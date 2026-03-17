@@ -1,0 +1,50 @@
+{{- if .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intake-redis
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: intake-redis
+    app.kubernetes.io/part-of: glerp-ai-intake
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: intake-redis
+  template:
+    metadata:
+      labels:
+        app: intake-redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: intake-redis
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: intake-redis
+    app.kubernetes.io/part-of: glerp-ai-intake
+spec:
+  selector:
+    app: intake-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+  type: ClusterIP
+{{- end }}

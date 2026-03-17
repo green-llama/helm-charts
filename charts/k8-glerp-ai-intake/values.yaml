@@ -1,0 +1,81 @@
+# Default values for k8-glerp-ai-intake
+# Override per environment with -f values-prod.yaml or --set
+
+image:
+  repository: ghcr.io/green-llama/k8-glerp-ai-intake
+  tag: "0.3.0"
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: ghcr-pull-secret
+
+# -- Kubernetes namespace (must exist before install)
+namespace: glerp-ai-intake-sandbox
+
+# -- Number of API gateway replicas
+apiReplicas: 1
+# -- Number of async worker replicas
+workerReplicas: 2
+
+# -- Non-secret configuration (mirrors 00-configmap.yaml)
+config:
+  APP_ENV: "development"
+  LOG_LEVEL: "INFO"
+  LLM_PROVIDER: "gemini"
+  GEMINI_MODEL: "gemini-2.0-flash"
+  ANTHROPIC_MODEL: "claude-sonnet-4-5-20250929"
+  OPENAI_MODEL: "gpt-4o"
+  GROQ_MODEL: "llama-3.3-70b-versatile"
+  VLLM_BASE_URL: "http://vllm-service.glerp-ai-intake.svc.cluster.local/v1"
+  VLLM_MODEL: "deepseek-ai/DeepSeek-V3"
+  REDIS_URL: "redis://intake-redis.glerp-ai-intake-sandbox.svc.cluster.local:6379/0"
+  OCR_CONFIDENCE_THRESHOLD: "0.95"
+  TEMP_STORAGE_PATH: "/tmp/intake-docs"
+  CONTEXT_PROVIDER_AP: "gemini"
+  CONTEXT_PROVIDER_LEGAL: "anthropic"
+  CONTEXT_PROVIDER_LEAD: "gemini"
+  CONTEXT_PROVIDER_EXPENSE: "gemini"
+  CONTEXT_PROVIDER_SHIPPING: "gemini"
+  CONTEXT_PROVIDER_CUSTOMER_PO: "gemini"
+  CONTEXT_PROVIDER_SUPPLIER_QUOTE: "gemini"
+  CONTEXT_PROVIDER_RECRUITMENT: "gemini"
+  CONTEXT_PROVIDER_BANK_STATEMENT: "gemini"
+  CONTEXT_PROVIDER_ISSUE: "gemini"
+
+# -- Secret name that holds LLM API keys and JWT_SECRET_KEY
+# Create before install: kubectl create secret generic intake-secrets -n <namespace> ...
+existingSecret: intake-secrets
+
+# -- Redis deployment (enabled = deploy in-cluster Redis)
+redis:
+  enabled: true
+  image: redis:7-alpine
+  storageSize: 1Gi
+
+# -- Ingress (Traefik IngressRoute)
+ingress:
+  enabled: true
+  # Cluster hostname for the IngressRoute
+  host: ""
+  # Strip-prefix middleware name (auto-created if ingress.enabled)
+  middlewareName: intake-strip-prefix
+
+# -- Resource limits
+resources:
+  api:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  worker:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# -- Ephemeral scratch volume for document processing
+workerScratchSizeLimit: 500Mi

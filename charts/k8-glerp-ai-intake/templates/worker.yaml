@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intake-worker
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: intake-worker
+    app.kubernetes.io/part-of: glerp-ai-intake
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+spec:
+  replicas: {{ .Values.workerReplicas }}
+  selector:
+    matchLabels:
+      app: intake-worker
+  template:
+    metadata:
+      labels:
+        app: intake-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "-m", "app.tasks.worker"]
+          envFrom:
+            - configMapRef:
+                name: intake-config
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+                optional: true
+          volumeMounts:
+            - name: doc-scratch
+              mountPath: /tmp/intake-docs
+          resources:
+            {{- toYaml .Values.resources.worker | nindent 12 }}
+      volumes:
+        - name: doc-scratch
+          emptyDir:
+            sizeLimit: {{ .Values.workerScratchSizeLimit }}

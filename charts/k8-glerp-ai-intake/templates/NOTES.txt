@@ -1,0 +1,59 @@
+GLerp AI Intake v{{ .Chart.AppVersion }} deployed to namespace: {{ .Values.namespace }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ REQUIRED: Image Pull Secret
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The container image is hosted on a private GitHub Container Registry
+(ghcr.io/green-llama/k8-glerp-ai-intake). The cluster MUST have a
+Kubernetes pull secret named exactly:
+
+  ghcr-pull-secret
+
+Create it in the target namespace before pods will start successfully:
+
+  kubectl create secret docker-registry ghcr-pull-secret \
+    --docker-server=ghcr.io \
+    --docker-username=<github-username-or-org> \
+    --docker-password=<PAT with read:packages scope> \
+    -n {{ .Values.namespace }}
+
+If this secret is missing, pods will remain in ImagePullBackOff.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ REQUIRED: LLM API Keys Secret
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A Kubernetes Secret named "{{ .Values.existingSecret }}" must exist
+in {{ .Values.namespace }} with at minimum GEMINI_API_KEY and JWT_SECRET_KEY:
+
+  kubectl create secret generic {{ .Values.existingSecret }} \
+    --from-literal=GEMINI_API_KEY="<your-gemini-api-key>" \
+    --from-literal=JWT_SECRET_KEY="$(openssl rand -hex 32)" \
+    --from-literal=ANTHROPIC_API_KEY="" \
+    --from-literal=OPENAI_API_KEY="" \
+    --from-literal=GROQ_API_KEY="" \
+    -n {{ .Values.namespace }}
+
+In production, all LLM keys are managed via the GLerp AI Settings
+DocType in Frappe, which pushes them to /admin/config at runtime.
+The above kubectl command is for initial bootstrap only.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Verify Deployment
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  kubectl get pods -n {{ .Values.namespace }}
+  kubectl rollout status deployment/intake-api -n {{ .Values.namespace }}
+
+Health check (port-forward if no ingress yet):
+  kubectl port-forward svc/intake-api 8080:80 -n {{ .Values.namespace }}
+  curl http://localhost:8080/healthz
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Documentation
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Source:      https://github.com/green-llama/k8-glerp-ai-intake
+  Frappe app:  https://github.com/green-llama/glerp-ai-intake
+  Dev guide:   see docs/GLERP_CONNECTOR_DEV_GUIDE.md in the source repo
