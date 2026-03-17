@@ -79,3 +79,4 @@ resources:
 
 # -- Ephemeral scratch volume for document processing
 workerScratchSizeLimit: 500Mi
+
