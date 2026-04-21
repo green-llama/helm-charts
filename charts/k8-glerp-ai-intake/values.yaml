@@ -28,7 +28,7 @@ config:
   GROQ_MODEL: "llama-3.3-70b-versatile"
   VLLM_BASE_URL: "http://vllm-service.glerp-ai-intake.svc.cluster.local/v1"
   VLLM_MODEL: "deepseek-ai/DeepSeek-V3"
-  REDIS_URL: "redis://intake-redis.glerp-ai-intake-sandbox.svc.cluster.local:6379/0"
+  REDIS_URL: ""  # auto-computed from .Values.namespace; override explicitly if needed
   OCR_CONFIDENCE_THRESHOLD: "0.95"
   TEMP_STORAGE_PATH: "/tmp/intake-docs"
   CONTEXT_PROVIDER_AP: "gemini"
@@ -79,4 +79,3 @@ resources:
 
 # -- Ephemeral scratch volume for document processing
 workerScratchSizeLimit: 500Mi
-

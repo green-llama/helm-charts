@@ -9,5 +9,9 @@ metadata:
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 data:
   {{- range $key, $val := .Values.config }}
+  {{- if and (eq $key "REDIS_URL") (eq $val "") }}
+  {{ $key }}: {{ printf "redis://intake-redis.%s.svc.cluster.local:6379/0" $.Values.namespace | quote }}
+  {{- else }}
   {{ $key }}: {{ $val | quote }}
+  {{- end }}
   {{- end }}
