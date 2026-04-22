@@ -2,8 +2,8 @@ apiVersion: v2
 name: k8-glerp-ai-intake
 description: GLerp AI Intake — document intelligence microservice with MCP interface
 type: application
-version: 0.3.2
-appVersion: "0.3.0"
+version: 0.3.3
+appVersion: "0.3.1"
 home: https://github.com/green-llama/k8-glerp-ai-intake
 sources:
   - https://github.com/green-llama/k8-glerp-ai-intake
