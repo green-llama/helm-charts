@@ -1,7 +1,9 @@
 {{- if .Values.ingress.enabled }}
+{{- $host := printf "%s.%s" .Values.namespace .Values.ingress.domain }}
 ---
 # Traefik IngressRoute — exposes the API and MCP endpoints
-# Set ingress.host in values.yaml or via --set ingress.host=<hostname>
+# Set ingress.domain in values or via --set ingress.domain=<domain>
+# FQDN is auto-computed as <namespace>.<domain>
 # TLS secret must exist in the namespace (cert-manager or static).
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -23,6 +25,8 @@ metadata:
   namespace: {{ .Values.namespace }}
   annotations:
     kubernetes.io/ingress.class: traefik
+    external-dns.alpha.kubernetes.io/hostname: {{ $host }}
+    external-dns.alpha.kubernetes.io/target: {{ .Values.ingress.externalDnsTarget }}
   labels:
     app.kubernetes.io/part-of: glerp-ai-intake
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -32,28 +36,28 @@ spec:
   tls:
     secretName: letsencrypt-greenllama-tech-tls
   routes:
-    - match: (Host(`{{ .Values.ingress.host }}`)) && PathPrefix(`/intake/api`)
+    - match: (Host(`{{ $host }}`)) && PathPrefix(`/intake/api`)
       kind: Rule
       services:
         - name: intake-api
           port: 80
       middlewares:
         - name: {{ .Values.ingress.middlewareName }}
-    - match: (Host(`{{ .Values.ingress.host }}`)) && PathPrefix(`/intake/mcp`)
+    - match: (Host(`{{ $host }}`)) && PathPrefix(`/intake/mcp`)
       kind: Rule
       services:
         - name: intake-api
           port: 80
       middlewares:
         - name: {{ .Values.ingress.middlewareName }}
-    - match: (Host(`{{ .Values.ingress.host }}`)) && PathPrefix(`/intake/admin`)
+    - match: (Host(`{{ $host }}`)) && PathPrefix(`/intake/admin`)
       kind: Rule
       services:
         - name: intake-api
           port: 80
       middlewares:
         - name: {{ .Values.ingress.middlewareName }}
-    - match: (Host(`{{ .Values.ingress.host }}`)) && (Path(`/intake/healthz`) || Path(`/intake/readyz`))
+    - match: (Host(`{{ $host }}`)) && (Path(`/intake/healthz`) || Path(`/intake/readyz`))
       kind: Rule
       services:
         - name: intake-api

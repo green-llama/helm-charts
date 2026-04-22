@@ -55,8 +55,12 @@ redis:
 # -- Ingress (Traefik IngressRoute)
 ingress:
   enabled: true
-  # Cluster hostname for the IngressRoute
-  host: ""
+  # Domain suffix — FQDN is computed as <namespace>.<domain>
+  # dev cluster:  dev.greenllama.tech  → glerp-ai-intake-sandbox.dev.greenllama.tech
+  # prod cluster: greenllama.tech      → glerp-ai-intake.greenllama.tech
+  domain: ""
+  # external-dns CNAME target (Cloudflare proxy record)
+  externalDnsTarget: "pec.greenllama.tech"
   # Strip-prefix middleware name (auto-created if ingress.enabled)
   middlewareName: intake-strip-prefix
 
