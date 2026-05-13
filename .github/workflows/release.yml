@@ -7,6 +7,10 @@ on:
     paths:
       - 'charts/**'
 
+# Forward-compatible with GitHub's Node.js 24 enforcement (June 2026).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -24,12 +28,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: latest
+        # Direct install avoids the azure/setup-helm Node.js 20 action dependency.
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Update chart dependencies
         run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
           for dir in charts/*/; do
             if [ -f "${dir}/Chart.yaml" ]; then
               helm dependency update "${dir}"
@@ -37,7 +43,7 @@ jobs:
           done
 
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
+        uses: helm/chart-releaser-action@v1.7.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         with:
