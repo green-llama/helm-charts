@@ -174,7 +174,7 @@ blackbox-exporter:
           method: GET
           follow_redirects: true
           preferred_ip_protocol: ip4
-          fail_if_not_matches_regexp:
+          fail_if_body_not_matches_regexp:
             - 'frappe'
             - '<form'
             - 'name="login"'
@@ -195,7 +195,7 @@ blackbox-exporter:
           method: GET
           follow_redirects: false
           preferred_ip_protocol: ip4
-          fail_if_not_matches_regexp:
+          fail_if_body_not_matches_regexp:
             - '"message"'
 
       # ── Internet / ISP connectivity check ────────────────────────────────────
