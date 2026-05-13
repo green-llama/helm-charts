@@ -3,11 +3,12 @@ apiVersion: v2
 name: glerp-monitoring
 description: >
   Uptime monitoring for GLerp (ERPNext v16) sites and ISP connectivity.
-  Includes Prometheus Blackbox Exporter, alert rules, AlertManager email routing,
-  and three Grafana dashboards (Uptime Overview, SLA Compliance, Internet Connectivity).
+  Includes Prometheus Blackbox Exporter, VictoriaMetrics long-term storage (90d),
+  alert rules, AlertManager email routing, and three Grafana dashboards
+  (Uptime Overview, SLA Compliance, Internet Connectivity).
   New sites are discovered automatically by labeling their Kubernetes Service.
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "1.0.0"
 keywords:
   - monitoring

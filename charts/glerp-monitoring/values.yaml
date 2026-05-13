@@ -72,6 +72,38 @@ grafana:
   # Grafana folder name for all GLerp dashboards.
   folderName: "GLerp Monitoring"
 
+# ── VictoriaMetrics — long-term uptime metric storage ─────────────────────────
+# Prometheus retains all cluster metrics for a short window (8-10 days by default)
+# to keep disk usage low. VictoriaMetrics receives ONLY the probe metrics via
+# Prometheus remoteWrite and stores them for 90 days, enabling accurate 30-day
+# SLA reporting without affecting overall Prometheus storage.
+#
+# After installing this chart, add the following to Rancher Monitoring values
+# (prometheus.prometheusSpec) to activate the remote write — see deployment-guide.md:
+#
+#   remoteWrite:
+#     - url: http://<release-name>-victoriametrics.cattle-monitoring-system.svc.cluster.local:8428/api/v1/write
+#       writeRelabelConfigs:
+#         - sourceLabels: [job]
+#           regex: "glerp-sites-basic|glerp-sites-login|glerp-sites-internal|internet-connectivity"
+#           action: keep
+victoriaMetrics:
+  enabled: true
+  imageTag: "v1.101.0"
+  # How long to retain uptime metrics. 90d covers 3 full SLA reporting months.
+  retention: 90d
+  storage:
+    size: 2Gi
+    # Leave empty to use the cluster's default StorageClass.
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
 # ── Blackbox Exporter subchart values ─────────────────────────────────────────
 # These are passed directly to the prometheus-blackbox-exporter chart.
 # See: https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-blackbox-exporter

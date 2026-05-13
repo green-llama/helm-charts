@@ -5,7 +5,7 @@
     { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
   ],
   "annotations": { "list": [] },
-  "description": "Monthly SLA compliance report for all GLerp sites. Set date range to reporting period, then export table to CSV.",
+  "description": "Monthly SLA compliance report for all GLerp sites. Set date range to reporting period, then export table to CSV. Defaults to VictoriaMetrics for accurate long-term uptime data (90-day retention).",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -18,12 +18,12 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 1,
-      "title": "SLA Summary — Current Month",
+      "title": "SLA Summary — Selected Period",
       "type": "row"
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Sites meeting the 99.5% SLA target",
+      "description": "Sites meeting the 99.5% SLA target over the selected time range",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -38,7 +38,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "count(glerp:site_uptime_ratio_30d >= 99.5)",
+          "expr": "count(avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range]) * 100 >= 99.5)",
           "legendFormat": "Compliant sites",
           "refId": "A",
           "instant": true
@@ -61,7 +61,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "count(glerp:site_uptime_ratio_30d < 99.5) or vector(0)",
+          "expr": "count(avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range]) * 100 < 99.5) or vector(0)",
           "legendFormat": "Breaching sites",
           "refId": "A",
           "instant": true
@@ -84,7 +84,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "avg(glerp:site_uptime_ratio_30d)",
+          "expr": "avg(avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range])) * 100",
           "legendFormat": "Avg uptime",
           "refId": "A",
           "instant": true
@@ -97,17 +97,17 @@
         "defaults": {
           "color": { "mode": "thresholds" },
           "unit": "percent",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.5 }, { "color": "red", "value": 99.5 }] }
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 98 }, { "color": "green", "value": 99.5 }] }
         }
       },
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
       "id": 5,
       "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "title": "ISP Uptime (30d)",
+      "title": "ISP Uptime (selected period)",
       "type": "stat",
       "targets": [
         {
-          "expr": "glerp:isp_uptime_ratio_30d",
+          "expr": "avg(avg_over_time(probe_success{job=\"internet-connectivity\"}[$__range])) * 100",
           "legendFormat": "ISP uptime",
           "refId": "A",
           "instant": true
@@ -123,7 +123,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Export this table: click the panel title → Inspect → Data → Download CSV. Use this CSV for SLA reporting to clients/management.",
+      "description": "Export this table: click the panel title → Inspect → Data → Download CSV. Uptime % and Downtime (min) are calculated over the selected time range using the login-page content probe — the true functional uptime signal.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -142,24 +142,35 @@
             "matcher": { "id": "byName", "options": "Uptime %" },
             "properties": [
               { "id": "unit", "value": "percent" },
+              { "id": "decimals", "value": 3 },
               { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 98 }, { "color": "green", "value": 99.5 }] } },
               { "id": "custom.displayMode", "value": "color-background" }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "SLA Status" },
+            "matcher": { "id": "byName", "options": "Downtime (min)" },
             "properties": [
-              { "id": "mappings", "value": [{ "type": "value", "options": { "PASS": { "color": "green" }, "FAIL": { "color": "red" } } }] },
-              { "id": "custom.displayMode", "value": "color-background" }
+              { "id": "unit", "value": "none" },
+              { "id": "decimals", "value": 1 }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Downtime (min)" },
-            "properties": [{ "id": "unit", "value": "none" }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Degraded (min)" },
-            "properties": [{ "id": "unit", "value": "none" }]
+            "matcher": { "id": "byName", "options": "SLA Status" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": { "text": "PASS", "color": "green", "index": 0 },
+                      "0": { "text": "FAIL", "color": "red", "index": 1 }
+                    }
+                  }
+                ]
+              },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
           }
         ]
       },
@@ -170,27 +181,20 @@
         "showHeader": true,
         "sortBy": [{ "displayName": "Uptime %", "desc": false }]
       },
-      "title": "SLA Compliance Table — 30 Days",
+      "title": "SLA Compliance Table — Selected Period",
       "type": "table",
       "targets": [
         {
-          "expr": "glerp:site_uptime_ratio_30d",
+          "expr": "avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range]) * 100",
           "legendFormat": "{{ site }}",
           "refId": "uptime",
           "instant": true,
           "format": "table"
         },
         {
-          "expr": "glerp:site_downtime_minutes_30d",
+          "expr": "(1 - avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range])) * $__range_s / 60",
           "legendFormat": "{{ site }}",
           "refId": "downtime",
-          "instant": true,
-          "format": "table"
-        },
-        {
-          "expr": "glerp:site_degraded_ratio_30d",
-          "legendFormat": "{{ site }}",
-          "refId": "degraded",
           "instant": true,
           "format": "table"
         }
@@ -203,8 +207,7 @@
             "renameByName": {
               "site": "Site",
               "Value #uptime": "Uptime %",
-              "Value #downtime": "Downtime (min)",
-              "Value #degraded": "Degraded %"
+              "Value #downtime": "Downtime (min)"
             }
           }
         },
@@ -212,8 +215,7 @@
           "id": "calculateField",
           "options": {
             "alias": "SLA Status",
-            "mode": "reduceRow",
-            "reduce": { "reducer": "sum" },
+            "mode": "binary",
             "binary": {
               "left": "Uptime %",
               "right": "99.5",
@@ -259,7 +261,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "probe_success{job=~\"glerp-.*-login\"}",
+          "expr": "probe_success{job=\"glerp-sites-login\"}",
           "legendFormat": "{{ site }}",
           "refId": "A"
         }
@@ -272,7 +274,11 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": "VictoriaMetrics (GLerp Long-term)",
+          "value": "glerp-victoriametrics"
+        },
         "hide": 0,
         "includeAll": false,
         "label": "Datasource",
