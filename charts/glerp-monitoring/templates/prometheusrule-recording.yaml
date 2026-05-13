@@ -16,13 +16,9 @@ spec:
         # Evaluated against current probe_success values — no long-term lookback.
         - record: glerp:site_health_state
           expr: |
-            (probe_success{job="glerp-sites-basic"} == 1) * 2
-            - on(site) group_left()
-            (
-              (probe_success{job="glerp-sites-basic"} == 1)
-              * on(site) group_left()
-              (probe_success{job="glerp-sites-login"} == 0)
-            )
+            probe_success{job="glerp-sites-basic"}
+            * on(site) group_left()
+            (1 + probe_success{job="glerp-sites-login"})
 
     # NOTE: Long-term SLA ratios (30-day uptime %, downtime minutes) are NOT
     # computed here as recording rules. Prometheus retains data for only

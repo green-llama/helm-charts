@@ -107,7 +107,8 @@ victoriaMetrics:
 # ── Blackbox Exporter subchart values ─────────────────────────────────────────
 # These are passed directly to the prometheus-blackbox-exporter chart.
 # See: https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-blackbox-exporter
-blackboxExporter:
+# Alias is "blackbox-exporter" (lowercase) so Kubernetes resource names are valid RFC 1123.
+blackbox-exporter:
   enabled: true
 
   image:

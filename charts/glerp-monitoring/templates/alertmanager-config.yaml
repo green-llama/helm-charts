@@ -55,9 +55,10 @@ spec:
           requireTLS: {{ .Values.alertmanager.email.requireTLS }}
           sendResolved: true
           headers:
-            subject: >-
-              [GLerp {{ .Values.cluster.name }}] {{ "{{" }} .GroupLabels.alertname {{ "}}" }}
-              {{- "{{" }} if .GroupLabels.site {{ "}}" }} — {{ "{{" }} .GroupLabels.site {{ "}}" }}{{ "{{" }} end {{ "}}" }}
+            - key: subject
+              value: >-
+                [GLerp {{ .Values.cluster.name }}] {{ "{{" }} .GroupLabels.alertname {{ "}}" }}
+                {{- "{{" }} if .GroupLabels.site {{ "}}" }} - {{ "{{" }} .GroupLabels.site {{ "}}" }}{{ "{{" }} end {{ "}}" }}
           html: |
             {{ "{{" }} range .Alerts {{ "}}" }}
             <h3>{{ "{{" }} .Annotations.summary {{ "}}" }}</h3>

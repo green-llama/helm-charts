@@ -3,7 +3,7 @@ Return the Blackbox Exporter service address (used in Probe CRDs and scrape conf
 The service name is derived from the Helm release name + subchart alias.
 */}}
 {{- define "glerp-monitoring.blackboxAddress" -}}
-{{- printf "%s-blackboxExporter-prometheus-blackbox-exporter.%s.svc.cluster.local:9115" .Release.Name .Values.monitoringNamespace -}}
+{{- printf "%s-blackbox-exporter.%s.svc.cluster.local:9115" .Release.Name .Values.monitoringNamespace -}}
 {{- end }}
 
 {{/*
