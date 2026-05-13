@@ -71,6 +71,9 @@ grafana:
   dashboardLabel: "1"
   # Grafana folder name for all GLerp dashboards.
   folderName: "GLerp Monitoring"
+  # Namespace that Rancher's Grafana sidecars watch for dashboard/datasource ConfigMaps.
+  # Rancher sets NAMESPACE=cattle-dashboards in both grafana-sc-dashboard and grafana-sc-datasources.
+  dashboardNamespace: cattle-dashboards
 
 # ── VictoriaMetrics — long-term uptime metric storage ─────────────────────────
 # Prometheus retains all cluster metrics for a short window (8-10 days by default)

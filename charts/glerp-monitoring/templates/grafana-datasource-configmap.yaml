@@ -12,7 +12,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-victoriametrics-datasource
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.grafana.dashboardNamespace }}
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
     grafana_datasource: "1"
