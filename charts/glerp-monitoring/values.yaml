@@ -164,10 +164,10 @@ blackbox-exporter:
 
       # ── Tier 2: ERPNext v16 login page content validation ─────────────────────
       # Detects degraded state: Nginx up, but Frappe workers down or overloaded.
-      # A healthy ERPNext v16 /login page always contains these markers:
-      #   'frappe'        — JS namespace injected on every Frappe page
-      #   '<form'         — the login form rendered in DOM
-      #   'name="login"'  — the username input field is present
+      # A healthy GLerp /login page always contains these markers:
+      #   'frappe'       — JS namespace injected on every Frappe page
+      #   'form-signin'  — class on the login <form> element rendered by Frappe
+      #   'btn-login'    — class on the login submit button
       # If workers are down, Nginx returns a small error stub that fails these checks.
       http_glerp_login:
         prober: http
@@ -179,8 +179,8 @@ blackbox-exporter:
           preferred_ip_protocol: ip4
           fail_if_body_not_matches_regexp:
             - 'frappe'
-            - '<form'
-            - 'name="login"'
+            - 'form-signin'
+            - 'btn-login'
           fail_if_header_not_matches:
             - header: Content-Type
               regexp: 'text/html'
