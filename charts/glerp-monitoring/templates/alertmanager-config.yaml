@@ -28,7 +28,7 @@ spec:
           - name: severity
             value: info
         receiver: email-alerts
-        repeatInterval: 0s
+        repeatInterval: 168h
 
   # Suppress per-site alerts when an ISP outage is confirmed.
   # This prevents alert storms — one ISPConnectivityLost email instead of N site emails.
