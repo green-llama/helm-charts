@@ -1,0 +1,176 @@
+# glerp-monitoring chart values.
+# Override these in the Rancher GUI when installing the chart.
+# All cluster-specific settings are here — no values are hardcoded in templates.
+
+# ── Cluster identity ──────────────────────────────────────────────────────────
+cluster:
+  # Human-readable name used in alert annotations.
+  name: gl-dev2
+  # Base domain. Sites probed at https://<company>.<domain>/login
+  domain: greenllama.tech
+
+# ── Namespace where Rancher Monitoring (kube-prometheus-stack) is deployed ────
+monitoringNamespace: cattle-monitoring-system
+
+# ── Prometheus Operator selector labels ───────────────────────────────────────
+# Rancher Monitoring's Prometheus only picks up PrometheusRule/AlertmanagerConfig
+# objects that carry the `release: rancher-monitoring` label. Do not change this
+# unless your Rancher Monitoring installation uses a different release name.
+prometheusRuleLabels:
+  release: rancher-monitoring
+
+# ── Internet connectivity probes ───────────────────────────────────────────────
+# Three distinct external endpoints for ISP health detection.
+# A majority failure (>= 2 of 3) triggers ISPConnectivityLost alert.
+internetProbes:
+  targets:
+    - https://www.google.com
+    - https://www.cloudflare.com
+    - https://dns.quad9.net
+
+# ── AlertManager email configuration ─────────────────────────────────────────
+alertmanager:
+  email:
+    # SMTP relay host and port
+    smarthost: "smtp.example.com:587"
+    # Sender address shown in alert emails
+    from: "alerts@greenllama.tech"
+    # Recipient(s) — comma-separated for multiple
+    to: "ops@greenllama.tech"
+    # Auth username for SMTP (often same as from address)
+    authUsername: "alerts@greenllama.tech"
+    # Name of a pre-existing Kubernetes Secret containing the SMTP password.
+    # Create it BEFORE installing this chart:
+    #   kubectl create secret generic alertmanager-smtp-secret \
+    #     --namespace cattle-monitoring-system \
+    #     --from-literal=smtp_auth_password='YOUR_PASSWORD'
+    passwordSecret:
+      name: alertmanager-smtp-secret
+      key: smtp_auth_password
+    requireTLS: true
+
+# ── Alert thresholds ───────────────────────────────────────────────────────────
+alerts:
+  # Minutes before a complete outage fires GLerpSiteDown (critical)
+  siteDownMinutes: 2
+  # Minutes before a degraded login page fires GLerpSiteDegraded (warning)
+  siteDegradedMinutes: 5
+  # Minutes before ISPConnectivityLost fires
+  ispDownMinutes: 2
+  # Fraction of internet probes that must fail to declare ISP down (0.5 = majority)
+  ispFailureThreshold: "0.5"
+
+# ── SLA target ─────────────────────────────────────────────────────────────────
+sla:
+  # Uptime percentage target (used for dashboard threshold coloring and SLA table)
+  targetPercent: 99.5
+
+# ── Grafana dashboard import ───────────────────────────────────────────────────
+grafana:
+  # Label that Rancher's Grafana sidecar uses to auto-import dashboard ConfigMaps.
+  dashboardLabel: "1"
+  # Grafana folder name for all GLerp dashboards.
+  folderName: "GLerp Monitoring"
+
+# ── Blackbox Exporter subchart values ─────────────────────────────────────────
+# These are passed directly to the prometheus-blackbox-exporter chart.
+# See: https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-blackbox-exporter
+blackboxExporter:
+  enabled: true
+
+  image:
+    tag: v0.25.0
+
+  service:
+    type: ClusterIP
+    port: 9115
+
+  # ServiceMonitor so Rancher Monitoring Prometheus scrapes this exporter.
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 15s
+
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    allowPrivilegeEscalation: false
+    capabilities:
+      add:
+        - NET_RAW
+
+  podSecurityContext:
+    sysctls:
+      - name: net.ipv4.ping_group_range
+        value: "0 2147483647"
+
+  config:
+    modules:
+      # ── Tier 1: Basic HTTPS reachability (fast 200 OK, no body check) ────────
+      http_2xx:
+        prober: http
+        timeout: 10s
+        http:
+          valid_status_codes: [200, 301, 302]
+          method: GET
+          follow_redirects: true
+          preferred_ip_protocol: ip4
+          tls_config:
+            insecure_skip_verify: false
+
+      # ── Tier 2: ERPNext v16 login page content validation ─────────────────────
+      # Detects degraded state: Nginx up, but Frappe workers down or overloaded.
+      # A healthy ERPNext v16 /login page always contains these markers:
+      #   'frappe'        — JS namespace injected on every Frappe page
+      #   '<form'         — the login form rendered in DOM
+      #   'name="login"'  — the username input field is present
+      # If workers are down, Nginx returns a small error stub that fails these checks.
+      http_glerp_login:
+        prober: http
+        timeout: 10s
+        http:
+          valid_status_codes: [200]
+          method: GET
+          follow_redirects: true
+          preferred_ip_protocol: ip4
+          fail_if_not_matches_regexp:
+            - 'frappe'
+            - '<form'
+            - 'name="login"'
+          fail_if_header_not_matches:
+            - header: Content-Type
+              regexp: 'text/html'
+          tls_config:
+            insecure_skip_verify: false
+
+      # ── Internal Frappe worker health (diagnostic, not SLA signal) ────────────
+      # Probes /api/method/ping on the internal ClusterIP Service.
+      # Not used for alerts. Helps diagnose "Nginx up / Frappe down" root cause.
+      http_2xx_internal:
+        prober: http
+        timeout: 5s
+        http:
+          valid_status_codes: [200]
+          method: GET
+          follow_redirects: false
+          preferred_ip_protocol: ip4
+          fail_if_not_matches_regexp:
+            - '"message"'
+
+      # ── Internet / ISP connectivity check ────────────────────────────────────
+      http_internet:
+        prober: http
+        timeout: 10s
+        http:
+          valid_status_codes: [200, 301, 302]
+          method: GET
+          follow_redirects: true
+          preferred_ip_protocol: ip4

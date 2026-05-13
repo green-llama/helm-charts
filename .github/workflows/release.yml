@@ -28,6 +28,14 @@ jobs:
         with:
           version: latest
 
+      - name: Update chart dependencies
+        run: |
+          for dir in charts/*/; do
+            if [ -f "${dir}/Chart.yaml" ]; then
+              helm dependency update "${dir}"
+            fi
+          done
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         env:

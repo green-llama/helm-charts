@@ -1,0 +1,31 @@
+{{- /*
+Internet connectivity Probe CRD.
+Static targets used as the ISP health reference signal.
+If a majority fail → ISPConnectivityLost fires and per-site alerts are suppressed.
+*/ -}}
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: {{ .Release.Name }}-internet-connectivity
+  namespace: {{ .Values.monitoringNamespace }}
+  labels:
+    {{- include "glerp-monitoring.labels" . | nindent 4 }}
+    probe-type: internet
+spec:
+  jobName: internet-connectivity
+  interval: 60s
+  scrapeTimeout: 15s
+  prober:
+    url: {{ include "glerp-monitoring.blackboxAddress" . }}
+    scheme: http
+    path: /probe
+  module: http_internet
+  targets:
+    staticConfig:
+      static:
+        {{- range .Values.internetProbes.targets }}
+        - {{ . }}
+        {{- end }}
+      labels:
+        probe_type: internet
+        cluster: {{ .Values.cluster.name }}

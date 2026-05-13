@@ -1,0 +1,28 @@
+apiVersion: v2
+name: glerp-monitoring
+description: >
+  Uptime monitoring for GLerp (ERPNext v16) sites and ISP connectivity.
+  Includes Prometheus Blackbox Exporter, alert rules, AlertManager email routing,
+  and three Grafana dashboards (Uptime Overview, SLA Compliance, Internet Connectivity).
+  New sites are discovered automatically by labeling their Kubernetes Service.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - monitoring
+  - uptime
+  - sla
+  - glerp
+  - erpnext
+home: https://github.com/green-llama/k8-glerp-monitoring
+sources:
+  - https://github.com/green-llama/k8-glerp-monitoring
+maintainers:
+  - name: Green Llama Technologies
+    email: ops@greenllama.tech
+dependencies:
+  - name: prometheus-blackbox-exporter
+    version: "9.4.0"
+    repository: https://prometheus-community.github.io/helm-charts
+    alias: blackboxExporter
+    condition: blackboxExporter.enabled

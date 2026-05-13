@@ -1,0 +1,25 @@
+{{- /*
+Grafana dashboard ConfigMap.
+Rancher Monitoring's Grafana sidecar watches for ConfigMaps with the label
+grafana_dashboard="1" and auto-imports them. Dashboards appear in Grafana
+within ~60 seconds of this ConfigMap being created — no Grafana restart needed.
+
+All three dashboards are embedded from files/dashboards/ in this chart.
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-dashboards
+  namespace: {{ .Values.monitoringNamespace }}
+  labels:
+    {{- include "glerp-monitoring.labels" . | nindent 4 }}
+    grafana_dashboard: {{ .Values.grafana.dashboardLabel | quote }}
+  annotations:
+    grafana_folder: {{ .Values.grafana.folderName | quote }}
+data:
+  uptime-overview.json: |-
+    {{ .Files.Get "files/dashboards/uptime-overview.json" | nindent 4 }}
+  sla-compliance.json: |-
+    {{ .Files.Get "files/dashboards/sla-compliance.json" | nindent 4 }}
+  internet-connectivity.json: |-
+    {{ .Files.Get "files/dashboards/internet-connectivity.json" | nindent 4 }}
