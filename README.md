@@ -1,70 +1,149 @@
-# green-llama Helm Charts
+# k8-glerp-monitoring
 
-Centralized Helm chart repository for all `glerp-ai-*` services.
+Kubernetes-native uptime monitoring for GLerp (ERPNext v16) sites and ISP connectivity.
+Designed for RKE2 clusters running Rancher Monitoring (kube-prometheus-stack).
 
-## Add this repository in Rancher or Helm
+## What This Does
 
-**Rancher UI:** Apps → Repositories → Create
-- Name: `green-llama`
-- Index URL: `https://green-llama.github.io/helm-charts/`
+- **Monitors all GLerp sites automatically** — add one label and one annotation to a site's Service; Prometheus discovers it within 60 seconds, no per-site config files needed.
+- **Three-tier health checks** — detects complete outages (Nginx down) AND partial outages (ERPNext workers degraded, login page malformed).
+- **ISP vs. application differentiation** — distinguishes your site being down from your ISP being down; suppresses site alerts during ISP outages.
+- **90-day SLA retention** — VictoriaMetrics stores probe metrics long-term so 30-day SLA reports are accurate (Prometheus alone only retains ~8-10 days).
+- **Grafana dashboards** — real-time status grid, 30-day SLA compliance table (CSV export), internet connectivity history.
+- **Email alerts** — after 2 minutes down (critical) or 5 minutes degraded (warning); clears when restored.
 
-**Helm CLI:**
+## Prerequisites
+
+- Rancher Monitoring (kube-prometheus-stack) installed in `cattle-monitoring-system`
+- Helm v3+ with the Green Llama chart repo:
+  ```bash
+  helm repo add green-llama https://green-llama.github.io/helm-charts/
+  helm repo update
+  ```
+- A Kubernetes Secret with your SMTP password (create **before** installing the chart):
+  ```bash
+  kubectl create secret generic alertmanager-smtp-secret \
+    --namespace cattle-monitoring-system \
+    --from-literal=smtp_auth_password='YOUR_PASSWORD'
+  ```
+
+## Installation
+
+### Step 1 — Install the chart
+
 ```bash
-helm repo add green-llama https://green-llama.github.io/helm-charts/
-helm repo update
-helm search repo green-llama
+helm install glerp-monitoring green-llama/glerp-monitoring \
+  --namespace cattle-monitoring-system \
+  --set cluster.name=gl-prod \
+  --set cluster.domain=greenllama.tech \
+  --set alertmanager.email.smarthost="smtp.example.com:587" \
+  --set alertmanager.email.from="alerts@greenllama.tech" \
+  --set alertmanager.email.to="ops@greenllama.tech" \
+  --set alertmanager.email.authUsername="alerts@greenllama.tech"
 ```
 
-## Available Charts
+Or use a values override file — copy and edit `charts/glerp-monitoring/values.yaml`.
 
-| Chart | Description | Source Repo |
+### Step 2 — Configure rancher-monitoring to pick up our scrape jobs
+
+The chart creates a Secret (`glerp-monitoring-scrape-configs`) containing the Prometheus scrape config for all GLerp sites and ISP probes. Prometheus needs to be pointed at it. Add the following to the **rancher-monitoring** Helm values (Rancher UI → Apps → rancher-monitoring → Edit/Upgrade → Edit YAML):
+
+```yaml
+prometheus:
+  prometheusSpec:
+    additionalScrapeConfigsSecret:
+      enabled: true
+      name: glerp-monitoring-scrape-configs
+      key: scrape-configs.yaml
+    remoteWrite:
+      - url: http://glerp-monitoring-victoriametrics.cattle-monitoring-system.svc.cluster.local:8428/api/v1/write
+        writeRelabelConfigs:
+          - sourceLabels: [job]
+            regex: "glerp-sites-basic|glerp-sites-login|glerp-sites-internal|internet-connectivity"
+            action: keep
+```
+
+The `remoteWrite` block forwards probe metrics to VictoriaMetrics for 90-day retention.
+Without it, SLA dashboards will only show data for the last 8-10 days.
+
+### Step 3 — Verify
+
+Within ~60 seconds of saving the rancher-monitoring values:
+
+- **Prometheus UI → Status → Targets** — you should see `internet-connectivity` with 3 UP targets (Google, Cloudflare, Microsoft). The `glerp-sites-*` jobs appear empty until a site is labeled (Step 4).
+- **Grafana → Dashboards → GLerp Monitoring** — the Internet Connectivity dashboard should show data immediately. Site dashboards populate after a site is labeled.
+
+## Adding a New GLerp Site
+
+Add these two fields to the site's Kubernetes **Service** (in your GLerp Helm chart values or via `extraObjects`):
+
+```yaml
+service:
+  labels:
+    glerp-monitoring: "enabled"
+  annotations:
+    glerp-monitoring/public-url: "https://company.greenllama.tech"
+```
+
+Prometheus discovers the site automatically within ~60 seconds. It will appear in the Uptime Overview and SLA Compliance dashboards.
+
+**Using `extraObjects` in the GLerp chart** (recommended — survives Helm upgrades):
+
+```yaml
+extraObjects:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: nginx-monitoring
+      labels:
+        glerp-monitoring: "enabled"
+      annotations:
+        glerp-monitoring/public-url: "https://company.greenllama.tech"
+    spec:
+      selector:
+        app: nginx
+      ports:
+        - port: 80
+          targetPort: 8080
+```
+
+## Alert Summary
+
+| Alert | Condition | Severity |
 |---|---|---|
-| `k8-glerp-ai-intake` | Document intelligence service — OCR + LLM extraction for ERPNext | [k8-glerp-ai-intake](https://github.com/green-llama/k8-glerp-ai-intake) |
+| `GLerpSiteDown` | Site HTTP probe fails 2+ min, ISP healthy | Critical |
+| `GLerpSiteDegraded` | Site up but login page malformed 5+ min | Warning |
+| `ISPConnectivityLost` | Majority of external probes fail 2+ min | Critical |
+| `ISPConnectivityRestored` | External probes recover | Info |
 
-> Future charts (`glerp-ai-architect`, `glerp-ai-copilot`, `glerp-ai-insights`, `glerp-ai-project-assistant`) will appear here as they are released.
+During an ISP outage, `GLerpSiteDown` and `GLerpSiteDegraded` are **suppressed** — only `ISPConnectivityLost` fires.
 
-## Install a Chart
+## SLA Target
 
-```bash
-# Install intake service
-helm install glerp-ai-intake green-llama/k8-glerp-ai-intake \
-  -n glerp-ai-intake \
-  --create-namespace \
-  --set config.APP_ENV=production \
-  --set ingress.host=glerp-ai-intake.yourdomain.com \
-  --set image.tag=0.3.0
+**99.5% monthly uptime** (≤ 3.6 hours downtime per month per site).
+The SLA signal uses the login-tier probe — both complete outages and degraded states count against SLA.
+
+Export the SLA Compliance dashboard to CSV from Grafana for client reporting.
+
+## Repository Structure
+
+```
+charts/
+└── glerp-monitoring/
+    ├── Chart.yaml
+    ├── values.yaml                   ← all configurable settings
+    ├── files/dashboards/             ← Grafana dashboard JSON files
+    └── templates/
+        ├── additional-scrape-configs-secret.yaml  ← site + ISP probe jobs
+        ├── alertmanager-config.yaml               ← email routing + ISP inhibition
+        ├── grafana-dashboards-configmap.yaml       ← dashboard import (cattle-dashboards)
+        ├── grafana-datasource-configmap.yaml       ← VictoriaMetrics datasource
+        ├── prometheusrule-alerts-glerp.yaml        ← site alert rules
+        ├── prometheusrule-alerts-internet.yaml     ← ISP alert rules
+        ├── prometheusrule-recording.yaml           ← site health state recording rule
+        └── victoriametrics.yaml                    ← VM deployment + PVC + service
 ```
 
-Or override values:
-```bash
-helm install glerp-ai-intake green-llama/k8-glerp-ai-intake \
-  -n glerp-ai-intake \
-  -f values-prod.yaml
-```
+## License
 
-## How This Repository Works
-
-Charts live in the `charts/` directory of this repository. When a change is pushed to `main`, the GitHub Actions workflow:
-
-1. Detects which charts have a new version in `Chart.yaml`
-2. Packages each changed chart into a `.tgz` release artifact
-3. Creates a GitHub Release tagged `<chart-name>-<version>` with the artifact attached
-4. Regenerates `index.yaml` on the `gh-pages` branch pointing to all release assets
-
-The `gh-pages` branch is what Helm and Rancher read. The `index.yaml` there indexes every chart version ever released, so older versions remain installable.
-
-## Adding a New Chart
-
-1. Create `charts/<chart-name>/` in this repo (copy an existing chart as template)
-2. Ensure `Chart.yaml` has `name`, `version`, and `appVersion` set correctly
-3. Commit to `main` — the release workflow handles the rest
-
-## Updating an Existing Chart
-
-Bump `version` in `charts/<chart-name>/Chart.yaml`, commit to `main`. The workflow detects the version change and publishes a new release. Previous versions are never removed.
-
-## Required GitHub Setup (one-time)
-
-1. **Enable GitHub Pages:** Repository Settings → Pages → Source: `gh-pages` branch, `/ (root)` directory
-2. **Workflow permissions:** Repository Settings → Actions → General → Workflow permissions → "Read and write permissions" ✓
-3. **Add `HELM_CHARTS_TOKEN` secret to each service repo** (PAT with `repo` scope for `green-llama/helm-charts`) — used by service repos to sync chart changes here automatically
+Internal use — Green Llama Technologies.
