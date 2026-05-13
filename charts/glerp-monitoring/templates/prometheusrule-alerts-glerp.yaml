@@ -32,7 +32,7 @@ spec:
         - alert: GLerpSiteDegraded
           expr: |
             probe_success{job="glerp-sites-basic"} == 1
-            and on(site) group_left()
+            and on(site)
             (probe_success{job="glerp-sites-login"} == 0)
             and on()
             (avg(probe_success{job="internet-connectivity"}) >= {{ .Values.alerts.ispFailureThreshold }})
