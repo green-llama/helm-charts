@@ -3,6 +3,38 @@ entries:
   glerp-monitoring:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2026-05-14T02:30:52.248898945Z"
+    dependencies:
+    - alias: blackbox-exporter
+      condition: blackbox-exporter.enabled
+      name: prometheus-blackbox-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 9.4.0
+    description: 'Uptime monitoring for GLerp (ERPNext v16) sites and ISP connectivity.
+      Includes Prometheus Blackbox Exporter, VictoriaMetrics long-term storage (90d),
+      alert rules, AlertManager email routing, and three Grafana dashboards (Uptime
+      Overview, SLA Compliance, Internet Connectivity). New sites are discovered automatically
+      by labeling their Kubernetes Service. '
+    digest: 05871bac04244b3196630a928f418a4b32a0e05c35893ae459772ff458aaab52
+    home: https://github.com/green-llama/k8-glerp-monitoring
+    keywords:
+    - monitoring
+    - uptime
+    - sla
+    - glerp
+    - erpnext
+    maintainers:
+    - email: ops@greenllama.tech
+      name: Green Llama Technologies
+    name: glerp-monitoring
+    sources:
+    - https://github.com/green-llama/k8-glerp-monitoring
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-0.2.10/glerp-monitoring-0.2.10.tgz
+    version: 0.2.10
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2026-05-14T01:51:26.060093264Z"
     dependencies:
     - alias: blackbox-exporter
@@ -437,4 +469,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.0/k8-glerp-ai-intake-0.3.0.tgz
     version: 0.3.0
-generated: "2026-05-14T01:51:26.06014442Z"
+generated: "2026-05-14T02:30:52.248944253Z"
