@@ -188,7 +188,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "glerp-victoriametrics" },
       "description": "Uptime % with maintenance windows excluded from the calculation. During a defined maintenance window, any downtime does not count against the SLA figure.\n\nWhen no maintenance windows are defined this equals the raw uptime % above. Maintenance windows are created using the GLerp Maintenance Admin tool.",
       "fieldConfig": {
         "defaults": {
@@ -221,7 +221,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "(\n  sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n  / (\n    count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n    - default(sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]), 0)\n  )\n) * 100",
+          "expr": "(\n  sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n  / (\n    count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n    - (sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]) or sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n  )\n) * 100",
           "legendFormat": "Adjusted Uptime %",
           "refId": "A",
           "instant": true
@@ -229,7 +229,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "glerp-victoriametrics" },
       "description": "SLA compliance status based on the maintenance-adjusted uptime %. Downtime that occurred within a defined maintenance window is excluded.\n\n• COMPLIANT (green) — adjusted uptime ≥ 99.5%\n• BREACH (red) — adjusted uptime < 99.5%",
       "fieldConfig": {
         "defaults": {
@@ -274,7 +274,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "(\n  sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n  / (\n    count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n    - default(sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]), 0)\n  )\n) * 100",
+          "expr": "(\n  sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n  / (\n    count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n    - (sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]) or sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n  )\n) * 100",
           "legendFormat": "Adjusted Status",
           "refId": "A",
           "instant": true
@@ -282,7 +282,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "glerp-victoriametrics" },
       "description": "Total minutes defined as maintenance windows for this site in the selected reporting period. These minutes are excluded from the adjusted SLA calculation above.\n\nEach maintenance window sample is recorded at 60-second resolution, so this value equals the total maintenance duration in minutes.",
       "fieldConfig": {
         "defaults": {
@@ -309,7 +309,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "default(sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]), 0)",
+          "expr": "sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]) or sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0",
           "legendFormat": "Excused (min)",
           "refId": "A",
           "instant": true
