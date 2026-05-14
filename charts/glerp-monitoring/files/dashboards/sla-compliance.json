@@ -4,7 +4,21 @@
     { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
     { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
   ],
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#1F60C4",
+        "limit": 100,
+        "name": "Maintenance Windows",
+        "showIn": 0,
+        "tags": ["maintenance"],
+        "type": "tags"
+      }
+    ]
+  },
   "description": "Monthly SLA compliance report for all GLerp sites. Set date range to reporting period, then export table to CSV. Defaults to VictoriaMetrics for accurate long-term uptime data (90-day retention).",
   "editable": true,
   "fiscalYearStartMonth": 0,
@@ -38,7 +52,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "count(avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range]) * 100 >= 99.5)",
+          "expr": "count(avg_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[$__range]) * 100 >= 99.5)",
           "legendFormat": "Compliant sites",
           "refId": "A",
           "instant": true
@@ -61,7 +75,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "count(avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range]) * 100 < 99.5) or vector(0)",
+          "expr": "count(avg_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[$__range]) * 100 < 99.5) or vector(0)",
           "legendFormat": "Breaching sites",
           "refId": "A",
           "instant": true
@@ -84,7 +98,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "avg(avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range])) * 100",
+          "expr": "avg(avg_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[$__range])) * 100",
           "legendFormat": "Avg uptime",
           "refId": "A",
           "instant": true
@@ -185,14 +199,14 @@
       "type": "table",
       "targets": [
         {
-          "expr": "avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range]) * 100",
+          "expr": "avg_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[$__range]) * 100",
           "legendFormat": "{{ site }}",
           "refId": "uptime",
           "instant": true,
           "format": "table"
         },
         {
-          "expr": "(1 - avg_over_time(probe_success{job=\"glerp-sites-login\"}[$__range])) * $__range_s / 60",
+          "expr": "(1 - avg_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[$__range])) * $__range_s / 60",
           "legendFormat": "{{ site }}",
           "refId": "downtime",
           "instant": true,
@@ -261,7 +275,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "probe_success{job=\"glerp-sites-login\"}",
+          "expr": "probe_success{job=\"glerp-sites-login\", site=~\"$site\"}",
           "legendFormat": "{{ site }}",
           "refId": "A"
         }
@@ -287,6 +301,26 @@
         "query": "prometheus",
         "refresh": 1,
         "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": { "type": "prometheus", "uid": "glerp-victoriametrics" },
+        "definition": "label_values(probe_success{job=\"glerp-sites-login\"}, site)",
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "label": "Site",
+        "multi": false,
+        "name": "site",
+        "options": [],
+        "query": {
+          "query": "label_values(probe_success{job=\"glerp-sites-login\"}, site)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
       }
     ]
   },

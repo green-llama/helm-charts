@@ -4,7 +4,21 @@
     { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
     { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
   ],
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#1F60C4",
+        "limit": 100,
+        "name": "Maintenance Windows",
+        "showIn": 0,
+        "tags": ["maintenance"],
+        "type": "tags"
+      }
+    ]
+  },
   "description": "Real-time status of all GLerp sites and ISP connectivity",
   "editable": true,
   "fiscalYearStartMonth": 0,
@@ -21,6 +35,13 @@
     {
       "title": "Internet Connectivity",
       "url": "/d/glerp-internet",
+      "type": "link",
+      "icon": "external link",
+      "targetBlank": false
+    },
+    {
+      "title": "Customer SLA Report",
+      "url": "/d/glerp-customer-sla",
       "type": "link",
       "icon": "external link",
       "targetBlank": false
@@ -137,7 +158,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "glerp:site_health_state",
+          "expr": "glerp:site_health_state{site=~\"$site\"}",
           "legendFormat": "{{ site }}",
           "refId": "A",
           "instant": true
@@ -181,9 +202,10 @@
       },
       "title": "30-Day Uptime % per Site",
       "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "glerp-victoriametrics" },
       "targets": [
         {
-          "expr": "glerp:site_uptime_ratio_30d",
+          "expr": "avg_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[30d]) * 100",
           "legendFormat": "{{ site }}",
           "refId": "A",
           "instant": true
@@ -210,13 +232,141 @@
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 26 },
       "id": 31,
       "options": { "tooltip": { "mode": "multi" } },
-      "title": "Login Probe Success (all sites, 6 hours)",
+      "title": "Login Probe Success",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "probe_success{job=~\"glerp-.*-login\"}",
+          "expr": "probe_success{job=\"glerp-sites-login\", site=~\"$site\"}",
           "legendFormat": "{{ site }}",
           "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "id": 50,
+      "title": "Incident History",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Green = UP, Red = DOWN. Each row is one site. Drag the time range to investigate specific incidents.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "DOWN", "color": "red" },
+                "1": { "text": "UP",   "color": "green" }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",   "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 35 },
+      "id": 51,
+      "options": {
+        "mergeValues": true,
+        "showValue": "auto",
+        "fillOpacity": 90,
+        "rowHeight": 0.9,
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "title": "Site Up/Down Timeline",
+      "type": "state-timeline",
+      "targets": [
+        {
+          "expr": "probe_success{job=\"glerp-sites-login\", site=~\"$site\"}",
+          "legendFormat": "{{ site }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 45 },
+      "id": 60,
+      "title": "Response Time",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Login probe round-trip time per site. Sustained increases often precede outages.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ms",
+          "custom": { "lineWidth": 1, "fillOpacity": 5 }
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 46 },
+      "id": 61,
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+      },
+      "title": "Login Probe Response Time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "probe_duration_seconds{job=\"glerp-sites-login\", site=~\"$site\"} * 1000",
+          "legendFormat": "{{ site }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 54 },
+      "id": 70,
+      "title": "TLS Certificate Expiry",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Days until the site's SSL certificate expires. Red = <14 days, Yellow = <30 days.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "d",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "orange", "value": 14 },
+              { "color": "green",  "value": 30 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 55 },
+      "id": 71,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "TLS Certificate Expiry (days remaining)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "(probe_ssl_earliest_cert_expiry{job=\"glerp-sites-basic\", site=~\"$site\"} - time()) / 86400",
+          "legendFormat": "{{ site }}",
+          "refId": "A",
+          "instant": true
         }
       ]
     }
@@ -236,6 +386,26 @@
         "query": "prometheus",
         "refresh": 1,
         "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "definition": "label_values(probe_success{job=\"glerp-sites-login\"}, site)",
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "label": "Site",
+        "multi": false,
+        "name": "site",
+        "options": [],
+        "query": {
+          "query": "label_values(probe_success{job=\"glerp-sites-login\"}, site)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
       }
     ]
   },

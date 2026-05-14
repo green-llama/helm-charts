@@ -107,6 +107,46 @@ extraObjects:
           targetPort: 8080
 ```
 
+## Maintenance Windows
+
+To mark a planned maintenance window so SLA reviewers know to exclude it:
+
+1. In Grafana, open any timeseries panel on the Uptime Overview or SLA Compliance dashboard
+2. Click and drag across the time region of the maintenance window
+3. Select **Add annotation**
+4. Add the tag `maintenance` (required) and the site namespace (e.g. `backuptest`) for a per-site window, or `all` for a cluster-wide window
+5. Save
+
+The blue shaded region appears on all timeseries panels in those dashboards and on the Customer SLA Report. Annotations persist in Grafana's internal store — no Helm upgrade needed.
+
+## Customer Reporting
+
+### Dashboards
+
+The **Customer SLA Report** dashboard (`GLerp Monitoring → GLerp — Customer SLA Report`) is designed for customer-facing use:
+- Select the customer's site from the **Site** dropdown (no "All" option — prevents seeing other customers' data)
+- Set the time range to the reporting period (default: last 30 days)
+- Data is sourced from VictoriaMetrics for accurate long-range calculations
+
+### Sharing a live link
+
+1. Open the Customer SLA Report dashboard with the correct site selected
+2. Go to **Share → Public Dashboard → Enable**
+3. Copy the public URL — customers can view it without a Grafana login
+4. For a direct per-customer link, append `?var-site=<namespace>` to pre-select their site
+
+### PDF export
+
+Requires enabling the Grafana image renderer in rancher-monitoring values:
+
+```yaml
+grafana:
+  imageRenderer:
+    enabled: true
+```
+
+After enabling: **Share → Export as PDF** becomes available on any dashboard.
+
 ## Alert Summary
 
 | Alert | Condition | Severity |

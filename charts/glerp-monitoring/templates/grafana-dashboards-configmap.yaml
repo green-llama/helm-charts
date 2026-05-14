@@ -23,3 +23,5 @@ data:
     {{ .Files.Get "files/dashboards/sla-compliance.json" | nindent 4 }}
   internet-connectivity.json: |-
     {{ .Files.Get "files/dashboards/internet-connectivity.json" | nindent 4 }}
+  customer-sla-report.json: |-
+    {{ .Files.Get "files/dashboards/customer-sla-report.json" | nindent 4 }}
