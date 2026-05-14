@@ -88,7 +88,7 @@ grafana:
 #     - url: http://<release-name>-victoriametrics.cattle-monitoring-system.svc.cluster.local:8428/api/v1/write
 #       writeRelabelConfigs:
 #         - sourceLabels: [job]
-#           regex: "glerp-sites-basic|glerp-sites-login|glerp-sites-internal|internet-connectivity"
+#           regex: "glerp-sites-basic|glerp-sites-login|internet-connectivity"
 #           action: keep
 victoriaMetrics:
   enabled: true

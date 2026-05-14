@@ -9,7 +9,7 @@ to keep cluster disk usage low. VictoriaMetrics receives ONLY the probe metrics
 
 The remoteWrite filter is configured in Rancher Monitoring values — see
 docs/deployment-guide.md Step 4. Only these job labels are forwarded:
-  glerp-sites-basic, glerp-sites-login, glerp-sites-internal, internet-connectivity
+  glerp-sites-basic, glerp-sites-login, internet-connectivity
 */ -}}
 ---
 apiVersion: v1

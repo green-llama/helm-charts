@@ -33,7 +33,7 @@
       "id": 99,
       "options": {
         "mode": "markdown",
-        "content": "**Operator tip — marking a maintenance window:** Click and drag across a time region on any graph below → select **Add annotation** → tag it with `maintenance` and the site namespace name (e.g. `backuptest`). A blue shaded band will appear across all graphs on this dashboard, indicating scheduled downtime that may be excluded from SLA discussions."
+        "content": "**Operator tip — marking a maintenance window:** On any time series graph below, hold **Ctrl** (Windows/Linux) or **⌘ Cmd** (Mac) then click and drag across the downtime period → an annotation dialog appears → set the description, then add the tags `maintenance` and the site namespace name (e.g. `backuptest`). A blue shaded band will appear across all graphs on this dashboard. Without the Ctrl/Cmd key, dragging zooms the time range instead of creating an annotation."
       },
       "title": "",
       "type": "text",
@@ -189,7 +189,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Continuous probe result over time: 1 = site UP (login page fully rendered), 0 = site DOWN or DEGRADED (probe failed).\n\nWhat you will see:\n• A flat line at 1.0 — site has been consistently available\n• A sharp drop to 0 — an outage or degraded period; the drop is instantaneous (step interpolation) so the exact start/end time is visible\n• No line at all — monitoring was not yet configured for this period (common for recently onboarded sites; adjust the time range to the period monitoring was active)\n\nBlue shaded bands = planned maintenance windows (marked by operators). These periods may be excluded from SLA calculations when discussing with customers.\n\nTo add a maintenance window: click and drag a time region on this graph → Add annotation → tag it 'maintenance' and the site name.",
+      "description": "Continuous probe result over time: 1 = site UP (login page fully rendered), 0 = site DOWN or DEGRADED (probe failed).\n\nWhat you will see:\n• A flat line at 1.0 — site has been consistently available\n• A sharp drop to 0 — an outage or degraded period; the drop is instantaneous (step interpolation) so the exact start/end time is visible\n• No line at all — monitoring was not yet configured for this period (common for recently onboarded sites; adjust the time range to the period monitoring was active)\n\nBlue shaded bands = planned maintenance windows (marked by operators). These periods may be excluded from SLA calculations when discussing with customers.\n\nTo add a maintenance window: hold Ctrl (Windows/Linux) or ⌘ Cmd (Mac) then click and drag across the downtime period → tag it 'maintenance' and the site namespace name.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -229,7 +229,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Same probe data as the Availability graph above, displayed as colour-coded bands instead of a line.\n\nHow to read it:\n• Green band = site was UP during that period\n• Red band = site was DOWN or DEGRADED during that period\n• Consecutive identical states are merged into one block, so a brief outage appears as a thin red sliver\n• The width of a red band is proportional to its duration — useful for estimating impact at a glance\n\nBlue shaded bands = planned maintenance windows. These are distinct from red bands and indicate scheduled downtime that may be excluded from SLA discussions.\n\nTo add a maintenance window: click and drag a time region on this graph → Add annotation → tag it 'maintenance' and the site name.",
+      "description": "Same probe data as the Availability graph above, displayed as colour-coded bands instead of a line.\n\nHow to read it:\n• Green band = site was UP during that period\n• Red band = site was DOWN or DEGRADED during that period\n• Consecutive identical states are merged into one block, so a brief outage appears as a thin red sliver\n• The width of a red band is proportional to its duration — useful for estimating impact at a glance\n\nBlue shaded bands = planned maintenance windows. These are distinct from red bands and indicate scheduled downtime that may be excluded from SLA discussions.\n\nTo add a maintenance window: hold Ctrl (Windows/Linux) or ⌘ Cmd (Mac) then click and drag across the downtime period → tag it 'maintenance' and the site namespace name.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
