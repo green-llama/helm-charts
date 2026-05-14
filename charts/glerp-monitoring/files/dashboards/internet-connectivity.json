@@ -73,9 +73,10 @@
       "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "title": "ISP Uptime — 30 Days",
       "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "glerp-victoriametrics" },
       "targets": [
         {
-          "expr": "glerp:isp_uptime_ratio_30d",
+          "expr": "avg_over_time(probe_success{job=\"internet-connectivity\"}[$__range]) * 100",
           "legendFormat": "ISP Uptime",
           "refId": "A",
           "instant": true
@@ -235,7 +236,7 @@
       }
     ]
   },
-  "time": { "from": "now-24h", "to": "now" },
+  "time": { "from": "now-30d", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
   "title": "GLerp — Internet Connectivity",

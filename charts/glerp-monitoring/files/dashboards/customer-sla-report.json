@@ -33,7 +33,7 @@
       "id": 99,
       "options": {
         "mode": "markdown",
-        "content": "**Operator tip — marking a maintenance window:**\n\nUse the Grafana annotations API (most reliable across all versions):\n\n```\ncurl -X POST https://&lt;grafana-url&gt;/api/annotations \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer &lt;api-token&gt;' \\\n  -d '{\n    \"text\": \"Planned maintenance\",\n    \"tags\": [\"maintenance\", \"&lt;site-name-or-all&gt;\"],\n    \"time\": &lt;epoch_ms_start&gt;,\n    \"timeEnd\": &lt;epoch_ms_end&gt;\n  }'\n```\n\nCreate a Grafana API token at: **⚙ Configuration → API Keys → Add API key** (role: Editor).\n\nConvert times at [epochconverter.com](https://epochconverter.com) — paste the ms value.\n\nTag with `maintenance` (required — this is what the dashboards filter on) plus the site name or `all` for your own reference. The blue shaded band appears on every monitoring dashboard that has the maintenance annotation layer; the extra tag is organisational only.\n\nAlternatively in Grafana UI: hold **Ctrl** (Windows/Linux) or **⌘ Cmd** (Mac) and drag on a timeseries panel, then add the tags above — but this requires Editor role and may not work in all Grafana versions."
+        "content": "**Operator tip — marking a maintenance window:**\n\nUse the **GLerp Maintenance Admin** tool (bookmark the URL your operator provides). Fill in the site, start/end time, and description — it automatically:\n- Writes the `glerp_maintenance_window` metric to VictoriaMetrics (excludes this period from the Adjusted SLA % panels below)\n- Creates a blue shaded annotation band on all monitoring dashboards\n- Creates an AlertManager silence so no alert emails are sent during the window\n\nFor global windows (all sites), select **All sites** in the form.\n\nTo delete a window: remove the Grafana annotation (click the blue band → pencil icon → delete) and expire the AlertManager silence via **Alerting → Silences**. Contact your operator to remove the VictoriaMetrics metric if needed."
       },
       "title": "",
       "type": "text",
@@ -183,6 +183,142 @@
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "id": 5,
+      "title": "Maintenance-Adjusted SLA — $site",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Uptime % with maintenance windows excluded from the calculation. During a defined maintenance window, any downtime does not count against the SLA figure.\n\nWhen no maintenance windows are defined this equals the raw uptime % above. Maintenance windows are created using the GLerp Maintenance Admin tool.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "decimals": 3,
+          "min": 95,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "orange", "value": 98.0 },
+              { "color": "green",  "value": 99.5 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 11 },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "Adjusted Uptime (excl. maintenance)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "(\n  sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n  / (\n    count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n    - default(sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]), 0)\n  )\n) * 100",
+          "legendFormat": "Adjusted Uptime %",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "SLA compliance status based on the maintenance-adjusted uptime %. Downtime that occurred within a defined maintenance window is excluded.\n\n• COMPLIANT (green) — adjusted uptime ≥ 99.5%\n• BREACH (red) — adjusted uptime < 99.5%",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",   "value": null },
+              { "color": "green", "value": 99.5 }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 99.5, "to": 100,
+                "result": { "text": "COMPLIANT", "color": "green", "index": 0 }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 0, "to": 99.4999,
+                "result": { "text": "BREACH", "color": "red", "index": 1 }
+              }
+            }
+          ]
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 11 },
+      "id": 7,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "SLA Status — Adjusted (99.5% target)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "(\n  sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n  / (\n    count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n    - default(sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]), 0)\n  )\n) * 100",
+          "legendFormat": "Adjusted Status",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Total minutes defined as maintenance windows for this site in the selected reporting period. These minutes are excluded from the adjusted SLA calculation above.\n\nEach maintenance window sample is recorded at 60-second resolution, so this value equals the total maintenance duration in minutes.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          }
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 11 },
+      "id": 8,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "Excused Maintenance Time (minutes)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "default(sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]), 0)",
+          "legendFormat": "Excused (min)",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
       "id": 10,
       "title": "Availability History",
       "type": "row"
@@ -204,7 +340,7 @@
           "max": 1.15
         }
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 11 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
       "id": 11,
       "options": {
         "tooltip": { "mode": "single" },
@@ -222,7 +358,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
       "id": 20,
       "title": "Outage Timeline",
       "type": "row"
@@ -251,7 +387,7 @@
           }
         }
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 27 },
       "id": 21,
       "options": {
         "mergeValues": true,

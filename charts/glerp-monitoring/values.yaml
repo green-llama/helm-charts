@@ -107,6 +107,34 @@ victoriaMetrics:
       cpu: 200m
       memory: 256Mi
 
+# ── Maintenance Window Admin ───────────────────────────────────────────────────
+# Optional browser-based tool for defining maintenance windows.
+# Writes glerp_maintenance_window metric to VictoriaMetrics, creates a Grafana
+# annotation, and creates an AlertManager silence — all in one form submission.
+#
+# One-time setup (ops team):
+#   1. Create a Grafana service account token (Editor role):
+#      Grafana → Administration → Service accounts → Add service account token
+#   2. Set grafanaToken, auth.password, and hostname below
+#   3. helm upgrade with maintenanceAdmin.enabled: true
+#
+# Day-to-day (Grafana-UI-only admin): bookmark the hostname URL.
+maintenanceAdmin:
+  enabled: false
+  # External hostname for the admin form. Must be reachable by the admin's browser.
+  # e.g. maintenance.monitoring.greenllama.tech
+  hostname: ""
+  # Internal Grafana URL (default works with Rancher Monitoring)
+  grafanaUrl: "http://rancher-monitoring-grafana.cattle-monitoring-system.svc.cluster.local"
+  # Grafana service account token with Editor role — REQUIRED when enabled
+  grafanaToken: ""
+  # Internal AlertManager URL (default works with Rancher Monitoring)
+  alertmanagerUrl: "http://rancher-monitoring-alertmanager.cattle-monitoring-system.svc.cluster.local:9093"
+  auth:
+    username: "admin"
+    # Set a strong password — this is the only protection for the admin form
+    password: ""
+
 # ── Blackbox Exporter subchart values ─────────────────────────────────────────
 # These are passed directly to the prometheus-blackbox-exporter chart.
 # See: https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-blackbox-exporter
