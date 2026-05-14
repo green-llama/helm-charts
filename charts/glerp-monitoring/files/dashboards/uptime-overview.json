@@ -118,7 +118,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "2=Up (green), 1=Degraded (yellow), 0=Down (red). Click a site name to drill into details.",
+      "description": "Current health state of each site, evaluated every 30 seconds:\n• UP (green, value 2) — basic HTTPS probe passes AND login-page content check passes\n• DEGRADED (orange, value 1) — HTTPS responds but login page is malformed (Frappe workers likely overloaded or crashed; Nginx is up but the app is broken)\n• DOWN (red, value 0) — site is not reachable at all\n\nNo Data shown here usually means the same site has more than one monitoring probe target active (e.g., two Services in the namespace both have the glerp-monitoring=enabled label). Fix: ensure exactly one Service per namespace has that label — typically the dedicated extraObjects monitoring-discovery Service. Remove the label from any other Service in the namespace.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -174,7 +174,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "30-day uptime % using login-tier probe (canonical SLA signal). Target: 99.5%.",
+      "description": "30-day uptime % per site, calculated from VictoriaMetrics (90-day retention). Uses the login-page content probe — the canonical SLA signal that detects both complete outages and degraded application states.\n\nTarget: 99.5% (≤ 3h 36m downtime per month).\nThresholds: red &lt;98%, orange 98–99.5%, green ≥99.5%.\n\nIf you see two entries for the same site (one correct, one showing 0%): a second Service in the namespace has the glerp-monitoring=enabled label but no valid public-url annotation. It probes a garbage URL and always fails. Fix: remove the label from any Service that does not have the glerp-monitoring/public-url annotation set correctly. Only one Service per namespace should have the label.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
