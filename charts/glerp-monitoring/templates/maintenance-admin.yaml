@@ -57,6 +57,8 @@ spec:
       labels:
         app.kubernetes.io/name: glerp-monitoring
         app.kubernetes.io/component: maintenance-admin
+      annotations:
+        checksum/script: {{ .Files.Get "files/maintenance-admin-server.py" | sha256sum }}
     spec:
       securityContext:
         runAsNonRoot: true
