@@ -193,9 +193,9 @@ def create_annotation(site, start_ms, end_ms, description):
 
 def create_silence(site, start_iso, end_iso, description):
     if site == "__all__":
-        matchers = [{"name": "alertname", "value": "GLerp.*", "isRegex": True}]
+        matchers = [{"name": "alertname", "value": "GLerp.*", "isRegex": True, "isEqual": True}]
     else:
-        matchers = [{"name": "site", "value": site, "isRegex": False}]
+        matchers = [{"name": "site", "value": site, "isRegex": False, "isEqual": True}]
     return alertmanager("POST", "/api/v2/silences", {
         "matchers":  matchers,
         "startsAt":  start_iso,
@@ -318,8 +318,8 @@ class Handler(BaseHTTPRequestHandler):
                 ))
                 return
 
-            start_iso = datetime.fromtimestamp(start_ms / 1000, tz=timezone.utc).isoformat()
-            end_iso   = datetime.fromtimestamp(end_ms   / 1000, tz=timezone.utc).isoformat()
+            start_iso = datetime.fromtimestamp(start_ms / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            end_iso   = datetime.fromtimestamp(end_ms   / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
             sites_to_write = get_sites() if site == "__all__" else [site]
             errors = []
@@ -333,9 +333,9 @@ class Handler(BaseHTTPRequestHandler):
             if st not in (200, 204):
                 errors.append(f"Grafana annotation failed (HTTP {st}) — check GRAFANA_TOKEN")
 
-            st, _ = create_silence(site, start_iso, end_iso, description)
+            st, am_body = create_silence(site, start_iso, end_iso, description)
             if st not in (200, 201):
-                errors.append(f"AlertManager silence failed (HTTP {st})")
+                errors.append(f"AlertManager silence failed (HTTP {st}): {am_body[:200]}")
 
             if errors:
                 msg = '<div class="msg err">' + "<br>".join(errors) + "</div>"
