@@ -134,6 +134,13 @@ maintenanceAdmin:
     username: "admin"
     # Set a strong password — this is the only protection for the admin form
     password: ""
+  # IngressRoute is placed in traefik-system so Traefik can reach it directly.
+  # tlsSecretName: name of the TLS Secret in traefik-system holding the wildcard cert.
+  tlsSecretName: "letsencrypt-greenllama-tech-tls"
+  # Google MFA middleware reference (must exist in traefik-system).
+  googleMfaMiddleware:
+    name: "google-mfa"
+    namespace: "traefik-system"
 
 # ── Blackbox Exporter subchart values ─────────────────────────────────────────
 # These are passed directly to the prometheus-blackbox-exporter chart.

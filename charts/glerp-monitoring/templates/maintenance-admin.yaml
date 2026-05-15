@@ -122,19 +122,26 @@ apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: {{ .Release.Name }}-maintenance-admin
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: traefik-system
+  annotations:
+    kubernetes.io/ingress.class: traefik
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`{{ .Values.maintenanceAdmin.hostname }}`)
-      kind: Rule
+    - kind: Rule
+      match: Host(`{{ .Values.maintenanceAdmin.hostname }}`) && PathPrefix(`/`)
+      middlewares:
+        - name: {{ .Values.maintenanceAdmin.googleMfaMiddleware.name }}
+          namespace: {{ .Values.maintenanceAdmin.googleMfaMiddleware.namespace }}
       services:
         - name: {{ .Release.Name }}-maintenance-admin
+          namespace: {{ .Values.monitoringNamespace }}
           port: 80
+          scheme: http
   tls:
-    certResolver: default
+    secretName: {{ .Values.maintenanceAdmin.tlsSecretName }}
 {{- end }}
 {{- end }}
