@@ -319,53 +319,13 @@
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
-      "id": 10,
-      "title": "Availability History",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Continuous probe result over time: 1 = site UP (login page fully rendered), 0 = site DOWN or DEGRADED (probe failed).\n\nWhat you will see:\n• A flat line at 1.0 — site has been consistently available\n• A sharp drop to 0 — an outage or degraded period; the drop is instantaneous (step interpolation) so the exact start/end time is visible\n• No line at all — adjust the time range to a period when monitoring was active\n\nBlue shaded bands = planned maintenance windows (marked by operators). These periods may be excluded from SLA calculations when discussing with customers.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 12,
-            "lineInterpolation": "stepAfter",
-            "spanNulls": false
-          },
-          "unit": "short",
-          "min": 0,
-          "max": 1.15
-        }
-      },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
-      "id": 11,
-      "options": {
-        "tooltip": { "mode": "single" },
-        "legend": { "displayMode": "hidden" }
-      },
-      "title": "Availability (login probe success)",
-      "type": "timeseries",
-      "targets": [
-        {
-          "expr": "probe_success{job=\"glerp-sites-login\", site=\"$site\"}",
-          "legendFormat": "$site",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
       "id": 20,
-      "title": "Outage Timeline",
+      "title": "Service Availability",
       "type": "row"
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Same probe data as the Availability graph above, displayed as colour-coded bands instead of a line.\n\nHow to read it:\n• Green band = site was UP during that period\n• Red band = site was DOWN or DEGRADED during that period\n• Consecutive identical states are merged into one block, so a brief outage appears as a thin red sliver\n• The width of a red band is proportional to its duration — useful for estimating impact at a glance\n\nBlue shaded bands = planned maintenance windows. These are distinct from red bands and indicate scheduled downtime that may be excluded from SLA discussions.\n\nTo mark a maintenance window: use the Grafana annotations API with tags [\"maintenance\", \"site-name\"] (or \"all\" for a global window). See the operator tip panel at the top of this dashboard for the full curl command.",
+      "description": "Colour-coded availability bands over the selected time range.\n\nHow to read it:\n• Green = site was available during that period\n• Red = site was unavailable or degraded (login page probe failed)\n• Blue shaded bands = planned maintenance windows — these periods are excluded from adjusted SLA calculations\n\nConsecutive identical states are merged into a single block; a brief outage appears as a thin red sliver whose width is proportional to its duration.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -373,8 +333,8 @@
             {
               "type": "value",
               "options": {
-                "0": { "text": "DOWN", "color": "red" },
-                "1": { "text": "UP",   "color": "green" }
+                "0": { "text": "UNAVAILABLE", "color": "red" },
+                "1": { "text": "AVAILABLE",   "color": "green" }
               }
             }
           ],
@@ -387,7 +347,7 @@
           }
         }
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 27 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
       "id": 21,
       "options": {
         "mergeValues": true,
@@ -397,7 +357,7 @@
         "tooltip": { "mode": "single" },
         "legend": { "displayMode": "list", "placement": "bottom" }
       },
-      "title": "Up / Down Timeline",
+      "title": "Availability Timeline",
       "type": "state-timeline",
       "targets": [
         {
