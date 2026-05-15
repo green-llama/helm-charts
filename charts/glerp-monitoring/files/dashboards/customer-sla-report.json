@@ -210,7 +210,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "(\n  sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]))\n  + (\n    sum by(site) (sum_over_time(glerp_maintenance_excused_failures{site=\"$site\"}[$__range]))\n    or\n    sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n  )\n) / sum by(site) (count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])) * 100",
+          "expr": "clamp_max(\n  (\n    sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]))\n    + (\n      sum by(site) (sum_over_time(glerp_maintenance_excused_failures{site=\"$site\"}[$__range]))\n      or\n      sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n    )\n  ) / sum by(site) (count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])) * 100,\n  100\n)",
           "legendFormat": "Adjusted Uptime %",
           "refId": "A",
           "instant": true
@@ -263,7 +263,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "(\n  sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]))\n  + (\n    sum by(site) (sum_over_time(glerp_maintenance_excused_failures{site=\"$site\"}[$__range]))\n    or\n    sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n  )\n) / sum by(site) (count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])) * 100",
+          "expr": "clamp_max(\n  (\n    sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]))\n    + (\n      sum by(site) (sum_over_time(glerp_maintenance_excused_failures{site=\"$site\"}[$__range]))\n      or\n      sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n    )\n  ) / sum by(site) (count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])) * 100,\n  100\n)",
           "legendFormat": "Adjusted Status",
           "refId": "A",
           "instant": true

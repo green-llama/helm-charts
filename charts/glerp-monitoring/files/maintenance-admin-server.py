@@ -192,9 +192,26 @@ def write_metric(site, start_ms, end_ms):
     result = vm_post_text("/api/v1/import/prometheus", "\n".join(lines) + "\n")
     # For windows that have already ended, query actual failed probe samples
     # and record them as excused failures so the adjusted SLA formula is exact.
+    # Pre-delete any existing excused_failures for this range first to prevent
+    # accumulation if the same window period is written more than once.
     if end_ms < int(time.time() * 1000):
+        _delete_excused_failures(site, start_ms, end_ms)
         _write_excused_failures(site, start_ms, end_ms)
     return result
+
+
+def _delete_excused_failures(site, start_ms, end_ms):
+    """Delete any existing excused_failures samples for the given window before re-writing."""
+    if site == "all":
+        sel = "glerp_maintenance_excused_failures"
+    else:
+        sel = f'glerp_maintenance_excused_failures{{site="{site}"}}'
+    qs = urllib.parse.urlencode({
+        "match[]": sel,
+        "start": int(start_ms / 1000),
+        "end":   int(end_ms   / 1000),
+    })
+    _http("POST", VM_URL.rstrip("/") + f"/api/v1/admin/tsdb/delete_series?{qs}")
 
 
 def _write_excused_failures(site, start_ms, end_ms):
