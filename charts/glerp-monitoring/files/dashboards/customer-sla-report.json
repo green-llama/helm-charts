@@ -210,7 +210,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "(\n  sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n  / (\n    count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n    - (sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]) or sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n  )\n) * 100",
+          "expr": "(\n  sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]))\n  + (\n    sum by(site) (sum_over_time(glerp_maintenance_excused_failures{site=\"$site\"}[$__range]))\n    or\n    sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n  )\n) / sum by(site) (count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])) * 100",
           "legendFormat": "Adjusted Uptime %",
           "refId": "A",
           "instant": true
@@ -263,7 +263,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "(\n  sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n  / (\n    count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])\n    - (sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]) or sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n  )\n) * 100",
+          "expr": "(\n  sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]))\n  + (\n    sum by(site) (sum_over_time(glerp_maintenance_excused_failures{site=\"$site\"}[$__range]))\n    or\n    sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)\n  )\n) / sum by(site) (count_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range])) * 100",
           "legendFormat": "Adjusted Status",
           "refId": "A",
           "instant": true
@@ -298,7 +298,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range]) or sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0",
+          "expr": "sum by(site) (sum_over_time(glerp_maintenance_window{site=\"$site\"}[$__range])) or sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=\"$site\"}[$__range]) * 0)",
           "legendFormat": "Excused (min)",
           "refId": "A",
           "instant": true

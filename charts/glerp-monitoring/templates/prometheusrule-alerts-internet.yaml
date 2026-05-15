@@ -40,15 +40,3 @@ spec:
               This is not a full ISP outage and does not suppress site alerts.
               Check: {{ "{{" }} $labels.instance {{ "}}" }}
 
-        # ── ISP restored (resolution notification) ─────────────────────────────
-        - alert: ISPConnectivityRestored
-          expr: avg(probe_success{job="internet-connectivity"}) == 1
-          for: 2m
-          labels:
-            severity: info
-            alert_type: isp_restored
-          annotations:
-            summary: "ISP / Internet connectivity RESTORED ({{ .Values.cluster.name }})"
-            description: >
-              All external internet probes are succeeding again. ISP connectivity
-              has been restored. Site alert monitoring has resumed.

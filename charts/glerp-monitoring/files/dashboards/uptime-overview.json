@@ -244,7 +244,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "(\n  sum_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[30d])\n  / (\n    count_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[30d])\n    - (sum_over_time(glerp_maintenance_window{site=~\"$site\"}[30d]) or sum_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[30d]) * 0)\n  )\n) * 100",
+          "expr": "(\n  sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[30d]))\n  + (\n    sum by(site) (sum_over_time(glerp_maintenance_excused_failures{site=~\"$site\"}[30d]))\n    or\n    sum by(site) (sum_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[30d]) * 0)\n  )\n) / sum by(site) (count_over_time(probe_success{job=\"glerp-sites-login\", site=~\"$site\"}[30d])) * 100",
           "legendFormat": "{{ site }}",
           "refId": "A",
           "instant": true

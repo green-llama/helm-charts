@@ -183,21 +183,50 @@ def write_metric(site, start_ms, end_ms):
     while ts <= end_ms:
         lines.append(f'glerp_maintenance_window{{site="{site}"}} 1 {ts}')
         ts += 60_000
-    return vm_post_text("/api/v1/import/prometheus", "\n".join(lines) + "\n")
+    result = vm_post_text("/api/v1/import/prometheus", "\n".join(lines) + "\n")
+    # For windows that have already ended, query actual failed probe samples
+    # and record them as excused failures so the adjusted SLA formula is exact.
+    if end_ms < int(time.time() * 1000):
+        _write_excused_failures(site, start_ms, end_ms)
+    return result
+
+
+def _write_excused_failures(site, start_ms, end_ms):
+    """Query probe_success during the window; write a failure sample for each 0."""
+    qs = urllib.parse.urlencode({
+        "query": f'probe_success{{job="glerp-sites-login",site="{site}"}}',
+        "start": int(start_ms / 1000),
+        "end":   int(end_ms   / 1000),
+        "step":  "30s",
+    })
+    st, body = _http("GET", VM_URL.rstrip("/") + f"/api/v1/query_range?{qs}")
+    if st != 200:
+        return
+    lines = []
+    for result in json.loads(body).get("data", {}).get("result", []):
+        for ts_str, val_str in result.get("values", []):
+            if float(val_str) == 0:
+                ts_ms = int(float(ts_str) * 1000)
+                lines.append(
+                    f'glerp_maintenance_excused_failures{{site="{site}"}} 1 {ts_ms}')
+    if lines:
+        vm_post_text("/api/v1/import/prometheus", "\n".join(lines) + "\n")
 
 
 def delete_metric(site, start_ms, end_ms):
-    """Remove glerp_maintenance_window samples for a site within the time range."""
+    """Remove glerp_maintenance_window and glerp_maintenance_excused_failures samples."""
     if site == "all":
-        selector = "glerp_maintenance_window"          # all sites
+        window_sel  = "glerp_maintenance_window"
+        excused_sel = "glerp_maintenance_excused_failures"
     else:
-        selector = f'glerp_maintenance_window{{site="{site}"}}'
-    qs = urllib.parse.urlencode({
-        "match[]": selector,
-        "start":   int(start_ms / 1000),
-        "end":     int(end_ms   / 1000),
-    })
-    return _http("POST", VM_URL.rstrip("/") + f"/api/v1/admin/tsdb/delete_series?{qs}")
+        window_sel  = f'glerp_maintenance_window{{site="{site}"}}'
+        excused_sel = f'glerp_maintenance_excused_failures{{site="{site}"}}'
+    start_s = int(start_ms / 1000)
+    end_s   = int(end_ms   / 1000)
+    for sel in (window_sel, excused_sel):
+        qs = urllib.parse.urlencode({"match[]": sel, "start": start_s, "end": end_s})
+        _http("POST", VM_URL.rstrip("/") + f"/api/v1/admin/tsdb/delete_series?{qs}")
+    return 204, ""
 
 
 def create_annotation(site, start_ms, end_ms, description, silence_id=""):
