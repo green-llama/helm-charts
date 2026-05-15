@@ -16,12 +16,16 @@ metadata:
     grafana_dashboard: {{ .Values.grafana.dashboardLabel | quote }}
   annotations:
     grafana_folder: {{ .Values.grafana.folderName | quote }}
+{{- $maintLink := "" }}
+{{- if and .Values.maintenanceAdmin.enabled .Values.maintenanceAdmin.hostname }}
+{{- $maintLink = printf ",\n    { \"title\": \"Maintenance Admin\", \"url\": \"https://%s\", \"type\": \"link\", \"icon\": \"external link\", \"targetBlank\": true }" .Values.maintenanceAdmin.hostname }}
+{{- end }}
 data:
   uptime-overview.json: |-
-    {{ .Files.Get "files/dashboards/uptime-overview.json" | nindent 4 }}
+    {{ .Files.Get "files/dashboards/uptime-overview.json" | replace "__MAINTENANCE_ADMIN_LINK__" $maintLink | nindent 4 }}
   sla-compliance.json: |-
-    {{ .Files.Get "files/dashboards/sla-compliance.json" | nindent 4 }}
+    {{ .Files.Get "files/dashboards/sla-compliance.json" | replace "__MAINTENANCE_ADMIN_LINK__" $maintLink | nindent 4 }}
   internet-connectivity.json: |-
-    {{ .Files.Get "files/dashboards/internet-connectivity.json" | nindent 4 }}
+    {{ .Files.Get "files/dashboards/internet-connectivity.json" | replace "__MAINTENANCE_ADMIN_LINK__" $maintLink | nindent 4 }}
   customer-sla-report.json: |-
-    {{ .Files.Get "files/dashboards/customer-sla-report.json" | nindent 4 }}
+    {{ .Files.Get "files/dashboards/customer-sla-report.json" | replace "__MAINTENANCE_ADMIN_LINK__" $maintLink | nindent 4 }}

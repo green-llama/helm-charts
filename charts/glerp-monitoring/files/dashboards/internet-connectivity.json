@@ -24,7 +24,7 @@
   "graphTooltip": 1,
   "id": null,
   "links": [
-    { "title": "Uptime Overview", "url": "/d/glerp-uptime-overview", "type": "link", "icon": "external link" }
+    { "title": "Uptime Overview", "url": "/d/glerp-uptime-overview", "type": "link", "icon": "external link" }__MAINTENANCE_ADMIN_LINK__
   ],
   "panels": [
     {
