@@ -324,8 +324,8 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Continuous probe result over time: 1 = site UP (login page fully rendered), 0 = site DOWN or DEGRADED (probe failed).\n\nWhat you will see:\n• A flat line at 1.0 — site has been consistently available\n• A sharp drop to 0 — an outage or degraded period; the drop is instantaneous (step interpolation) so the exact start/end time is visible\n• No line at all — monitoring was not yet configured for this period (common for recently onboarded sites; adjust the time range to the period monitoring was active)\n\nBlue shaded bands = planned maintenance windows (marked by operators). These periods may be excluded from SLA calculations when discussing with customers.\n\nTo mark a maintenance window: use the Grafana annotations API with tags [\"maintenance\", \"site-name\"] (or \"all\" for a global window). See the operator tip panel at the top of this dashboard for the full curl command.",
+      "datasource": { "type": "prometheus", "uid": "${datasource_prom}" },
+      "description": "Continuous probe result over time: 1 = site UP (login page fully rendered), 0 = site DOWN or DEGRADED (probe failed).\n\nData source: Rancher Monitoring Prometheus (live data, ~10 day retention). The SLA % panels above use VictoriaMetrics for long-term accuracy; this graph uses Prometheus so it always shows current activity regardless of how long VictoriaMetrics has been collecting.\n\nWhat you will see:\n• A flat line at 1.0 — site has been consistently available\n• A sharp drop to 0 — an outage or degraded period; the drop is instantaneous (step interpolation) so the exact start/end time is visible\n• No line at all — monitoring was not yet configured for this period (common for recently onboarded sites; adjust the time range to the period monitoring was active)\n\nBlue shaded bands = planned maintenance windows (marked by operators). These periods may be excluded from SLA calculations when discussing with customers.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -364,7 +364,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "${datasource_prom}" },
       "description": "Same probe data as the Availability graph above, displayed as colour-coded bands instead of a line.\n\nHow to read it:\n• Green band = site was UP during that period\n• Red band = site was DOWN or DEGRADED during that period\n• Consecutive identical states are merged into one block, so a brief outage appears as a thin red sliver\n• The width of a red band is proportional to its duration — useful for estimating impact at a glance\n\nBlue shaded bands = planned maintenance windows. These are distinct from red bands and indicate scheduled downtime that may be excluded from SLA discussions.\n\nTo mark a maintenance window: use the Grafana annotations API with tags [\"maintenance\", \"site-name\"] (or \"all\" for a global window). See the operator tip panel at the top of this dashboard for the full curl command.",
       "fieldConfig": {
         "defaults": {
@@ -426,6 +426,16 @@
         "options": [],
         "query": "prometheus",
         "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "hide": 2,
+        "includeAll": false,
+        "name": "datasource_prom",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "/^(?!VictoriaMetrics).*/",
         "type": "datasource"
       },
       {
