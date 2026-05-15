@@ -18,7 +18,11 @@ metadata:
     grafana_folder: {{ .Values.grafana.folderName | quote }}
 {{- $maintLink := "" }}
 {{- if and .Values.maintenanceAdmin.enabled .Values.maintenanceAdmin.hostname }}
-{{- $maintLink = printf ",\n    { \"title\": \"Maintenance Admin\", \"url\": \"https://%s\", \"type\": \"link\", \"icon\": \"external link\", \"targetBlank\": true }" .Values.maintenanceAdmin.hostname }}
+{{- $maintUrl := printf "https://%s" .Values.maintenanceAdmin.hostname }}
+{{- if .Values.maintenanceAdmin.port }}
+{{- $maintUrl = printf "https://%s:%s" .Values.maintenanceAdmin.hostname .Values.maintenanceAdmin.port }}
+{{- end }}
+{{- $maintLink = printf ",\n    { \"title\": \"Maintenance Admin\", \"url\": \"%s\", \"type\": \"link\", \"icon\": \"external link\", \"targetBlank\": true }" $maintUrl }}
 {{- end }}
 data:
   uptime-overview.json: |-

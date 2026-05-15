@@ -121,9 +121,12 @@ victoriaMetrics:
 # Day-to-day (Grafana-UI-only admin): bookmark the hostname URL.
 maintenanceAdmin:
   enabled: false
-  # External hostname for the admin form. Must be reachable by the admin's browser.
-  # e.g. maintenance.monitoring.greenllama.tech
+  # External hostname for the admin form (bare DNS name, no port). Must be reachable by the admin's browser.
+  # e.g. maintenance.greenllama.tech
   hostname: ""
+  # External port when the admin form is served on a non-standard HTTPS port.
+  # Leave empty for standard HTTPS (443). Set to e.g. "10443" for dev clusters.
+  port: ""
   # Internal Grafana URL (default works with Rancher Monitoring)
   grafanaUrl: "http://rancher-monitoring-grafana.cattle-monitoring-system.svc.cluster.local"
   # Grafana service account token with Editor role — REQUIRED when enabled
