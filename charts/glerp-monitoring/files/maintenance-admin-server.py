@@ -11,7 +11,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 VM_URL       = os.environ.get("VM_URL",       "http://localhost:8428")
@@ -55,14 +55,17 @@ PAGE = """\
 </style>
 <script>
   document.addEventListener("DOMContentLoaded",function(){{
+    var rawOff=new Date().getTimezoneOffset(); // positive for UTC-N (e.g. CDT=+300)
+    var tzField=document.getElementById("tz_offset");
+    if(tzField) tzField.value=rawOff;
     var el=document.getElementById("tzinfo");
     if(el){{
-      var off=-new Date().getTimezoneOffset();
+      var off=-rawOff; // negate for display (UTC+N notation)
       var sign=off>=0?"+":"-";
       var h=String(Math.floor(Math.abs(off)/60)).padStart(2,"0");
       var m=String(Math.abs(off)%60).padStart(2,"0");
-      el.textContent="Your browser timezone offset: UTC"+sign+h+":"+m+
-        " — enter times in your local time and the server will convert to UTC automatically.";
+      el.textContent="Browser timezone: UTC"+sign+h+":"+m+
+        " — enter times in your local time, the server converts to UTC automatically.";
     }}
   }});
 </script>
@@ -92,6 +95,7 @@ PAGE = """\
   <div id="tzinfo" class="tz"></div>
   <label>Description</label>
   <input type="text" name="description" placeholder="e.g. ERPNext v16.1 upgrade — backuptest" required>
+  <input type="hidden" name="tz_offset" id="tz_offset" value="0">
   <p class="note">Times are read from your browser's local timezone and converted to UTC automatically.</p>
   <button type="submit">Create Maintenance Window</button>
 </form>
@@ -205,16 +209,20 @@ def create_silence(site, start_iso, end_iso, description):
     })
 
 
-def parse_local_dt(s):
-    """Parse datetime-local string with optional timezone offset, return epoch ms."""
-    # Browsers send YYYY-MM-DDTHH:MM or YYYY-MM-DDTHH:MM:SS
-    # We try to parse as-is; if no tzinfo, treat as UTC (user is told this in the UI)
+def parse_local_dt(s, tz_offset_minutes=0):
+    """Parse datetime-local string (naive browser local time) and return UTC epoch ms.
+
+    tz_offset_minutes is the browser's getTimezoneOffset() value:
+      positive for UTC-N zones (e.g. CDT/UTC-5 → +300)
+      negative for UTC+N zones (e.g. UTC+2 → -120)
+    UTC = local + tz_offset_minutes, so we add the offset to shift correctly.
+    """
     try:
         dt = datetime.fromisoformat(s)
     except ValueError:
         raise ValueError(f"Cannot parse '{s}' as a date/time")
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=timezone.utc) + timedelta(minutes=tz_offset_minutes)
     return int(dt.timestamp() * 1000)
 
 # ---------------------------------------------------------------------------
@@ -296,6 +304,10 @@ class Handler(BaseHTTPRequestHandler):
             start_str   = p("start")
             end_str     = p("end")
             description = p("description")
+            try:
+                tz_offset = int(p("tz_offset") or "0")
+            except ValueError:
+                tz_offset = 0
 
             if not all([site, start_str, end_str, description]):
                 self._send_html(self._render(
@@ -304,8 +316,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                start_ms = parse_local_dt(start_str)
-                end_ms   = parse_local_dt(end_str)
+                start_ms = parse_local_dt(start_str, tz_offset)
+                end_ms   = parse_local_dt(end_str, tz_offset)
             except ValueError as e:
                 self._send_html(self._render(
                     f'<div class="msg err">Invalid date/time: {e}</div>'
