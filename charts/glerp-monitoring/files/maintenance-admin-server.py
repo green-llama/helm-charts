@@ -49,6 +49,7 @@ input,select{{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4p
 .msg{{padding:12px 16px;border-radius:4px;margin-bottom:16px}}
 .ok{{background:#d4edda;border:1px solid #28a745}}
 .err{{background:#f8d7da;border:1px solid #dc3545}}
+.info{{background:#d1ecf1;border:1px solid #17a2b8}}
 table{{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:8px}}
 th,td{{text-align:left;padding:7px 10px;border-bottom:1px solid #ddd;vertical-align:top}}
 th{{background:#eef;font-size:.8rem}}
@@ -478,7 +479,8 @@ class Handler(BaseHTTPRequestHandler):
                 end_ms   / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
             sites_to_write = get_sites() if site == "__all__" else [site]
-            errors = []
+            errors  = []
+            notices = []
 
             # 1. Write VictoriaMetrics metric
             for s in sites_to_write:
@@ -490,24 +492,35 @@ class Handler(BaseHTTPRequestHandler):
             #    can store the silence ID in the annotation tags)
             st, am_err, silence_id = create_silence(site, start_iso, end_iso, description)
             if st not in (200, 201):
-                errors.append(f"AlertManager silence failed (HTTP {st}): {am_err}")
+                if st == 400 and "past" in am_err.lower():
+                    notices.append(
+                        "AlertManager silence was not created because the window end time "
+                        "is in the past — this is expected for retroactive entries. "
+                        "No silence is needed since the period has already ended."
+                    )
+                else:
+                    errors.append(f"AlertManager silence failed (HTTP {st}): {am_err}")
 
             # 3. Create Grafana annotation (carries silence ID in tags)
             st, _ = create_annotation(site, start_ms, end_ms, description, silence_id)
             if st not in (200, 204):
                 errors.append(f"Grafana annotation failed (HTTP {st}) — check GRAFANA_TOKEN")
 
+            notice_html = (
+                '<div class="msg info">' + "<br>".join(notices) + "</div>"
+            ) if notices else ""
+
             if errors:
-                msg = '<div class="msg err">' + "<br>".join(errors) + "</div>"
+                msg = '<div class="msg err">' + "<br>".join(errors) + "</div>" + notice_html
             else:
                 label = "all sites" if site == "__all__" else f"<strong>{site}</strong>"
+                silence_note = f" · AlertManager silence created (ID: {silence_id})" if silence_id else ""
                 msg = (
                     f'<div class="msg ok">Maintenance window created for {label}:<br>'
                     f"UTC {start_iso} → {end_iso}<br>"
-                    f"VictoriaMetrics metric written · "
-                    f"Grafana annotation created · "
-                    f"AlertManager silence created"
-                    f"{' (ID: ' + silence_id + ')' if silence_id else ''}</div>"
+                    f"VictoriaMetrics metric written · Grafana annotation created"
+                    f"{silence_note}</div>"
+                    + notice_html
                 )
 
             self._send_html(self._render(msg))
