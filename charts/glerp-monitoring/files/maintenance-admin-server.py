@@ -4,8 +4,7 @@ GLerp Maintenance Window Admin
 Create / list / delete maintenance windows.
 Each window writes a VictoriaMetrics metric, a Grafana annotation, and an
 AlertManager silence.  Deletion expires the silence, removes the VM samples,
-and moves the annotation to the "maintenance-deleted" tag so it disappears
-from dashboards but remains visible in this admin GUI.
+and permanently deletes the Grafana annotation (blue band removed from dashboards).
 """
 import base64
 import json
@@ -56,7 +55,6 @@ th{{background:#eef;font-size:.8rem}}
 .s-active{{color:#28a745;font-weight:700}}
 .s-upcoming{{color:#fd7e14;font-weight:700}}
 .s-past{{color:#6c757d}}
-.s-deleted{{color:#aaa;text-decoration:line-through}}
 .del-panel{{display:none;margin-top:8px;padding:10px;background:#fff3cd;
              border:1px solid #ffc107;border-radius:4px}}
 .del-panel input{{margin-bottom:8px}}
@@ -68,15 +66,25 @@ document.addEventListener("DOMContentLoaded",function(){{
   var rawOff=new Date().getTimezoneOffset();
   var tzField=document.getElementById("tz_offset");
   if(tzField) tzField.value=rawOff;
+  var off=-rawOff;
+  var sign=off>=0?"+":"-";
+  var h=String(Math.floor(Math.abs(off)/60)).padStart(2,"0");
+  var m=String(Math.abs(off)%60).padStart(2,"0");
+  var tzStr="UTC"+sign+h+":"+m;
   var el=document.getElementById("tzinfo");
   if(el){{
-    var off=-rawOff;
-    var sign=off>=0?"+":"-";
-    var h=String(Math.floor(Math.abs(off)/60)).padStart(2,"0");
-    var m=String(Math.abs(off)%60).padStart(2,"0");
-    el.textContent="Browser timezone: UTC"+sign+h+":"+m+
+    el.textContent="Browser timezone: "+tzStr+
       " — enter times in your local time, the server converts to UTC automatically.";
   }}
+  var pad=function(n){{return String(n).padStart(2,"0");}};
+  document.querySelectorAll(".local-time").forEach(function(span){{
+    var ms=parseInt(span.getAttribute("data-ms"),10);
+    if(!isNaN(ms)){{
+      var d=new Date(ms);
+      span.textContent=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+
+        " "+pad(d.getHours())+":"+pad(d.getMinutes())+" ("+tzStr+")";
+    }}
+  }});
 }});
 function showDel(id){{document.getElementById("del-"+id).style.display="block";}}
 function hideDel(id){{document.getElementById("del-"+id).style.display="none";}}
@@ -121,10 +129,8 @@ mark it on Grafana dashboards, and suppress alerts.</p>
 <p class="note">
   <strong>Active</strong> = window is ongoing now (alerts suppressed)&nbsp;·&nbsp;
   <strong>Upcoming</strong> = starts in the future&nbsp;·&nbsp;
-  <strong>Past</strong> = completed&nbsp;·&nbsp;
-  <span class="s-deleted">Deleted</span> = removed from SLA and dashboards,
-  retained here for audit.
-  All times shown in UTC.
+  <strong>Past</strong> = completed.
+  Times are shown in your browser's local timezone.
 </p>
 </div>
 </body>
@@ -249,20 +255,8 @@ def get_annotation(ann_id):
 
 
 def mark_annotation_deleted(ann_id, original_ann, delete_comment):
-    """Move annotation from 'maintenance' to 'maintenance-deleted' tag."""
-    old_tags = original_ann.get("tags", [])
-    new_tags = ["maintenance-deleted"] + [
-        t for t in old_tags
-        if t != "maintenance" and not t.startswith("silence:")
-    ]
-    original_text = original_ann.get("text", "")
-    new_text = f"[DELETED: {delete_comment}]\n\n{original_text}"
-    return grafana("PUT", f"/api/annotations/{ann_id}", {
-        "time":    original_ann.get("time",    0),
-        "timeEnd": original_ann.get("timeEnd", 0),
-        "tags":    new_tags,
-        "text":    new_text,
-    })
+    """Delete the Grafana annotation so the blue band is removed from dashboards."""
+    return grafana("DELETE", f"/api/annotations/{ann_id}")
 
 
 def create_silence(site, start_iso, end_iso, description):
@@ -314,7 +308,7 @@ def parse_local_dt(s, tz_offset_minutes=0):
 
 def _ann_site(ann):
     for t in ann.get("tags", []):
-        if t not in ("maintenance", "maintenance-deleted") and not t.startswith("silence:"):
+        if t != "maintenance" and not t.startswith("silence:"):
             return t
     return "?"
 
@@ -326,20 +320,18 @@ def _ann_silence_id(ann):
     return None
 
 
-def _fmt_utc(ms):
+def _fmt_ms(ms):
     if not ms:
         return "—"
-    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
+    utc_str = datetime.fromtimestamp(ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return f'<span class="local-time" data-ms="{ms}">{utc_str}</span>'
 
 
 def get_all_windows():
-    windows = {}
-    for tag in ("maintenance", "maintenance-deleted"):
-        st, body = grafana("GET", f"/api/annotations?tags={tag}&limit=200")
-        if st == 200:
-            for ann in json.loads(body):
-                windows[ann["id"]] = ann   # deduplicate by id
-    return sorted(windows.values(), key=lambda x: x.get("time", 0), reverse=True)
+    st, body = grafana("GET", "/api/annotations?tags=maintenance&limit=200")
+    if st == 200:
+        return sorted(json.loads(body), key=lambda x: x.get("time", 0), reverse=True)
+    return []
 
 
 def render_windows():
@@ -354,17 +346,13 @@ def render_windows():
     now_ms = int(time.time() * 1000)
     rows   = []
     for ann in anns:
-        tags    = ann.get("tags", [])
-        deleted = "maintenance-deleted" in tags
-        site    = _ann_site(ann)
-        start   = ann.get("time",    0)
-        end     = ann.get("timeEnd", start)
-        text    = ann.get("text",    "")
-        ann_id  = ann["id"]
+        site   = _ann_site(ann)
+        start  = ann.get("time",    0)
+        end    = ann.get("timeEnd", start)
+        text   = ann.get("text",    "")
+        ann_id = ann["id"]
 
-        if deleted:
-            css, label = "s-deleted",  "Deleted"
-        elif start > now_ms:
+        if start > now_ms:
             css, label = "s-upcoming", "Upcoming"
         elif end > now_ms:
             css, label = "s-active",   "Active"
@@ -373,29 +361,26 @@ def render_windows():
 
         display = (text[:72] + "…") if len(text) > 72 else text
 
-        if deleted:
-            action = ""
-        else:
-            action = (
-                f'<button class="btn btn-red" onclick="showDel({ann_id})">Delete…</button>'
-                f'<div class="del-panel" id="del-{ann_id}">'
-                f'<form method="POST" action="/delete">'
-                f'<input type="hidden" name="annotation_id" value="{ann_id}">'
-                f'<label style="font-size:.8rem;margin-top:0">Deletion reason (required)</label>'
-                f'<input type="text" name="delete_comment"'
-                f'       placeholder="e.g. Window cancelled — upgrade postponed" required>'
-                f'<div style="margin-top:8px">'
-                f'<button type="submit" class="btn btn-red">Confirm Delete</button>'
-                f'&nbsp;<button type="button" class="btn btn-grey"'
-                f'        onclick="hideDel({ann_id})">Cancel</button>'
-                f'</div></form></div>'
-            )
+        action = (
+            f'<button class="btn btn-red" onclick="showDel({ann_id})">Delete…</button>'
+            f'<div class="del-panel" id="del-{ann_id}">'
+            f'<form method="POST" action="/delete">'
+            f'<input type="hidden" name="annotation_id" value="{ann_id}">'
+            f'<label style="font-size:.8rem;margin-top:0">Deletion reason (required)</label>'
+            f'<input type="text" name="delete_comment"'
+            f'       placeholder="e.g. Window cancelled — upgrade postponed" required>'
+            f'<div style="margin-top:8px">'
+            f'<button type="submit" class="btn btn-red">Confirm Delete</button>'
+            f'&nbsp;<button type="button" class="btn btn-grey"'
+            f'        onclick="hideDel({ann_id})">Cancel</button>'
+            f'</div></form></div>'
+        )
 
         rows.append(
             f"<tr>"
             f"<td>{site}</td>"
-            f"<td>{_fmt_utc(start)}</td>"
-            f"<td>{_fmt_utc(end)}</td>"
+            f"<td>{_fmt_ms(start)}</td>"
+            f"<td>{_fmt_ms(end)}</td>"
             f"<td>{display}</td>"
             f'<td class="{css}">{label}</td>'
             f"<td>{action}</td>"
@@ -404,7 +389,7 @@ def render_windows():
 
     return (
         "<table>"
-        "<tr><th>Site</th><th>Start (UTC)</th><th>End (UTC)</th>"
+        "<tr><th>Site</th><th>Start</th><th>End</th>"
         "<th>Description</th><th>Status</th><th>Action</th></tr>"
         + "".join(rows)
         + "</table>"
@@ -609,12 +594,12 @@ class Handler(BaseHTTPRequestHandler):
                     f"Note: VictoriaMetrics delete returned HTTP {st} — "
                     "samples may persist until background merge completes")
 
-            # 3. Mark Grafana annotation as deleted (removes blue band from dashboards)
+            # 3. Delete Grafana annotation (removes blue band from dashboards immediately)
             st, body = mark_annotation_deleted(ann_id, ann, delete_comment)
             if st in (200, 204):
-                notices.append("Grafana annotation updated (no longer shown on dashboards)")
+                notices.append("Grafana annotation deleted (blue band removed from dashboards)")
             else:
-                errors.append(f"Could not update Grafana annotation (HTTP {st}): {body[:120]}")
+                errors.append(f"Could not delete Grafana annotation (HTTP {st}): {body[:120]}")
 
             if errors:
                 msg = '<div class="msg err">' + "<br>".join(errors + notices) + "</div>"
