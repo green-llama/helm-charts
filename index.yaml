@@ -3,7 +3,39 @@ entries:
   glerp-monitoring:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-15T01:54:37.524829114Z'
+    created: "2026-05-15T02:48:00.724374419Z"
+    dependencies:
+    - alias: blackbox-exporter
+      condition: blackbox-exporter.enabled
+      name: prometheus-blackbox-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 9.4.0
+    description: 'Uptime monitoring for GLerp (ERPNext v16) sites and ISP connectivity.
+      Includes Prometheus Blackbox Exporter, VictoriaMetrics long-term storage (90d),
+      alert rules, AlertManager email routing, and three Grafana dashboards (Uptime
+      Overview, SLA Compliance, Internet Connectivity). New sites are discovered automatically
+      by labeling their Kubernetes Service. '
+    digest: 43c51e2230a0649bcb90c603a41334a8b5226f055e0b8a4abf34e956abef4324
+    home: https://github.com/green-llama/k8-glerp-monitoring
+    keywords:
+    - monitoring
+    - uptime
+    - sla
+    - glerp
+    - erpnext
+    maintainers:
+    - email: ops@greenllama.tech
+      name: Green Llama Technologies
+    name: glerp-monitoring
+    sources:
+    - https://github.com/green-llama/k8-glerp-monitoring
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-0.2.17/glerp-monitoring-0.2.17.tgz
+    version: 0.2.17
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-05-15T01:54:37.524829114Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -35,7 +67,7 @@ entries:
     version: 0.2.16
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-15T01:48:16.32544248Z'
+    created: "2026-05-15T01:48:16.32544248Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -67,7 +99,7 @@ entries:
     version: 0.2.15
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-14T05:33:57.247323931Z'
+    created: "2026-05-14T05:33:57.247323931Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -100,7 +132,7 @@ entries:
   k8-glerp-ai-intake:
   - apiVersion: v2
     appVersion: 0.3.1
-    created: '2026-04-22T17:27:24.33800416Z'
+    created: "2026-04-22T17:27:24.33800416Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: 4469a34731bbafa44dbb635917ddba042f438a76bab1e77eef492a42ec2cd530
     home: https://github.com/green-llama/k8-glerp-ai-intake
@@ -121,7 +153,7 @@ entries:
     version: 0.3.3
   - apiVersion: v2
     appVersion: 0.3.0
-    created: '2026-04-22T03:30:18.806430986Z'
+    created: "2026-04-22T03:30:18.806430986Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: b35a393688a84512df3b5bb2e3cc4d063e5a3c404d2991d80943f9dae361bee9
     home: https://github.com/green-llama/k8-glerp-ai-intake
@@ -142,7 +174,7 @@ entries:
     version: 0.3.2
   - apiVersion: v2
     appVersion: 0.3.0
-    created: '2026-04-21T20:01:02.825415333Z'
+    created: "2026-04-21T20:01:02.825415333Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: 96f9a9d23ebb1ad03f4b9e8d671313568cc9855eb4f1bb524a079f0271a0c706
     home: https://github.com/green-llama/k8-glerp-ai-intake
@@ -163,7 +195,7 @@ entries:
     version: 0.3.1
   - apiVersion: v2
     appVersion: 0.3.0
-    created: '2026-03-17T03:37:26.898069097Z'
+    created: "2026-03-17T03:37:26.898069097Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: 46f9387230ca0b8210084f1473fea4c71541b71338e4fd0e12b7fa74b5f38d26
     home: https://github.com/green-llama/k8-glerp-ai-intake
@@ -182,4 +214,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.0/k8-glerp-ai-intake-0.3.0.tgz
     version: 0.3.0
-generated: '2026-05-15T02:46:47Z'
+generated: "2026-05-15T02:48:00.724399086Z"
