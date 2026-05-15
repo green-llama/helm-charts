@@ -109,15 +109,26 @@ extraObjects:
 
 ## Maintenance Windows
 
-To mark a planned maintenance window so SLA reviewers know to exclude it:
+The **Maintenance Admin** tool is an optional browser-based form included in the chart. On submit it simultaneously:
 
-1. In Grafana, open any timeseries panel on the Uptime Overview or SLA Compliance dashboard
-2. Click and drag across the time region of the maintenance window
-3. Select **Add annotation**
-4. Add the tag `maintenance` (required) and the site namespace (e.g. `backuptest`) for a per-site window, or `all` for a cluster-wide window
-5. Save
+- Writes the `glerp_maintenance_window` metric to VictoriaMetrics (the adjusted SLA panels automatically exclude this period from calculations)
+- Creates a blue shaded annotation band on all monitoring dashboards
+- Creates an AlertManager silence so no alert emails are sent during the window
 
-The blue shaded region appears on all timeseries panels in those dashboards and on the Customer SLA Report. Annotations persist in Grafana's internal store — no Helm upgrade needed.
+Windows can be deleted from the same UI — deletion expires the silence, removes the metric, and hides the annotation band from dashboards.
+
+### Enabling the Maintenance Admin
+
+```yaml
+maintenanceAdmin:
+  enabled: true
+  hostname: "maintenance.monitoring.greenllama.tech"   # must be accessible from admin's browser
+  grafanaToken: "<Grafana service account token — Editor role>"
+  auth:
+    password: "<strong password>"
+```
+
+See the deployment guide for the full setup procedure, including how to create the Grafana service account token and add the maintenance admin link to your dashboards.
 
 ## Customer Reporting
 

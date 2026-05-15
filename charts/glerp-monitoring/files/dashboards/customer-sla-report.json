@@ -29,19 +29,8 @@
   ],
   "panels": [
     {
-      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 0 },
-      "id": 99,
-      "options": {
-        "mode": "markdown",
-        "content": "**Operator tip — marking a maintenance window:**\n\nUse the **GLerp Maintenance Admin** tool (bookmark the URL your operator provides). Fill in the site, start/end time, and description — it automatically:\n- Writes the `glerp_maintenance_window` metric to VictoriaMetrics (excludes this period from the Adjusted SLA % panels below)\n- Creates a blue shaded annotation band on all monitoring dashboards\n- Creates an AlertManager silence so no alert emails are sent during the window\n\nFor global windows (all sites), select **All sites** in the form.\n\nTo delete a window: remove the Grafana annotation (click the blue band → pencil icon → delete) and expire the AlertManager silence via **Alerting → Silences**. Contact your operator to remove the VictoriaMetrics metric if needed."
-      },
-      "title": "",
-      "type": "text",
-      "transparent": true
-    },
-    {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 3 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 1,
       "title": "SLA Summary — $site",
       "type": "row"
@@ -66,7 +55,7 @@
           }
         }
       },
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 4 },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 },
       "id": 2,
       "options": {
         "colorMode": "background",
@@ -121,7 +110,7 @@
           ]
         }
       },
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 4 },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 1 },
       "id": 3,
       "options": {
         "colorMode": "background",
@@ -159,7 +148,7 @@
           }
         }
       },
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 4 },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 1 },
       "id": 4,
       "options": {
         "colorMode": "background",
@@ -182,7 +171,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
       "id": 5,
       "title": "Maintenance-Adjusted SLA — $site",
       "type": "row"
@@ -207,7 +196,7 @@
           }
         }
       },
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 11 },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 8 },
       "id": 6,
       "options": {
         "colorMode": "background",
@@ -260,7 +249,7 @@
           ]
         }
       },
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 11 },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 8 },
       "id": 7,
       "options": {
         "colorMode": "background",
@@ -295,7 +284,7 @@
           }
         }
       },
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 11 },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 8 },
       "id": 8,
       "options": {
         "colorMode": "background",
@@ -318,7 +307,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
       "id": 20,
       "title": "Service Availability",
       "type": "row"
@@ -347,7 +336,7 @@
           }
         }
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
       "id": 21,
       "options": {
         "mergeValues": true,
