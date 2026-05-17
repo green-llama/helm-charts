@@ -17,6 +17,7 @@ spec:
           labels:
             severity: critical
             alert_type: isp
+            namespace: {{ .Values.monitoringNamespace }}
           annotations:
             summary: "ISP / Internet connectivity LOST ({{ .Values.cluster.name }})"
             description: >
@@ -33,6 +34,7 @@ spec:
           labels:
             severity: info
             alert_type: isp_partial
+            namespace: {{ .Values.monitoringNamespace }}
           annotations:
             summary: "One external internet probe is failing ({{ .Values.cluster.name }})"
             description: >

@@ -20,6 +20,7 @@ spec:
           labels:
             severity: critical
             alert_type: application
+            namespace: {{ .Values.monitoringNamespace }}
           annotations:
             summary: "GLerp site DOWN: {{ "{{" }} $labels.site {{ "}}" }}"
             description: >
@@ -40,6 +41,7 @@ spec:
           labels:
             severity: warning
             alert_type: application_degraded
+            namespace: {{ .Values.monitoringNamespace }}
           annotations:
             summary: "GLerp site DEGRADED: {{ "{{" }} $labels.site {{ "}}" }}"
             description: >
@@ -58,6 +60,7 @@ spec:
           labels:
             severity: warning
             alert_type: isp_suspected
+            namespace: {{ .Values.monitoringNamespace }}
           annotations:
             summary: "GLerp site DOWN (ISP outage suspected): {{ "{{" }} $labels.site {{ "}}" }}"
             description: >
@@ -73,6 +76,7 @@ spec:
           labels:
             severity: warning
             alert_type: tls
+            namespace: {{ .Values.monitoringNamespace }}
           annotations:
             summary: "TLS cert expiring in < 30 days: {{ "{{" }} $labels.site {{ "}}" }}"
             description: >
