@@ -28,7 +28,7 @@ spec:
         repeatInterval: 2h
         # continue: true allows the alert to also match the messaging route below,
         # sending to both email AND Telegram/Slack simultaneously.
-        {{- if or .Values.telegram.enabled .Values.slack.enabled }}
+        {{- if or .Values.alertmanager.telegram.enabled .Values.alertmanager.slack.enabled }}
         continue: true
       - matchers:
           - name: severity
@@ -85,14 +85,14 @@ spec:
             <p><small>Started: {{ "{{" }} .StartsAt.Format "2006-01-02 15:04:05 UTC" {{ "}}" }}</small></p>
             {{ "{{" }} end {{ "}}" }}
 
-    {{- if or .Values.telegram.enabled .Values.slack.enabled }}
+    {{- if or .Values.alertmanager.telegram.enabled .Values.alertmanager.slack.enabled }}
     - name: messaging-critical
-      {{- if .Values.telegram.enabled }}
+      {{- if .Values.alertmanager.telegram.enabled }}
       telegramConfigs:
-        - chatID: {{ .Values.telegram.chatId }}
+        - chatID: {{ .Values.alertmanager.telegram.chatId }}
           botToken:
-            name: {{ .Values.telegram.botTokenSecret.name }}
-            key: {{ .Values.telegram.botTokenSecret.key }}
+            name: {{ .Values.alertmanager.telegram.botTokenSecret.name }}
+            key: {{ .Values.alertmanager.telegram.botTokenSecret.key }}
           parseMode: HTML
           sendResolved: true
           message: |-
@@ -104,12 +104,12 @@ spec:
             Started: {{ "{{" }} .StartsAt.Format "2006-01-02 15:04 UTC" {{ "}}" }}
             {{ "{{" }}- end {{ "}}" }}
       {{- end }}
-      {{- if .Values.slack.enabled }}
+      {{- if .Values.alertmanager.slack.enabled }}
       slackConfigs:
         - apiURL:
-            name: {{ .Values.slack.webhookSecret.name }}
-            key: {{ .Values.slack.webhookSecret.key }}
-          channel: {{ .Values.slack.channel | quote }}
+            name: {{ .Values.alertmanager.slack.webhookSecret.name }}
+            key: {{ .Values.alertmanager.slack.webhookSecret.key }}
+          channel: {{ .Values.alertmanager.slack.channel | quote }}
           sendResolved: true
           color: '{{ "{{" }} if eq .Status "firing" {{ "}}" }}danger{{ "{{" }} else {{ "}}" }}good{{ "{{" }} end {{ "}}" }}'
           title: '{{ "{{" }} if eq .Status "firing" {{ "}}" }}🔴{{ "{{" }} else {{ "}}" }}✅{{ "{{" }} end {{ "}}" }} [GLerp {{ .Values.cluster.name }}] {{ "{{" }} .GroupLabels.alertname {{ "}}" }}{{ "{{" }} if .GroupLabels.site {{ "}}" }} — {{ "{{" }} .GroupLabels.site {{ "}}" }}{{ "{{" }} end {{ "}}" }}'

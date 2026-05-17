@@ -199,12 +199,13 @@ for phone push notifications. Both are opt-in and can be enabled independently.
    ```
 5. Enable in your values override:
    ```yaml
-   telegram:
-     enabled: true
-     chatId: -1234567890   # your chat/group ID
-     botTokenSecret:
-       name: telegram-alertmanager-secret
-       key: bot_token
+   alertmanager:
+     telegram:
+       enabled: true
+       chatId: -1234567890   # your chat/group ID
+       botTokenSecret:
+         name: telegram-alertmanager-secret
+         key: bot_token
    ```
 6. `helm upgrade` — critical alerts will now also be sent to Telegram
 
@@ -223,12 +224,13 @@ for phone push notifications. Both are opt-in and can be enabled independently.
    ```
 4. Enable in your values override:
    ```yaml
-   slack:
-     enabled: true
-     channel: "#alerts"    # must match the webhook's workspace
-     webhookSecret:
-       name: slack-alertmanager-secret
-       key: webhook_url
+   alertmanager:
+     slack:
+       enabled: true
+       channel: "#alerts"    # must match the webhook's workspace
+       webhookSecret:
+         name: slack-alertmanager-secret
+         key: webhook_url
    ```
 5. `helm upgrade` — critical alerts will now also be sent to Slack
 
