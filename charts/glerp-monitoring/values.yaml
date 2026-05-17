@@ -107,6 +107,47 @@ victoriaMetrics:
       cpu: 200m
       memory: 256Mi
 
+# ── Telegram alerts (optional) ────────────────────────────────────────────────
+# Native AlertManager receiver — no intermediary service required.
+# Setup:
+#   1. Message @BotFather on Telegram → /newbot → copy the bot token
+#   2. Add the bot to a group/channel, or start a personal chat with it
+#   3. Get the chat ID: add @userinfobot to the group, or message @userinfobot directly
+#   4. Create the Kubernetes Secret:
+#        kubectl create secret generic telegram-alertmanager-secret \
+#          --namespace cattle-monitoring-system \
+#          --from-literal=bot_token='YOUR_BOT_TOKEN'
+#   5. Set enabled: true, chatId, and secretName below, then helm upgrade
+telegram:
+  enabled: false
+  # Chat ID to send alerts to. Group/channel IDs are negative integers (e.g. -1234567890).
+  # Personal chat IDs are positive (e.g. 987654321).
+  chatId: 0
+  # Kubernetes Secret holding the bot token created in step 4 above.
+  botTokenSecret:
+    name: telegram-alertmanager-secret
+    key: bot_token
+
+# ── Slack alerts (optional) ───────────────────────────────────────────────────
+# Native AlertManager receiver — requires a Slack Incoming Webhook URL.
+# Setup:
+#   1. Slack → Administration → Manage apps → Incoming Webhooks → Add New Webhook
+#      (or create a Slack App with Incoming Webhooks enabled)
+#   2. Select the channel and copy the webhook URL
+#   3. Create the Kubernetes Secret:
+#        kubectl create secret generic slack-alertmanager-secret \
+#          --namespace cattle-monitoring-system \
+#          --from-literal=webhook_url='https://hooks.slack.com/services/...'
+#   4. Set enabled: true, channel, and secretName below, then helm upgrade
+slack:
+  enabled: false
+  # Slack channel to post alerts to (must match the webhook's workspace).
+  channel: "#alerts"
+  # Kubernetes Secret holding the Slack webhook URL created in step 3 above.
+  webhookSecret:
+    name: slack-alertmanager-secret
+    key: webhook_url
+
 # ── Maintenance Window Admin ───────────────────────────────────────────────────
 # Optional browser-based tool for defining maintenance windows.
 # Writes glerp_maintenance_window metric to VictoriaMetrics, creates a Grafana

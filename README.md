@@ -171,6 +171,66 @@ creating the Grafana service account token and enabling the dashboard link.
 
 ---
 
+## Optional: Telegram and Slack Alerts
+
+In addition to email, the chart can send critical alerts to **Telegram** and/or **Slack** — useful
+for phone push notifications. Both are opt-in and can be enabled independently.
+
+### Telegram
+
+**One-time setup:**
+
+1. Message `@BotFather` on Telegram → `/newbot` → copy the bot token
+2. Add the bot to a group/channel, or start a personal chat with it
+3. Get your chat ID: add `@userinfobot` to the group, or message it directly for a personal chat ID
+   - Group/channel IDs are negative integers (e.g. `-1234567890`)
+   - Personal chat IDs are positive (e.g. `987654321`)
+4. Create the Kubernetes Secret:
+   ```bash
+   kubectl create secret generic telegram-alertmanager-secret \
+     --namespace cattle-monitoring-system \
+     --from-literal=bot_token='YOUR_BOT_TOKEN'
+   ```
+5. Enable in your values override:
+   ```yaml
+   telegram:
+     enabled: true
+     chatId: -1234567890   # your chat/group ID
+     botTokenSecret:
+       name: telegram-alertmanager-secret
+       key: bot_token
+   ```
+6. `helm upgrade` — critical alerts will now also be sent to Telegram
+
+### Slack
+
+**One-time setup:**
+
+1. Slack → **Administration → Manage apps → Incoming Webhooks → Add New Webhook**
+   (or create a Slack App with Incoming Webhooks enabled)
+2. Select the target channel and copy the webhook URL
+3. Create the Kubernetes Secret:
+   ```bash
+   kubectl create secret generic slack-alertmanager-secret \
+     --namespace cattle-monitoring-system \
+     --from-literal=webhook_url='https://hooks.slack.com/services/...'
+   ```
+4. Enable in your values override:
+   ```yaml
+   slack:
+     enabled: true
+     channel: "#alerts"    # must match the webhook's workspace
+     webhookSecret:
+       name: slack-alertmanager-secret
+       key: webhook_url
+   ```
+5. `helm upgrade` — critical alerts will now also be sent to Slack
+
+> **Both can be enabled simultaneously.** When enabled, critical alerts are sent to email AND to
+> the messaging channel(s) at the same time. Warning and info severity alerts go to email only.
+
+---
+
 ## Customer Reporting
 
 The **Customer SLA Report** dashboard (`GLerp Monitoring → GLerp — Customer SLA Report`) is

@@ -26,6 +26,16 @@ spec:
             value: critical
         receiver: email-alerts
         repeatInterval: 2h
+        # continue: true allows the alert to also match the messaging route below,
+        # sending to both email AND Telegram/Slack simultaneously.
+        {{- if or .Values.telegram.enabled .Values.slack.enabled }}
+        continue: true
+      - matchers:
+          - name: severity
+            value: critical
+        receiver: messaging-critical
+        repeatInterval: 2h
+        {{- end }}
       - matchers:
           - name: severity
             value: warning
@@ -74,3 +84,40 @@ spec:
             <p>{{ "{{" }} .Annotations.description {{ "}}" }}</p>
             <p><small>Started: {{ "{{" }} .StartsAt.Format "2006-01-02 15:04:05 UTC" {{ "}}" }}</small></p>
             {{ "{{" }} end {{ "}}" }}
+
+    {{- if or .Values.telegram.enabled .Values.slack.enabled }}
+    - name: messaging-critical
+      {{- if .Values.telegram.enabled }}
+      telegramConfigs:
+        - chatID: {{ .Values.telegram.chatId }}
+          botToken:
+            name: {{ .Values.telegram.botTokenSecret.name }}
+            key: {{ .Values.telegram.botTokenSecret.key }}
+          parseMode: HTML
+          sendResolved: true
+          message: |-
+            {{ "{{" }}- if eq .Status "firing" -{{ "}}" }}🔴{{ "{{" }}- else -{{ "}}" }}✅{{ "{{" }}- end {{ "}}" }} <b>{{ "{{" }} .GroupLabels.alertname {{ "}}" }}</b>{{ "{{" }} if .GroupLabels.site {{ "}}" }} — {{ "{{" }} .GroupLabels.site {{ "}}" }}{{ "{{" }} end {{ "}}" }}
+            <b>Cluster:</b> {{ .Values.cluster.name }}
+            {{ "{{" }} range .Alerts {{ "}}" -{{ "}}" }}
+            {{ "{{" }} .Annotations.summary {{ "}}" }}
+            {{ "{{" }} if .Annotations.description {{ "}}" }}{{ "{{" }} .Annotations.description {{ "}}" }}{{ "{{" }} end {{ "}}" }}
+            Started: {{ "{{" }} .StartsAt.Format "2006-01-02 15:04 UTC" {{ "}}" }}
+            {{ "{{" }}- end {{ "}}" }}
+      {{- end }}
+      {{- if .Values.slack.enabled }}
+      slackConfigs:
+        - apiURL:
+            name: {{ .Values.slack.webhookSecret.name }}
+            key: {{ .Values.slack.webhookSecret.key }}
+          channel: {{ .Values.slack.channel | quote }}
+          sendResolved: true
+          color: '{{ "{{" }} if eq .Status "firing" {{ "}}" }}danger{{ "{{" }} else {{ "}}" }}good{{ "{{" }} end {{ "}}" }}'
+          title: '{{ "{{" }} if eq .Status "firing" {{ "}}" }}🔴{{ "{{" }} else {{ "}}" }}✅{{ "{{" }} end {{ "}}" }} [GLerp {{ .Values.cluster.name }}] {{ "{{" }} .GroupLabels.alertname {{ "}}" }}{{ "{{" }} if .GroupLabels.site {{ "}}" }} — {{ "{{" }} .GroupLabels.site {{ "}}" }}{{ "{{" }} end {{ "}}" }}'
+          text: |-
+            {{ "{{" }} range .Alerts {{ "}}" -{{ "}}" }}
+            *{{ "{{" }} .Annotations.summary {{ "}}" }}*
+            {{ "{{" }} if .Annotations.description {{ "}}" }}{{ "{{" }} .Annotations.description {{ "}}" }}{{ "{{" }} end {{ "}}" }}
+            Started: {{ "{{" }} .StartsAt.Format "2006-01-02 15:04 UTC" {{ "}}" }}
+            {{ "{{" }}- end {{ "}}" }}
+      {{- end }}
+    {{- end }}
