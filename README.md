@@ -64,7 +64,7 @@ helm install glerp-monitoring green-llama/glerp-monitoring \
   --values glerp-monitoring-values.yaml
 ```
 
-### Step 2 — Wire up Prometheus scrape jobs and remote write
+### Step 2 — Wire up Prometheus scrape jobs, remote write, and VictoriaMetrics datasource
 
 The chart creates a Secret (`glerp-monitoring-scrape-configs`) containing the Prometheus scrape
 configuration for all GLerp sites and ISP probes. Prometheus needs to be pointed at it. Add the
@@ -84,10 +84,28 @@ prometheus:
           - sourceLabels: [job]
             regex: "glerp-sites-basic|glerp-sites-login|internet-connectivity"
             action: keep
+
+grafana:
+  additionalDataSources:
+    - name: VictoriaMetrics (GLerp Long-term)
+      uid: glerp-victoriametrics
+      type: prometheus
+      url: http://glerp-monitoring-victoriametrics.cattle-monitoring-system.svc.cluster.local:8428
+      access: proxy
+      isDefault: false
+      editable: false
+      jsonData:
+        timeInterval: "60s"
+        queryTimeout: "60s"
+        httpMethod: POST
 ```
 
 The `remoteWrite` block forwards probe metrics to VictoriaMetrics for 90-day retention.
 Without it, SLA dashboards only show data for the last 8-10 days (Prometheus default retention).
+
+The `additionalDataSources` block registers VictoriaMetrics as a Grafana datasource (uid:
+`glerp-victoriametrics`). Rancher Monitoring provisions this directly into Grafana — the SLA and
+uptime dashboards require it for long-range queries. Without it, panels show "Datasource not found".
 
 ### Step 3 — Verify the base install
 
