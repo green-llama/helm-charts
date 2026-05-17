@@ -8,7 +8,7 @@ description: >
   (Uptime Overview, SLA Compliance, Internet Connectivity).
   New sites are discovered automatically by labeling their Kubernetes Service.
 type: application
-version: 0.2.29
+version: 0.2.30
 appVersion: "1.0.0"
 keywords:
   - monitoring

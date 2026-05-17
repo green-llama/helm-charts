@@ -9,6 +9,13 @@ metadata:
 spec:
   route:
     receiver: email-alerts
+    # Only handle alerts that carry an alert_type label — every GLerp rule sets
+    # one (application, isp, tls, …) while Rancher/Kubernetes built-in alerts
+    # do not.  Alerts without this label fall through to Rancher's default receiver.
+    matchers:
+      - name: alert_type
+        matchType: =~
+        value: ".+"
     groupBy: [alertname, site]
     groupWait: 30s
     groupInterval: 5m
