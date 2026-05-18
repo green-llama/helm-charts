@@ -127,6 +127,10 @@ metadata:
   namespace: traefik-system
   annotations:
     kubernetes.io/ingress.class: traefik
+    {{- if .Values.maintenanceAdmin.externalDnsTarget }}
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.maintenanceAdmin.hostname }}
+    external-dns.alpha.kubernetes.io/target: {{ .Values.maintenanceAdmin.externalDnsTarget }}
+    {{- end }}
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
 spec:

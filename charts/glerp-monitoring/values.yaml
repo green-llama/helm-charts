@@ -165,6 +165,11 @@ maintenanceAdmin:
   # External hostname for the admin form (bare DNS name, no port). Must be reachable by the admin's browser.
   # e.g. maintenance.greenllama.tech
   hostname: ""
+  # External DNS target — the cluster's public entry point that external-dns should point the hostname at.
+  # When set, external-dns will automatically create/update the Cloudflare DNS record on deploy.
+  # e.g. pec.greenllama.tech
+  # Leave empty to manage the DNS record manually.
+  externalDnsTarget: ""
   # External port when the admin form is served on a non-standard HTTPS port.
   # Leave empty for standard HTTPS (443). Set to e.g. "10443" for dev clusters.
   port: ""
