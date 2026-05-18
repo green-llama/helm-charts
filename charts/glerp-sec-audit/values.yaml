@@ -124,11 +124,13 @@ trivy-operator:
 
 # ------------------------------------------------------------
 # Grafana dashboard
-# Set enabled: false if the glerp-monitoring namespace does not exist yet.
+# Targets the namespace where Grafana's sidecar is running.
+# Rancher built-in monitoring uses cattle-monitoring-system.
+# Set enabled: false to skip dashboard creation entirely.
 # ------------------------------------------------------------
 grafanaDashboard:
   enabled: true
-  namespace: "glerp-monitoring"
+  namespace: "cattle-monitoring-system"
 
 # ------------------------------------------------------------
 # Prometheus Pushgateway sub-chart overrides
