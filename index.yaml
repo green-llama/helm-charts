@@ -1,5 +1,18 @@
 apiVersion: v1
 entries:
+  glerp-documenso:
+  - apiVersion: v2
+    appVersion: v1.8.1
+    created: "2026-05-18T22:35:18.164650273Z"
+    description: A Helm chart for Documenso — green-llama infrastructure edition (Traefik
+      IngressRoute + external-dns)
+    digest: f1b86b558d8e769f950bb8822f212a48e6d999436e0591acee0e94897f461ae0
+    icon: https://www.documenso.com/favicon.ico
+    name: glerp-documenso
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-documenso-1.1.0/glerp-documenso-1.1.0.tgz
+    version: 1.1.0
   glerp-monitoring:
   - apiVersion: v2
     appVersion: 1.0.0
@@ -763,4 +776,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.0/k8-glerp-ai-intake-0.3.0.tgz
     version: 0.3.0
-generated: "2026-05-18T22:30:08.090252249Z"
+generated: "2026-05-18T22:35:18.326545665Z"
