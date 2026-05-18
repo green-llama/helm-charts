@@ -16,7 +16,7 @@ namespace: glerp-sec-audit
 # ------------------------------------------------------------
 domain: "dev.greenllama.tech"
 reportHostname: "security.dev.greenllama.tech"
-externalDnsTarget: "pec.dev.greenllama.tech"
+externalDnsTarget: "pec.greenllama.tech"
 ingressEntrypoint: "websecure"
 tlsSecretName: "letsencrypt-greenllama-tech-tls"
 
