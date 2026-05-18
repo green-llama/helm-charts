@@ -1,0 +1,46 @@
+---
+# Strip-prefix middleware: removes /security prefix before forwarding to nginx
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "glerp-sec-audit.fullname" . }}-strip-prefix
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "glerp-sec-audit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: report-server
+spec:
+  stripPrefix:
+    prefixes:
+      - /security
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "glerp-sec-audit.fullname" . }}-report-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "glerp-sec-audit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: report-server
+  annotations:
+    # external-dns creates the Cloudflare DNS record automatically
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.reportHostname | quote }}
+    external-dns.alpha.kubernetes.io/target: {{ .Values.externalDnsTarget | quote }}
+spec:
+  entryPoints:
+    - {{ .Values.ingressEntrypoint }}
+  routes:
+    - match: Host(`{{ .Values.reportHostname }}`) && PathPrefix(`/security`)
+      kind: Rule
+      middlewares:
+        - name: {{ include "glerp-sec-audit.fullname" . }}-strip-prefix
+      services:
+        - name: {{ include "glerp-sec-audit.fullname" . }}-report-server
+          port: 80
+    # Root redirect → /security/
+    - match: Host(`{{ .Values.reportHostname }}`) && Path(`/`)
+      kind: Rule
+      services:
+        - name: {{ include "glerp-sec-audit.fullname" . }}-report-server
+          port: 80
+  tls:
+    secretName: {{ .Values.tlsSecretName | quote }}

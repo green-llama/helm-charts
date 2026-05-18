@@ -1,0 +1,140 @@
+# glerp-sec-audit Helm chart values
+# Override these per environment:
+#   Dev:  helm install glerp-sec-audit . -f values.yaml
+#   Prod: helm install glerp-sec-audit . -f values.yaml \
+#           --set domain=greenllama.tech \
+#           --set reportHostname=security.greenllama.tech \
+#           --set externalDnsTarget=pec.greenllama.tech
+
+# ------------------------------------------------------------
+# Namespace
+# ------------------------------------------------------------
+namespace: glerp-sec-audit
+
+# ------------------------------------------------------------
+# Ingress / DNS — override per cluster environment
+# ------------------------------------------------------------
+domain: "dev.greenllama.tech"
+reportHostname: "security.dev.greenllama.tech"
+externalDnsTarget: "pec.dev.greenllama.tech"
+ingressEntrypoint: "websecure"
+tlsSecretName: "letsencrypt-greenllama-tech-tls"
+
+# ------------------------------------------------------------
+# GLerp web app scan targets
+# Add one entry per GLerp customer instance.
+# Running `helm upgrade` after adding a new entry automatically
+# creates an additional ZAP CronJob — no other changes required.
+# ------------------------------------------------------------
+scanTargets:
+  - name: backuptest
+    url: "https://backuptest.dev.greenllama.tech:10443"
+
+# ------------------------------------------------------------
+# kube-bench — CIS Kubernetes Benchmark (node-level)
+# Runs as a privileged CronJob mounting host paths for RKE2.
+# ------------------------------------------------------------
+kubeBench:
+  enabled: true
+  image: "aquasec/kube-bench:v0.15.0"
+  imagePullPolicy: IfNotPresent
+  schedule: "0 3 * * 0"       # Weekly: Sunday 03:00 UTC
+  benchmark: "rke2-cis-1.7"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+
+# ------------------------------------------------------------
+# OWASP ZAP — web application scan
+# One CronJob is generated per scanTarget entry above.
+# full scan = active attack probes (recommended for SOC2 evidence)
+# baseline  = passive scan only (faster, lower load on target)
+# ------------------------------------------------------------
+zapScan:
+  enabled: true
+  image: "ghcr.io/zaproxy/zaproxy:stable"
+  imagePullPolicy: Always
+  schedule: "0 2 * * 0"       # Weekly: Sunday 02:00 UTC
+  scanType: "full"             # full | baseline
+  # ZAP exits 0 even with findings so the Job does not report failure.
+  # Findings are reviewed via the HTML report.
+  exitOnWarning: false
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+# ------------------------------------------------------------
+# Reports storage and server
+# ------------------------------------------------------------
+reports:
+  storageSize: "10Gi"
+  storageClassName: ""         # leave blank to use cluster default
+  retentionDays: 90
+
+reportServer:
+  image: "nginx:alpine"
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "32Mi"
+    limits:
+      cpu: "100m"
+      memory: "64Mi"
+
+# ------------------------------------------------------------
+# Trivy Operator sub-chart overrides
+# Full reference: https://aquasecurity.github.io/trivy-operator/latest/getting-started/installation/helm/
+# targetNamespaces: "" = scan all namespaces (correct for SOC2 — any GLerp
+# customer namespace is automatically included without naming convention)
+# ------------------------------------------------------------
+trivy-operator:
+  targetNamespaces: ""
+  excludeNamespaces: "kube-system,kube-public,kube-node-lease"
+  operator:
+    scanJobTimeout: "5m"
+    concurrentScanJobsLimit: "10"
+    vulnerabilityScannerEnabled: true
+    configAuditScannerEnabled: true
+    rbacAssessmentScannerEnabled: true
+    exposedSecretScannerEnabled: true
+    complianceScannerEnabled: true
+  trivy:
+    ignoreUnfixed: false
+    severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+    slow: true                 # reduce memory pressure during scans
+  compliance:
+    reportType: "all"          # generates both summary and detailed reports
+    failEntriesLimit: "10"
+  serviceMonitor:
+    enabled: true              # Prometheus ServiceMonitor for Trivy metrics
+  trivyOperator:
+    scanJobAnnotations: ""
+    scanJobNodeSelector: {}
+    scanJobTolerations: []
+
+# ------------------------------------------------------------
+# Prometheus Pushgateway sub-chart overrides
+# Used to receive kube-bench metrics after each weekly run.
+# ------------------------------------------------------------
+prometheus-pushgateway:
+  replicaCount: 1
+  serviceMonitor:
+    enabled: true
+    namespace: ""              # defaults to release namespace
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "32Mi"
+    limits:
+      cpu: "100m"
+      memory: "64Mi"
