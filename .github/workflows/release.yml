@@ -36,6 +36,7 @@ jobs:
       - name: Update chart dependencies
         run: |
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add aquasecurity https://aquasecurity.github.io/helm-charts/
           helm repo update
           for dir in charts/*/; do
             if [ -f "${dir}/Chart.yaml" ]; then
