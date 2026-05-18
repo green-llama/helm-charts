@@ -12,9 +12,20 @@
         "hide": false,
         "iconColor": "#1F60C4",
         "limit": 100,
-        "name": "Maintenance Windows",
+        "name": "Maintenance (this site)",
         "showIn": 0,
-        "tags": ["maintenance"],
+        "tags": ["maintenance", "$site"],
+        "type": "tags"
+      },
+      {
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#1F60C4",
+        "limit": 100,
+        "name": "Maintenance (all sites)",
+        "showIn": 0,
+        "tags": ["maintenance", "all"],
         "type": "tags"
       }
     ]
