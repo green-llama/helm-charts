@@ -1,0 +1,89 @@
+# Basic glerp-documenso Configuration Example
+# Minimal configuration to get started with Traefik IngressRoute + external-dns
+
+documenso:
+  replicaCount: 1
+
+  # Static configuration
+  cm:
+    NEXTAUTH_URL: 'https://sign.dev.greenllama.tech'
+    NEXT_PUBLIC_WEBAPP_URL: 'https://sign.dev.greenllama.tech'
+    NEXT_PUBLIC_MARKETING_URL: 'https://sign.dev.greenllama.tech'
+
+    # S3 Storage
+    NEXT_PUBLIC_UPLOAD_TRANSPORT: 's3'
+    NEXT_PRIVATE_UPLOAD_ENDPOINT: 'https://minio.example.com'
+    NEXT_PRIVATE_UPLOAD_REGION: 'us-east-1'
+    NEXT_PRIVATE_UPLOAD_BUCKET: 'documenso'
+    NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE: 'true'
+
+    # SMTP
+    NEXT_PRIVATE_SMTP_FROM_ADDRESS: 'noreply@example.com'
+    NEXT_PRIVATE_SMTP_FROM_NAME: 'Documenso'
+    NEXT_PRIVATE_SMTP_PORT: '587'
+    NEXT_PRIVATE_SMTP_SECURE: 'false'
+
+  # Secrets (create these first!)
+  env:
+    - name: NEXT_PRIVATE_DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: documenso-secrets
+          key: DATABASE_URL
+    - name: NEXTAUTH_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: documenso-secrets
+          key: NEXTAUTH_SECRET
+    - name: NEXT_PRIVATE_ENCRYPTION_KEY
+      valueFrom:
+        secretKeyRef:
+          name: documenso-secrets
+          key: ENCRYPTION_KEY
+    - name: NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: documenso-secrets
+          key: S3_ACCESS_KEY
+    - name: NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: documenso-secrets
+          key: S3_SECRET_KEY
+    - name: NEXT_PRIVATE_SMTP_HOST
+      valueFrom:
+        secretKeyRef:
+          name: documenso-secrets
+          key: SMTP_HOST
+    - name: NEXT_PRIVATE_SMTP_USER
+      valueFrom:
+        secretKeyRef:
+          name: documenso-secrets
+          key: SMTP_USER
+    - name: NEXT_PRIVATE_SMTP_PASS
+      valueFrom:
+        secretKeyRef:
+          name: documenso-secrets
+          key: SMTP_PASSWORD
+
+  # Traefik IngressRoute + external-dns
+  ingress:
+    enabled: true
+    hostname: "sign.dev.greenllama.tech"
+    externalDnsTarget: "pec.dev.greenllama.tech"
+    entrypoint: "websecure"
+    tlsSecretName: "letsencrypt-greenllama-tech-tls"
+
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+signing:
+  enabled: true
+  mode: "certmanager"
+  secretName: documenso-signing-p12
+  passwordSecretName: documenso-signing-p12-cert-pass

@@ -1,0 +1,23 @@
+{{- if .Values.documenso.ingress.enabled -}}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "documenso.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "documenso.labels" . | nindent 4 }}
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.documenso.ingress.hostname | quote }}
+    external-dns.alpha.kubernetes.io/target: {{ .Values.documenso.ingress.externalDnsTarget | quote }}
+spec:
+  entryPoints:
+    - {{ .Values.documenso.ingress.entrypoint }}
+  routes:
+    - match: Host(`{{ .Values.documenso.ingress.hostname }}`)
+      kind: Rule
+      services:
+        - name: {{ include "documenso.fullname" . }}
+          port: {{ .Values.documenso.service.port }}
+  tls:
+    secretName: {{ .Values.documenso.ingress.tlsSecretName | quote }}
+{{- end }}

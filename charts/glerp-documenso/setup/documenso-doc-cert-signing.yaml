@@ -1,0 +1,281 @@
+# ============================================================================
+# Documenso Document Cert-Manager Cert Signed Setup
+# ============================================================================
+#
+# PURPOSE:
+# Creates a PKCS#12 (.p12) certificate for Documenso document signing.
+# Automates cert-manager certificate conversion to the PKCS#12 format required by Documenso.
+#
+# PREREQUISITES:
+# 1. cert-manager installed with a configured Issuer/ClusterIssuer (e.g., "apps-general-signer")
+# 2. Namespace "documenso-system" exists
+# 3. Issuer backed by your organization's CA chain
+#
+# RESOURCES CREATED:
+# 1. Certificate: documenso-signing-cert (cert-manager)
+#    - 4096-bit RSA, valid 1 year, auto-renews 30 days before expiration
+#    - Creates Secret: documenso-signing-cert-tls (standard TLS format)
+#
+# 2. Secret: documenso-signing-p12
+#    - Contains cert.p12 file for document signing
+#    - Referenced by Documenso Helm chart
+#
+# 3. Secret: documenso-signing-p12-cert-pass
+#    - Auto-generated random password for the .p12 certificate
+#    - Created on first run, reused on subsequent conversions
+#
+# 4. Secret: p12-converter-script
+#    - Conversion script (stored as Secret for security)
+#
+# 5. ServiceAccount + RBAC: documenso-cert-converter
+#    - Least-privilege permissions for secret management
+#
+# 6. CronJob: documenso-cert-converter
+#    - Runs daily at 3 AM to handle certificate renewals
+#    - Converts TLS cert → PKCS#12 format
+#
+# DEPLOYMENT:
+# 1. Update issuerRef name of Certificate yaml to match your Issuer/ClusterIssuer name
+# 2. kubectl apply -f documenso-doc-cert-signing.yaml
+# 3. kubectl wait --for=condition=Ready certificate/documenso-signing-cert -n documenso-system --timeout=120s
+# 4. kubectl create job --from=cronjob/documenso-cert-converter documenso-initial-convert -n documenso-system
+# 5. kubectl get secret documenso-signing-p12 documenso-signing-p12-cert-pass -n documenso-system
+# 6. Deploy Documenso Helm chart
+#
+# OUTPUTS (Secrets for Helm chart):
+# - documenso-signing-p12 → signing.secretName
+# - documenso-signing-p12-cert-pass → signing.passwordSecretName
+#
+# CERTIFICATE RENEWAL:
+# - Automatic: CronJob detects renewals and reconverts certificates daily
+# - Manual: Restart Documenso pods to load renewed certificates
+#
+# TROUBLESHOOTING:
+# Certificate: kubectl describe certificate documenso-signing-cert -n documenso-system
+# Job logs:    kubectl logs -n documenso-system job/documenso-initial-convert
+# Secrets:     kubectl get secret documenso-signing-p12{,-cert-pass} -n documenso-system
+# Password:    kubectl get secret documenso-signing-p12-cert-pass -n documenso-system -o jsonpath='{.data.password}' | base64 -d
+# ============================================================================
+---
+# 1. cert-manager Certificate for document signing
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: documenso-signing-cert
+  namespace: documenso-system
+spec:
+  secretName: documenso-signing-cert-tls
+  duration: 8760h  # 1 year
+  renewBefore: 720h  # Renew 30 days before expiration
+
+  subject:
+    organizations:
+      - "Green Llama"
+    organizationalUnits:
+      - "Documenso"
+  commonName: "Documenso Signing Certificate"
+
+  privateKey:
+    algorithm: RSA
+    size: 4096
+    rotationPolicy: Always
+
+  usages:
+    - digital signature
+    - key encipherment
+    - data encipherment
+
+  issuerRef:
+    name: apps-general-signer
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+# 2. Conversion script stored as Secret (not ConfigMap for security)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: p12-converter-script
+  namespace: documenso-system
+type: Opaque
+stringData:
+  convert.sh: |
+    #!/bin/sh
+    set -e
+
+    echo "Installing required packages..."
+    apk add --no-cache openssl curl
+
+    echo "Installing kubectl..."
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    mv kubectl /usr/local/bin/
+
+    echo "Converting cert-manager certificate to PKCS#12 format..."
+
+    # Check if input files exist
+    if [ ! -f /input/tls.key ] || [ ! -f /input/tls.crt ]; then
+      echo "ERROR: Certificate files not found!"
+      exit 1
+    fi
+
+    # Check if password secret already exists
+    if kubectl get secret documenso-signing-p12-cert-pass -n documenso-system &>/dev/null; then
+      echo "Password secret already exists, retrieving..."
+      CERT_PASSWORD=$(kubectl get secret documenso-signing-p12-cert-pass -n documenso-system -o jsonpath='{.data.password}' | base64 -d)
+    else
+      echo "Generating random password for certificate..."
+      CERT_PASSWORD=$(openssl rand -base64 32)
+
+      echo "Storing password in secret..."
+      kubectl create secret generic documenso-signing-p12-cert-pass \
+        --from-literal=password="${CERT_PASSWORD}" \
+        --namespace=documenso-system
+
+      echo "✓ Password secret created: documenso-signing-p12-cert-pass"
+    fi
+
+    # Convert to PKCS#12 with legacy mode enabled
+    openssl pkcs12 -export \
+      -legacy \
+      -out /output/cert.p12 \
+      -inkey /input/tls.key \
+      -in /input/tls.crt \
+      -passout pass:"${CERT_PASSWORD}"
+
+    # Set proper permissions
+    chmod 644 /output/cert.p12
+
+    echo "✓ Certificate converted successfully"
+
+    # Create/update the Kubernetes secret with p12 certificate
+    echo "Creating Kubernetes secret with p12 certificate..."
+    kubectl create secret generic documenso-signing-p12 \
+      --from-file=cert.p12=/output/cert.p12 \
+      --namespace=documenso-system \
+      --dry-run=client -o yaml | kubectl apply -f -
+
+    echo "✓ Secret 'documenso-signing-p12' created/updated successfully"
+    echo "✓ Password stored in secret 'documenso-signing-p12-cert-pass'"
+
+---
+# 3. ServiceAccount for the converter job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: documenso-cert-converter
+  namespace: documenso-system
+
+---
+# 4. Role for secret management
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: documenso-cert-converter
+  namespace: documenso-system
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update", "patch", "get"]
+    resourceNames:
+      - "documenso-signing-p12"
+      - "documenso-signing-p12-cert-pass"
+  # Allow creating secrets if they don't exist yet
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "get"]
+
+---
+# 5. RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: documenso-cert-converter
+  namespace: documenso-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: documenso-cert-converter
+subjects:
+  - kind: ServiceAccount
+    name: documenso-cert-converter
+    namespace: documenso-system
+
+---
+# 6. CronJob for automatic certificate renewal conversion
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: documenso-cert-converter
+  namespace: documenso-system
+  labels:
+    app: documenso
+    component: cert-converter
+spec:
+  schedule: "0 3 * * *"  # Run daily at 3 AM to check for renewed certs
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600  # Clean up after 1 hour
+      template:
+        metadata:
+          labels:
+            app: documenso
+            component: cert-converter
+        spec:
+          serviceAccountName: documenso-cert-converter
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: false  # Need root for apk install
+            fsGroup: 0
+            fsGroupChangePolicy: "OnRootMismatch"
+            seccompProfile:
+              type: RuntimeDefault
+            seLinuxOptions:
+              level: "s0:c123,c456"
+          containers:
+            - name: converter
+              image: alpine:3.19
+              command: ["/bin/sh", "/script/convert.sh"]
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                capabilities:
+                  drop:
+                    - ALL
+                seLinuxOptions:
+                  level: "s0:c123,c456"
+              env:
+                - name: CERT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: documenso-cert-password
+                      key: password
+                      optional: true
+              volumeMounts:
+                - name: script
+                  mountPath: /script
+                  readOnly: true
+                - name: tls-cert
+                  mountPath: /input
+                  readOnly: true
+                - name: output
+                  mountPath: /output
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: script
+              secret:
+                secretName: p12-converter-script
+                defaultMode: 0500
+            - name: tls-cert
+              secret:
+                secretName: documenso-signing-cert-tls
+                defaultMode: 0400
+            - name: output
+              emptyDir:
+                medium: Memory
+            - name: tmp
+              emptyDir:
+                medium: Memory

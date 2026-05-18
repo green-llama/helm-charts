@@ -1,0 +1,7 @@
+apiVersion: v2
+name: glerp-documenso
+description: A Helm chart for Documenso — green-llama infrastructure edition (Traefik IngressRoute + external-dns)
+type: application
+version: 1.1.0
+appVersion: "v1.8.1"
+icon: https://www.documenso.com/favicon.ico

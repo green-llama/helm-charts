@@ -1,0 +1,218 @@
+documenso:
+
+  certPassword: ""
+
+  podAnnotations: {}
+
+  podLabels: {}
+
+  podSecurityContext: {}
+
+  securityContext: {}
+
+  replicaCount: 1
+  image:
+    repository: documenso/documenso
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: ""
+
+  cm:
+    # ConfigMap entries
+    # This is a map of key-value pairs that will be passed to the ConfigMap
+    # You can use this to add additional configuration to your application
+    # This is optional and there is no default value
+    # cmKey: cmValue
+    NEXTAUTH_URL: ""
+    NEXT_PRIVATE_ENCRYPTION_KEY: ""
+    NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY: ""
+    NEXTAUTH_SECRET: ""
+    NEXT_PUBLIC_WEBAPP_URL: ""
+    NEXT_PUBLIC_MARKETING_URL: ""
+    NEXT_PRIVATE_DATABASE_URL: ""
+    NEXT_PRIVATE_DIRECT_DATABASE_URL: ""
+    NEXT_PRIVATE_SMTP_FROM_NAME: ""
+    NEXT_PRIVATE_SMTP_FROM_ADDRESS: ""
+    NEXT_PRIVATE_SMTP_HOST: ""
+    NEXT_PRIVATE_SMTP_PORT: ""
+    NEXT_PRIVATE_SMTP_SECURE: ""
+    NEXT_PRIVATE_SMTP_USER: ""
+    NEXT_PRIVATE_SMTP_PASS: ""
+    NEXT_PRIVATE_GOOGLE_CLIENT_ID: ""
+    NEXT_PRIVATE_GOOGLE_CLIENT_SECRET: ""
+    NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH: ""
+
+
+  imagePullSecrets: []
+  namespaceOverride: "documenso"
+  nameOverride: ""
+  fullnameOverride: ""
+
+  serviceAccount:
+    create: true
+    automount: true
+    annotations: {}
+    name: ""
+
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  ingress:
+    enabled: false
+    hostname: "sign.dev.greenllama.tech"
+    externalDnsTarget: "pec.dev.greenllama.tech"
+    entrypoint: "websecure"
+    tlsSecretName: "letsencrypt-greenllama-tech-tls"
+    stripPrefix: false
+
+  resources:
+    # limits:
+    #   memory: 128Mi
+    requests:
+      memory: 256Mi
+
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+
+  persistence:
+    enabled: false
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    annotations: []
+
+  volumes: []
+  # - name: foo
+  #   secret:
+  #     secretName: mysecret
+  #     optional: false
+
+  volumeMounts: []
+  # - name: foo
+  #   mountPath: "/etc/foo"
+  #   readOnly: true
+
+  nodeSelector: {}
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+
+  tolerations: []
+
+  affinity: {}
+
+# ============================================================================
+# Document Signing Certificate Configuration
+# ============================================================================
+# Documenso requires a PKCS#12 (.p12) certificate to digitally sign documents.
+#
+# Three modes are supported:
+#
+# MODE 1: cert-manager (RECOMMENDED for production)
+#   - Automated certificate management with your organization's CA
+#   - Deploy documenso-doc-cert-signing.yaml infrastructure first
+#   - Set mode: "certmanager"
+#
+# MODE 2: manual (Bring your own certificate)
+#   - Create your own .p12 certificate and Kubernetes secret
+#   - Set mode: "manual"
+#   - Specify secretName and passwordSecretName
+#
+# MODE 3: self-signed (Default, for testing only)
+#   - Auto-generates self-signed certificate via init container
+#   - Set mode: "self-signed" or leave signing.enabled: false
+#   - NOT recommended for production
+# ============================================================================
+
+signing:
+  # Enable document signing certificate
+  # Set to false to use legacy self-signed init container
+  enabled: true
+
+  # Certificate mode: "certmanager", "manual", or "self-signed"
+  # - certmanager: Use cert-manager with automated conversion (recommended)
+  # - manual: Bring your own pre-existing secret with .p12 file
+  # - self-signed: Generate self-signed cert via init container (testing only)
+  mode: "certmanager"
+
+  # Name of the secret containing the cert.p12 file
+  # Used for "certmanager" and "manual" modes
+  secretName: documenso-signing-p12
+  passwordSecretName: documenso-signing-p12-cert-pass
+  passwordSecretKey: password
+
+  # Path where the certificate will be mounted in the container
+  mountPath: /certs
+
+  # Self-signed certificate settings (only used when mode: "self-signed")
+  selfSigned:
+    # Password for the self-signed certificate
+    # Leave empty for no password
+    password: ""
+
+  # cert-manager integration (optional, for documentation)
+  certManager:
+    # Whether cert-manager infrastructure is being used
+    enabled: true
+
+    # Reference to your cert-manager Issuer/ClusterIssuer
+    issuerName: apps-general-signer
+    issuerKind: ClusterIssuer
+
+    # Certificate validity
+    duration: 8760h  # 1 year
+    renewBefore: 720h  # 30 days before expiration
+
+# ============================================================================
+# Custom Environment Variables
+# ============================================================================
+# Use this to inject secrets from Vault, external secrets, or other sources
+# The signing certificate env vars are automatically added if signing.enabled=true
+# ============================================================================
+
+env: []
+  # Example: Database credentials from Vault CSI
+  # - name: DB_USERNAME
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: documenso-secrets
+  #       key: DB_USERNAME
+  # - name: DB_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: documenso-secrets
+  #       key: DB_PASSWORD
+
+# ============================================================================
+# Extra Volumes and Volume Mounts
+# ============================================================================
+# Use for CSI secret stores, additional config, etc.
+# The signing certificate volume is automatically added if signing.enabled=true
+# ============================================================================
+
+extraVolumes: []
+  # Example: Vault CSI secret store
+  # - name: secrets-store
+  #   csi:
+  #     driver: secrets-store.csi.k8s.io
+  #     readOnly: true
+  #     volumeAttributes:
+  #       secretProviderClass: "documenso-secrets"
+
+extraVolumeMounts: []
+  # Example: Mount Vault CSI secrets
+  # - name: secrets-store
+  #   mountPath: "/mnt/secrets-store"
+  #   readOnly: true

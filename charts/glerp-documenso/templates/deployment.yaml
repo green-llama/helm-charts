@@ -1,0 +1,157 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "documenso.fullname" . }}
+  labels:
+    {{- include "documenso.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.documenso.autoscaling.enabled }}
+  replicas: {{ .Values.documenso.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "documenso.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.documenso.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "documenso.labels" . | nindent 8 }}
+        {{- with .Values.documenso.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if or (not .Values.signing.enabled) (eq .Values.signing.mode "self-signed") }}
+      {{- /* Self-signed certificate init container (legacy/testing) */}}
+      initContainers:
+        - name: cert-generator
+          image: alpine:latest
+          command:
+            - sh
+            - -c
+            - |
+              apk add --no-cache openssl &&
+              mkdir -p /certs &&
+              echo "Generating CA certificate..." &&
+              openssl req -x509 -newkey rsa:4096 -keyout /certs/ca-key.pem -out /certs/ca-cert.pem -days 365 -nodes -subj "/CN=Documenso CA" &&
+              echo "Generating Signing Key..." &&
+              openssl genpkey -algorithm RSA -out /certs/signing-key.pem &&
+              echo "Generating Signing Certificate Request..." &&
+              openssl req -new -key /certs/signing-key.pem -out /certs/signing.csr -subj "/CN=Documenso Signing Cert" &&
+              echo "Signing the Certificate with CA..." &&
+              openssl x509 -req -in /certs/signing.csr -CA /certs/ca-cert.pem -CAkey /certs/ca-key.pem -CAcreateserial -out /certs/signing-cert.pem -days 365 &&
+              echo "Creating PKCS#12 (.p12) format file..." &&
+              openssl pkcs12 -export -out /certs/cert.p12 -inkey /certs/signing-key.pem -in /certs/signing-cert.pem -password pass:{{ .Values.signing.selfSigned.password }} &&
+              echo "Setting ownership to documenso:documenso" &&
+              chown -R 1001:1001 /certs
+          volumeMounts:
+            - name: cert-volume
+              mountPath: /certs
+      {{- end }}
+      {{- with .Values.documenso.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "documenso.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.documenso.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.documenso.securityContext | nindent 12 }}
+          image: "{{ .Values.documenso.image.repository }}:{{ .Values.documenso.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.documenso.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.documenso.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.documenso.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.documenso.resources | nindent 12 }}
+          volumeMounts:
+            {{- if or (not .Values.signing.enabled) (eq .Values.signing.mode "self-signed") }}
+            {{- /* Mount self-signed cert from emptyDir */}}
+            - name: cert-volume
+              mountPath: {{ .Values.signing.mountPath | default "/certs" }}
+            {{- else if or (eq .Values.signing.mode "certmanager") (eq .Values.signing.mode "manual") }}
+            {{- /* Mount cert-manager or manual cert from secret */}}
+            - name: signing-cert
+              mountPath: {{ .Values.signing.mountPath | default "/certs" }}
+              readOnly: true
+            {{- end }}
+            - name: documenso-storage
+              mountPath: /data
+            {{- if .Values.documenso.extraVolumeMounts }}
+            {{- toYaml .Values.documenso.extraVolumeMounts | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: cm-documenso-app
+          {{- if or .Values.env .Values.signing.enabled }}
+          env:
+            {{- if and .Values.signing.enabled (or (eq .Values.signing.mode "certmanager") (eq .Values.signing.mode "manual")) }}
+            {{- /* Inject certificate path and password for cert-manager/manual modes */}}
+            - name: NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH
+              value: "{{ .Values.signing.mountPath | default "/certs" }}/cert.p12"
+            - name: NEXT_PRIVATE_SIGNING_PASSPHRASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.signing.passwordSecretName }}
+                  key: {{ .Values.signing.passwordSecretKey }}
+                  optional: true
+            {{- else if or (not .Values.signing.enabled) (eq .Values.signing.mode "self-signed") }}
+            {{- /* Inject certificate path for self-signed mode */}}
+            - name: NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH
+              value: "{{ .Values.signing.mountPath | default "/certs" }}/cert.p12"
+            {{- if .Values.signing.selfSigned.password }}
+            - name: NEXT_PRIVATE_SIGNING_PASSPHRASE
+              value: {{ .Values.signing.selfSigned.password | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.documenso.env }}
+            {{- toYaml .Values.documenso.env | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      volumes:
+        {{- if or (not .Values.signing.enabled) (eq .Values.signing.mode "self-signed") }}
+        {{- /* emptyDir for self-signed certs */}}
+        - name: cert-volume
+          emptyDir: {}
+        {{- else if or (eq .Values.signing.mode "certmanager") (eq .Values.signing.mode "manual") }}
+        {{- /* Secret volume for cert-manager or manual certs */}}
+        - name: signing-cert
+          secret:
+            secretName: {{ .Values.signing.secretName }}
+            defaultMode: 0644
+            items:
+              - key: cert.p12
+                path: cert.p12
+        {{- end }}
+        {{- if .Values.documenso.persistence.enabled }}
+        - name: documenso-storage
+          persistentVolumeClaim:
+            claimName: {{ include "documenso.fullname" . }}
+        {{- else }}
+        - name: documenso-storage
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.documenso.extraVolumes }}
+        {{- toYaml .Values.documenso.extraVolumes | nindent 8 }}
+        {{- end }}
+      {{- with .Values.documenso.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.documenso.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.documenso.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
