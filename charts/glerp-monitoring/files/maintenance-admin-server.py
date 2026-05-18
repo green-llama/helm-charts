@@ -7,6 +7,7 @@ AlertManager silence.  Deletion expires the silence, removes the VM samples,
 and permanently deletes the Grafana annotation (blue band removed from dashboards).
 """
 import base64
+import html
 import json
 import os
 import time
@@ -22,6 +23,9 @@ GRAFANA_TOKEN = os.environ.get("GRAFANA_TOKEN", "")
 AM_URL        = os.environ.get("AM_URL",        "http://localhost:9093")
 ADMIN_USER    = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASS    = os.environ.get("ADMIN_PASSWORD", "changeme")
+
+METRIC_WINDOW  = "glerp_maintenance_window"
+METRIC_EXCUSED = "glerp_maintenance_excused_failures"
 
 # ── HTML ─────────────────────────────────────────────────────────────────────
 
@@ -187,7 +191,7 @@ def write_metric(site, start_ms, end_ms):
     lines = []
     ts = start_ms
     while ts <= end_ms:
-        lines.append(f'glerp_maintenance_window{{site="{site}"}} 1 {ts}')
+        lines.append(f'{METRIC_WINDOW}{{site="{site}"}} 1 {ts}')
         ts += 60_000
     result = vm_post_text("/api/v1/import/prometheus", "\n".join(lines) + "\n")
     # For windows that have already ended, query actual failed probe samples
@@ -203,9 +207,9 @@ def write_metric(site, start_ms, end_ms):
 def _delete_excused_failures(site, start_ms, end_ms):
     """Delete any existing excused_failures samples for the given window before re-writing."""
     if site == "all":
-        sel = "glerp_maintenance_excused_failures"
+        sel = METRIC_EXCUSED
     else:
-        sel = f'glerp_maintenance_excused_failures{{site="{site}"}}'
+        sel = f'{METRIC_EXCUSED}{{site="{site}"}}'
     qs = urllib.parse.urlencode({
         "match[]": sel,
         "start": int(start_ms / 1000),
@@ -231,7 +235,7 @@ def _write_excused_failures(site, start_ms, end_ms):
             if float(val_str) == 0:
                 ts_ms = int(float(ts_str) * 1000)
                 lines.append(
-                    f'glerp_maintenance_excused_failures{{site="{site}"}} 1 {ts_ms}')
+                    f'{METRIC_EXCUSED}{{site="{site}"}} 1 {ts_ms}')
     if lines:
         vm_post_text("/api/v1/import/prometheus", "\n".join(lines) + "\n")
 
@@ -239,11 +243,11 @@ def _write_excused_failures(site, start_ms, end_ms):
 def delete_metric(site, start_ms, end_ms):
     """Remove glerp_maintenance_window and glerp_maintenance_excused_failures samples."""
     if site == "all":
-        window_sel  = "glerp_maintenance_window"
-        excused_sel = "glerp_maintenance_excused_failures"
+        window_sel  = METRIC_WINDOW
+        excused_sel = METRIC_EXCUSED
     else:
-        window_sel  = f'glerp_maintenance_window{{site="{site}"}}'
-        excused_sel = f'glerp_maintenance_excused_failures{{site="{site}"}}'
+        window_sel  = f'{METRIC_WINDOW}{{site="{site}"}}'
+        excused_sel = f'{METRIC_EXCUSED}{{site="{site}"}}'
     start_s = int(start_ms / 1000)
     end_s   = int(end_ms   / 1000)
     for sel in (window_sel, excused_sel):
@@ -376,7 +380,7 @@ def render_windows():
         else:
             css, label = "s-past",     "Past"
 
-        display = (text[:72] + "…") if len(text) > 72 else text
+        display = html.escape((text[:72] + "…") if len(text) > 72 else text)
 
         action = (
             f'<button class="btn btn-red" onclick="showDel({ann_id})">Delete…</button>'
@@ -395,7 +399,7 @@ def render_windows():
 
         rows.append(
             f"<tr>"
-            f"<td>{site}</td>"
+            f"<td>{html.escape(site)}</td>"
             f"<td>{_fmt_ms(start)}</td>"
             f"<td>{_fmt_ms(end)}</td>"
             f"<td>{display}</td>"
@@ -411,6 +415,15 @@ def render_windows():
         + "".join(rows)
         + "</table>"
     )
+
+# ── Message builder ───────────────────────────────────────────────────────────
+
+def _build_msg(errors, ok_html, info_lines=None):
+    """Return an HTML message div. Errors → red; no errors → ok_html; info_lines → blue info div."""
+    info_html = ('<div class="msg info">' + "<br>".join(info_lines) + "</div>") if info_lines else ""
+    if errors:
+        return '<div class="msg err">' + "<br>".join(errors) + "</div>" + info_html
+    return ok_html + info_html
 
 # ── HTTP handler ──────────────────────────────────────────────────────────────
 
@@ -509,7 +522,12 @@ class Handler(BaseHTTPRequestHandler):
             end_iso   = datetime.fromtimestamp(
                 end_ms   / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            sites_to_write = get_sites() if site == "__all__" else [site]
+            known_sites = get_sites()
+            if site != "__all__" and site not in known_sites:
+                self._send_html(self._render(
+                    f'<div class="msg err">Unknown site: {html.escape(site)}</div>'))
+                return
+            sites_to_write = known_sites if site == "__all__" else [site]
             errors  = []
             notices = []
 
@@ -537,22 +555,15 @@ class Handler(BaseHTTPRequestHandler):
             if st not in (200, 204):
                 errors.append(f"Grafana annotation failed (HTTP {st}) — check GRAFANA_TOKEN")
 
-            notice_html = (
-                '<div class="msg info">' + "<br>".join(notices) + "</div>"
-            ) if notices else ""
-
-            if errors:
-                msg = '<div class="msg err">' + "<br>".join(errors) + "</div>" + notice_html
-            else:
-                label = "all sites" if site == "__all__" else f"<strong>{site}</strong>"
-                silence_note = f" · AlertManager silence created (ID: {silence_id})" if silence_id else ""
-                msg = (
-                    f'<div class="msg ok">Maintenance window created for {label}:<br>'
-                    f"UTC {start_iso} → {end_iso}<br>"
-                    f"VictoriaMetrics metric written · Grafana annotation created"
-                    f"{silence_note}</div>"
-                    + notice_html
-                )
+            label = "all sites" if site == "__all__" else f"<strong>{html.escape(site)}</strong>"
+            silence_note = f" · AlertManager silence created (ID: {silence_id})" if silence_id else ""
+            ok_html = (
+                f'<div class="msg ok">Maintenance window created for {label}:<br>'
+                f"UTC {start_iso} → {end_iso}<br>"
+                f"VictoriaMetrics metric written · Grafana annotation created"
+                f"{silence_note}</div>"
+            )
+            msg = _build_msg(errors, ok_html, notices or None)
 
             self._send_html(self._render(msg))
             return
@@ -618,13 +629,11 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 errors.append(f"Could not delete Grafana annotation (HTTP {st}): {body[:120]}")
 
-            if errors:
-                msg = '<div class="msg err">' + "<br>".join(errors + notices) + "</div>"
-            else:
-                msg = (
-                    '<div class="msg ok">Window deleted successfully:<br>'
-                    + " · ".join(notices) + "</div>"
-                )
+            ok_html = (
+                '<div class="msg ok">Window deleted successfully:<br>'
+                + " · ".join(notices) + "</div>"
+            )
+            msg = _build_msg(errors, ok_html, notices if errors else None)
 
             self._send_html(self._render(msg))
             return
