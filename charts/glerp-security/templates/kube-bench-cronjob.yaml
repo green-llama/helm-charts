@@ -1,0 +1,140 @@
+{{- if .Values.kubeBench.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "glerp-security.fullname" . }}-kube-bench
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "glerp-security.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kube-bench
+spec:
+  schedule: {{ .Values.kubeBench.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            {{- include "glerp-security.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: kube-bench
+        spec:
+          serviceAccountName: {{ include "glerp-security.serviceAccountName" . }}
+          restartPolicy: Never
+          hostPID: true
+          hostNetwork: false
+
+          # kube-bench must run on a control-plane node to read etcd / API server configs.
+          # RKE2 co-locates control-plane and worker on the same node by default.
+          tolerations:
+            - operator: Exists
+
+          containers:
+            - name: kube-bench
+              image: {{ .Values.kubeBench.image | quote }}
+              imagePullPolicy: {{ .Values.kubeBench.imagePullPolicy }}
+
+              securityContext:
+                privileged: true
+                runAsUser: 0
+
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  REPORT_FILE="/reports/kube-bench-$(date +%Y%m%d-%H%M%S).json"
+                  echo "Running kube-bench benchmark: {{ .Values.kubeBench.benchmark }}"
+                  kube-bench run \
+                    --benchmark {{ .Values.kubeBench.benchmark }} \
+                    --json \
+                    --outputfile "${REPORT_FILE}"
+
+                  echo "Report written to ${REPORT_FILE}"
+
+                  # Push summary counts to Prometheus Pushgateway
+                  PASS=$(python3 -c "import json,sys; d=json.load(open('${REPORT_FILE}')); print(sum(t['total_pass'] for t in d.get('Controls',[])))" 2>/dev/null || echo 0)
+                  FAIL=$(python3 -c "import json,sys; d=json.load(open('${REPORT_FILE}')); print(sum(t['total_fail'] for t in d.get('Controls',[])))" 2>/dev/null || echo 0)
+                  WARN=$(python3 -c "import json,sys; d=json.load(open('${REPORT_FILE}')); print(sum(t['total_warn'] for t in d.get('Controls',[])))" 2>/dev/null || echo 0)
+
+                  PUSHGW="{{ include "glerp-security.pushgatewayUrl" . }}"
+                  cat <<EOF | curl -s --data-binary @- "${PUSHGW}/metrics/job/kube-bench/instance/$(hostname)"
+                  # TYPE kube_bench_total_pass gauge
+                  kube_bench_total_pass ${PASS}
+                  # TYPE kube_bench_total_fail gauge
+                  kube_bench_total_fail ${FAIL}
+                  # TYPE kube_bench_total_warn gauge
+                  kube_bench_total_warn ${WARN}
+                  EOF
+
+                  echo "Pushed metrics to Pushgateway — PASS=${PASS} FAIL=${FAIL} WARN=${WARN}"
+
+              resources:
+                {{- toYaml .Values.kubeBench.resources | nindent 16 }}
+
+              volumeMounts:
+                - name: reports
+                  mountPath: /reports
+                # RKE2 control-plane config
+                - name: etc-rancher-rke2
+                  mountPath: /etc/rancher/rke2
+                  readOnly: true
+                - name: var-lib-rancher-rke2
+                  mountPath: /var/lib/rancher/rke2
+                  readOnly: true
+                # Standard Kubernetes paths (kube-bench expects these)
+                - name: etc-kubernetes
+                  mountPath: /etc/kubernetes
+                  readOnly: true
+                - name: var-lib-kubelet
+                  mountPath: /var/lib/kubelet
+                  readOnly: true
+                - name: var-lib-etcd
+                  mountPath: /var/lib/etcd
+                  readOnly: true
+                - name: etc-systemd
+                  mountPath: /etc/systemd
+                  readOnly: true
+                - name: lib-systemd
+                  mountPath: /lib/systemd
+                  readOnly: true
+                - name: proc
+                  mountPath: /proc
+                  readOnly: true
+
+          volumes:
+            - name: reports
+              persistentVolumeClaim:
+                claimName: {{ include "glerp-security.fullname" . }}-reports
+            - name: etc-rancher-rke2
+              hostPath:
+                path: /etc/rancher/rke2
+                type: DirectoryOrCreate
+            - name: var-lib-rancher-rke2
+              hostPath:
+                path: /var/lib/rancher/rke2
+                type: DirectoryOrCreate
+            - name: etc-kubernetes
+              hostPath:
+                path: /etc/kubernetes
+                type: DirectoryOrCreate
+            - name: var-lib-kubelet
+              hostPath:
+                path: /var/lib/kubelet
+                type: DirectoryOrCreate
+            - name: var-lib-etcd
+              hostPath:
+                path: /var/lib/etcd
+                type: DirectoryOrCreate
+            - name: etc-systemd
+              hostPath:
+                path: /etc/systemd
+            - name: lib-systemd
+              hostPath:
+                path: /lib/systemd
+            - name: proc
+              hostPath:
+                path: /proc
+{{- end }}

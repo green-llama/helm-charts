@@ -1,0 +1,27 @@
+apiVersion: v2
+name: glerp-security
+description: Automated CIS vulnerability scanning for GLerp RKE2 clusters — Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
+type: application
+version: 0.1.0
+appVersion: "2026.05"
+keywords:
+  - security
+  - cis
+  - soc2
+  - trivy
+  - kube-bench
+  - owasp-zap
+  - vulnerability-scanning
+home: https://github.com/green-llama/k8-glerp-security
+sources:
+  - https://github.com/green-llama/k8-glerp-security
+maintainers:
+  - name: greenllama
+    email: rjbloesser@greenllama.tech
+dependencies:
+  - name: trivy-operator
+    repository: "https://aquasecurity.github.io/helm-charts/"
+    version: "0.32.1"
+  - name: prometheus-pushgateway
+    repository: "https://prometheus-community.github.io/helm-charts"
+    version: "2.14.0"

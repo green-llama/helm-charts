@@ -1,0 +1,53 @@
+GLerp Security — CIS/SOC2 Automated Scanning
+=============================================
+
+Release:   {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Version:   {{ .Chart.Version }}
+
+Scanning Configuration
+----------------------
+Trivy Operator:   Continuous (every 6h) — all namespaces
+kube-bench:       {{ .Values.kubeBench.schedule }} (CIS K8s Benchmark, RKE2)
+OWASP ZAP:        {{ .Values.zapScan.schedule }} (web app, {{ .Values.zapScan.scanType }} scan)
+
+Scan Targets (ZAP):
+{{- range .Values.scanTargets }}
+  - {{ .name }}: {{ .url }}
+{{- end }}
+
+Report Server
+-------------
+URL: https://{{ .Values.reportHostname }}/security/
+
+  Reports are accessible via the nginx report server after each scan run.
+  Trivy vulnerability and compliance reports are also available via kubectl:
+
+    kubectl get vulnerabilityreports -A --request-timeout=5s
+    kubectl get clustercompliancereports --request-timeout=5s
+
+Trigger a manual scan run
+--------------------------
+  # kube-bench
+  kubectl create job kube-bench-manual \
+    --from=cronjob/{{ include "glerp-security.fullname" . }}-kube-bench \
+    -n {{ .Release.Namespace }} --request-timeout=5s
+
+  # OWASP ZAP (per target)
+{{- range .Values.scanTargets }}
+  kubectl create job zap-{{ .name }}-manual \
+    --from=cronjob/{{ include "glerp-security.fullname" $ }}-zap-{{ .name | lower | replace "_" "-" }} \
+    -n {{ $.Release.Namespace }} --request-timeout=5s
+{{- end }}
+
+Grafana Dashboard
+-----------------
+  Dashboard "GLerp Security — CIS/SOC2 Compliance" is auto-loaded into Grafana
+  (ConfigMap deployed to glerp-monitoring namespace with label grafana_dashboard=1).
+
+Next Steps (Production)
+-----------------------
+  helm upgrade glerp-security . \
+    --set reportHostname=security.greenllama.tech \
+    --set externalDnsTarget=pec.greenllama.tech \
+    --set domain=greenllama.tech
