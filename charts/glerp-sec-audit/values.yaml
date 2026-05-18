@@ -123,6 +123,14 @@ trivy-operator:
     scanJobTolerations: []
 
 # ------------------------------------------------------------
+# Grafana dashboard
+# Set enabled: false if the glerp-monitoring namespace does not exist yet.
+# ------------------------------------------------------------
+grafanaDashboard:
+  enabled: true
+  namespace: "glerp-monitoring"
+
+# ------------------------------------------------------------
 # Prometheus Pushgateway sub-chart overrides
 # Used to receive kube-bench metrics after each weekly run.
 # ------------------------------------------------------------

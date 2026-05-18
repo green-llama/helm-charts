@@ -1,10 +1,9 @@
+{{- if .Values.grafanaDashboard.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ include "glerp-sec-audit.fullname" . }}-grafana-dashboard
-  # Deployed into the monitoring namespace so Grafana's sidecar picks it up.
-  # Grafana sidecar watches for label grafana_dashboard: "1" in its configured namespace.
-  namespace: glerp-monitoring
+  namespace: {{ .Values.grafanaDashboard.namespace }}
   labels:
     grafana_dashboard: "1"
     {{- include "glerp-sec-audit.labels" . | nindent 4 }}
@@ -276,3 +275,4 @@ data:
       "uid": "glerp-sec-audit-cis",
       "version": 1
     }
+{{- end }}
