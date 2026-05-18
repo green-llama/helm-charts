@@ -98,7 +98,7 @@ spec:
           message: |-
             {{ "{{" }}- if eq .Status "firing" -{{ "}}" }}🔴{{ "{{" }}- else -{{ "}}" }}✅{{ "{{" }}- end {{ "}}" }} <b>{{ "{{" }} .GroupLabels.alertname {{ "}}" }}</b>{{ "{{" }} if .GroupLabels.site {{ "}}" }} — {{ "{{" }} .GroupLabels.site {{ "}}" }}{{ "{{" }} end {{ "}}" }}
             <b>Cluster:</b> {{ .Values.cluster.name }}
-            {{ "{{" }} range .Alerts {{ "}}" -{{ "}}" }}
+            {{ "{{" }} range .Alerts {{ "-}}" }}
             {{ "{{" }} .Annotations.summary {{ "}}" }}
             {{ "{{" }} if .Annotations.description {{ "}}" }}{{ "{{" }} .Annotations.description {{ "}}" }}{{ "{{" }} end {{ "}}" }}
             Started: {{ "{{" }} .StartsAt.Format "2006-01-02 15:04 UTC" {{ "}}" }}
@@ -114,7 +114,7 @@ spec:
           color: '{{ "{{" }} if eq .Status "firing" {{ "}}" }}danger{{ "{{" }} else {{ "}}" }}good{{ "{{" }} end {{ "}}" }}'
           title: '{{ "{{" }} if eq .Status "firing" {{ "}}" }}🔴{{ "{{" }} else {{ "}}" }}✅{{ "{{" }} end {{ "}}" }} [GLerp {{ .Values.cluster.name }}] {{ "{{" }} .GroupLabels.alertname {{ "}}" }}{{ "{{" }} if .GroupLabels.site {{ "}}" }} — {{ "{{" }} .GroupLabels.site {{ "}}" }}{{ "{{" }} end {{ "}}" }}'
           text: |-
-            {{ "{{" }} range .Alerts {{ "}}" -{{ "}}" }}
+            {{ "{{" }} range .Alerts {{ "-}}" }}
             *{{ "{{" }} .Annotations.summary {{ "}}" }}*
             {{ "{{" }} if .Annotations.description {{ "}}" }}{{ "{{" }} .Annotations.description {{ "}}" }}{{ "{{" }} end {{ "}}" }}
             Started: {{ "{{" }} .StartsAt.Format "2006-01-02 15:04 UTC" {{ "}}" }}
