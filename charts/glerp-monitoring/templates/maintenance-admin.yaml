@@ -59,6 +59,7 @@ spec:
         app.kubernetes.io/component: maintenance-admin
       annotations:
         checksum/script: {{ .Files.Get "files/maintenance-admin-server.py" | sha256sum }}
+        checksum/secret: {{ list .Values.maintenanceAdmin.auth.password .Values.maintenanceAdmin.grafanaToken | join ":" | sha256sum }}
     spec:
       securityContext:
         runAsNonRoot: true
