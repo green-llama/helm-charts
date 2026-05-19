@@ -112,6 +112,8 @@ trivy-operator:
     rbacAssessmentScannerEnabled: true
     exposedSecretScannerEnabled: true
     complianceScannerEnabled: true
+    infraAssessmentScannerEnabled: false  # kube-bench covers CIS node compliance; node-collector
+                                          # cannot schedule on RKE2 worker nodes due to affinity mismatch
   trivy:
     ignoreUnfixed: false
     severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
