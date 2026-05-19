@@ -18,7 +18,7 @@ Scan Targets (ZAP):
 
 Report Server
 -------------
-URL: https://{{ .Values.reportHostname }}/security/
+URL: https://{{ .Values.reportHostname }}{{ .Values.reportPort }}/security/
 
   Reports are accessible via the nginx report server after each scan run.
   Trivy vulnerability and compliance reports are also available via kubectl:

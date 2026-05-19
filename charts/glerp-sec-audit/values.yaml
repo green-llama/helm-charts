@@ -25,6 +25,8 @@ scanPriorityClassName: "glerp-sec-audit-scan-low"
 # ------------------------------------------------------------
 domain: "dev.greenllama.tech"
 reportHostname: "security.dev.greenllama.tech"
+reportPort: ":10443"              # port suffix appended to report URLs (e.g. ":10443" for dev NAT)
+                                  # set to "" for production (standard HTTPS port 443)
 externalDnsTarget: "pec.greenllama.tech"
 ingressEntrypoint: "websecure"
 tlsSecretName: "letsencrypt-greenllama-tech-tls"
@@ -88,6 +90,8 @@ zapScan:
 reports:
   storageSize: "10Gi"
   storageClassName: ""         # leave blank to use cluster default
+  accessMode: ReadWriteMany    # RWX required — report-server and scan jobs (kube-bench, ZAP)
+                               # mount the same PVC simultaneously; Longhorn supports RWX natively
   retentionDays: 90
 
 reportServer:

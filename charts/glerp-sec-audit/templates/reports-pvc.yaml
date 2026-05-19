@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/component: report-storage
 spec:
   accessModes:
-    - ReadWriteOnce
+    - {{ .Values.reports.accessMode }}
   resources:
     requests:
       storage: {{ .Values.reports.storageSize }}
