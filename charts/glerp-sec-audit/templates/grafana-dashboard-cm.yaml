@@ -5,9 +5,11 @@ metadata:
   name: {{ include "glerp-sec-audit.fullname" . }}-grafana-dashboard
   namespace: {{ .Values.grafanaDashboard.namespace }}
   labels:
-    grafana_dashboard: "1"
+    grafana_dashboard: {{ .Values.grafanaDashboard.dashboardLabel | quote }}
     {{- include "glerp-sec-audit.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana-dashboard
+  annotations:
+    grafana_folder: {{ .Values.grafanaDashboard.folderName | quote }}
 data:
   glerp-sec-audit.json: |
     {
