@@ -62,7 +62,8 @@ zapScan:
   image: "ghcr.io/zaproxy/zaproxy:stable"
   imagePullPolicy: Always
   schedule: "0 2 * * 0"       # Weekly: Sunday 02:00 UTC
-  scanType: "full"             # full | baseline
+  scanType: "baseline"         # baseline = passive only (low load, adequate SOC2 evidence)
+                               # full = active attack probes (high load, run manually if needed)
   # ZAP exits 0 even with findings so the Job does not report failure.
   # Findings are reviewed via the HTML report.
   exitOnWarning: false
@@ -105,7 +106,7 @@ trivy-operator:
   excludeNamespaces: "kube-system,kube-public,kube-node-lease"
   operator:
     scanJobTimeout: "5m"
-    concurrentScanJobsLimit: "10"
+    concurrentScanJobsLimit: "3"  # 10 causes load spikes on initial install; 3 is safe for single-node dev
     vulnerabilityScannerEnabled: true
     configAuditScannerEnabled: true
     rbacAssessmentScannerEnabled: true
