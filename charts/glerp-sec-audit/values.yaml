@@ -103,15 +103,28 @@ reportServer:
 # ------------------------------------------------------------
 trivy-operator:
   targetNamespaces: ""
-  excludeNamespaces: "kube-system,kube-public,kube-node-lease"
+  # Exclude all Rancher/RKE2 system namespaces — scanning these causes Rancher GUI
+  # brownouts and produces no SOC2-relevant evidence (not GLerp workloads).
+  excludeNamespaces: >-
+    kube-system,kube-public,kube-node-lease,
+    cattle-fleet-system,cattle-fleet-local-system,cattle-provisioning-capi-system,
+    cattle-monitoring-system,cattle-logging-system,cattle-alerting-system,
+    cattle-dashboards,cattle-impersonation-system,
+    fleet-local,fleet-default,
+    rancher-operator-system,
+    traefik-system,
+    cert-manager,
+    longhorn-system,
+    glerp-sec-audit
   operator:
     scanJobTimeout: "5m"
-    concurrentScanJobsLimit: "3"  # 10 causes load spikes on initial install; 3 is safe for single-node dev
+    concurrentScanJobsLimit: "2"  # conservative for single-node dev; raise to 5 on multi-node prod
     vulnerabilityScannerEnabled: true
     configAuditScannerEnabled: true
     rbacAssessmentScannerEnabled: true
     exposedSecretScannerEnabled: true
-    complianceScannerEnabled: true
+    complianceScannerEnabled: false  # cluster-wide compliance scan is very heavy; CIS evidence
+                                     # comes from kube-bench instead
     infraAssessmentScannerEnabled: false  # kube-bench covers CIS node compliance; node-collector
                                           # cannot schedule on RKE2 worker nodes due to affinity mismatch
   trivy:
@@ -119,8 +132,7 @@ trivy-operator:
     severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
     slow: true                 # reduce memory pressure during scans
   compliance:
-    reportType: "all"          # generates both summary and detailed reports
-    failEntriesLimit: "10"
+    reportType: "summary"      # summary only; detail reports are very large
   serviceMonitor:
     enabled: true              # Prometheus ServiceMonitor for Trivy metrics
   trivyOperator:
