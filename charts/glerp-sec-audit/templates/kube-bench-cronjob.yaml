@@ -23,6 +23,7 @@ spec:
         spec:
           serviceAccountName: {{ include "glerp-sec-audit.serviceAccountName" . }}
           restartPolicy: Never
+          priorityClassName: {{ .Values.scanPriorityClassName }}
           hostPID: true
           hostNetwork: false
 

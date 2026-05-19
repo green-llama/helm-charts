@@ -12,6 +12,13 @@
 namespace: glerp-sec-audit
 
 # ------------------------------------------------------------
+# Scan job priority — applied to kube-bench, ZAP, and Trivy scan pods.
+# Value -100 means these jobs are the first to be preempted under
+# node pressure and the scheduler treats them as background work.
+# ------------------------------------------------------------
+scanPriorityClassName: "glerp-sec-audit-scan-low"
+
+# ------------------------------------------------------------
 # Ingress / DNS — override per cluster environment
 # ingressNamespace: namespace where IngressRoute is deployed.
 # Must match where letsencrypt-greenllama-tech-tls lives (traefik-system).
@@ -98,21 +105,26 @@ reportServer:
 # ------------------------------------------------------------
 # Trivy Operator sub-chart overrides
 # Full reference: https://aquasecurity.github.io/trivy-operator/latest/getting-started/installation/helm/
+#
+# Mode: ClientServer — a single trivy-server StatefulSet holds the vulnerability
+# DB on a shared Longhorn PVC. Scan pods connect to it as thin clients and do NOT
+# download the DB themselves, eliminating the ~250 MB per-pod download that caused
+# cluster I/O brownout in Standalone mode.
+#
 # targetNamespaces: "" = scan all namespaces (correct for SOC2 — any GLerp
-# customer namespace is automatically included without naming convention)
+# customer namespace is automatically included without naming convention).
+# excludeNamespaces must be a single-line comma-separated string — block scalars
+# fold newlines into spaces which Trivy rejects, silently skipping all exclusions.
 # ------------------------------------------------------------
 trivy-operator:
-  enabled: false    # Set true only on clusters with spare capacity; causes brownout on small dev clusters
+  enabled: false    # Set true only on clusters with spare capacity.
+                    # Re-enable with: --set trivy-operator.enabled=true
   targetNamespaces: ""
-  # Single-line string required — block scalars fold newlines into spaces which Trivy rejects.
-  # Excludes all Rancher/RKE2/infrastructure namespaces; only GLerp app namespaces are scanned.
   excludeNamespaces: "kube-system,kube-public,kube-node-lease,cattle-fleet-system,cattle-fleet-local-system,cattle-provisioning-capi-system,cattle-monitoring-system,cattle-logging-system,cattle-alerting-system,cattle-dashboards,cattle-impersonation-system,fleet-local,fleet-default,rancher-operator-system,traefik-system,cert-manager,longhorn-system,glerp-sec-audit"
   operator:
+    builtInTrivyServer: true        # deploys the trivy-server StatefulSet with shared PVC
     scanJobTimeout: "5m"
     concurrentScanJobsLimit: "1"
-    # Only image vulnerability scanning enabled — generates one scan pod per unique image.
-    # All other scanners disabled to minimise load on the dev cluster.
-    # Re-enable configAudit/rbac/exposedSecret on a production multi-node cluster.
     vulnerabilityScannerEnabled: true
     configAuditScannerEnabled: false
     rbacAssessmentScannerEnabled: false
@@ -120,12 +132,36 @@ trivy-operator:
     complianceScannerEnabled: false
     infraAssessmentScannerEnabled: false
   trivy:
+    mode: ClientServer              # scan pods are thin clients; no per-pod DB download
+    storageClassName: ""            # uses cluster default (longhorn)
+    storageSize: "2Gi"              # holds trivy-db (~250 MB) with ample headroom
+    skipJavaDBUpdate: true          # GLerp stack has no Java; saves 400 MB of storage/bandwidth
     ignoreUnfixed: false
     severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
     slow: true
+    priorityClassName: "glerp-sec-audit-scan-low"
+    # Scan job pod resources — requests sized to actual usage so the scheduler
+    # correctly tracks load; limits cap burst to prevent node saturation.
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+    # trivy-server StatefulSet resources — needs more memory to hold the DB in cache
+    server:
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
   serviceMonitor:
     enabled: true
   trivyOperator:
+    scanJobPodPriorityClassName: "glerp-sec-audit-scan-low"
     scanJobAnnotations: ""
     scanJobNodeSelector: {}
     scanJobTolerations: []

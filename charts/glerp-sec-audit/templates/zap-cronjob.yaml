@@ -28,6 +28,7 @@ spec:
             glerp-sec-audit/scan-target: {{ .name | quote }}
         spec:
           restartPolicy: Never
+          priorityClassName: {{ $.Values.scanPriorityClassName }}
           securityContext:
             runAsUser: 1000
             fsGroup: 1000
