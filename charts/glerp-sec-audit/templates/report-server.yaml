@@ -49,6 +49,8 @@ spec:
         {{- include "glerp-sec-audit.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: report-server
     spec:
+      securityContext:
+        fsGroup: 101  # nginx group in alpine — allows worker processes to read Longhorn-provisioned PVC
       containers:
         - name: nginx
           image: {{ .Values.reportServer.image | quote }}
