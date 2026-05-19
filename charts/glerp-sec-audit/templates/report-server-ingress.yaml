@@ -1,5 +1,5 @@
 ---
-# Strip-prefix middleware: removes /security prefix before forwarding to nginx
+# Strip-prefix middleware stays in the app namespace; referenced cross-namespace from the IngressRoute.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -13,18 +13,20 @@ spec:
     prefixes:
       - /security
 ---
+# IngressRoute in traefik-system so it can access letsencrypt-greenllama-tech-tls directly.
+# Service and middleware are referenced cross-namespace.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: {{ include "glerp-sec-audit.fullname" . }}-report-server
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.ingressNamespace }}
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.reportHostname | quote }}
+    external-dns.alpha.kubernetes.io/target: {{ .Values.externalDnsTarget | quote }}
   labels:
     {{- include "glerp-sec-audit.labels" . | nindent 4 }}
     app.kubernetes.io/component: report-server
-  annotations:
-    # external-dns creates the Cloudflare DNS record automatically
-    external-dns.alpha.kubernetes.io/hostname: {{ .Values.reportHostname | quote }}
-    external-dns.alpha.kubernetes.io/target: {{ .Values.externalDnsTarget | quote }}
 spec:
   entryPoints:
     - {{ .Values.ingressEntrypoint }}
@@ -33,14 +35,18 @@ spec:
       kind: Rule
       middlewares:
         - name: {{ include "glerp-sec-audit.fullname" . }}-strip-prefix
+          namespace: {{ .Release.Namespace }}
       services:
         - name: {{ include "glerp-sec-audit.fullname" . }}-report-server
+          namespace: {{ .Release.Namespace }}
           port: 80
-    # Root redirect → /security/
+          scheme: http
     - match: Host(`{{ .Values.reportHostname }}`) && Path(`/`)
       kind: Rule
       services:
         - name: {{ include "glerp-sec-audit.fullname" . }}-report-server
+          namespace: {{ .Release.Namespace }}
           port: 80
+          scheme: http
   tls:
     secretName: {{ .Values.tlsSecretName | quote }}

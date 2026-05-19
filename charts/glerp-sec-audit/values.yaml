@@ -13,12 +13,15 @@ namespace: glerp-sec-audit
 
 # ------------------------------------------------------------
 # Ingress / DNS — override per cluster environment
+# ingressNamespace: namespace where IngressRoute is deployed.
+# Must match where letsencrypt-greenllama-tech-tls lives (traefik-system).
 # ------------------------------------------------------------
 domain: "dev.greenllama.tech"
 reportHostname: "security.dev.greenllama.tech"
 externalDnsTarget: "pec.greenllama.tech"
 ingressEntrypoint: "websecure"
 tlsSecretName: "letsencrypt-greenllama-tech-tls"
+ingressNamespace: "traefik-system"
 
 # ------------------------------------------------------------
 # GLerp web app scan targets
