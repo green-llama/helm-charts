@@ -2,7 +2,7 @@ apiVersion: v2
 name: glerp-sec-audit
 description: Automated security compliance auditing for GLerp RKE2 clusters — Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
 type: application
-version: 0.2.12
+version: 0.2.13
 appVersion: "2026.05"
 keywords:
   - security

@@ -124,7 +124,7 @@ trivy-operator:
   operator:
     builtInTrivyServer: true        # deploys the trivy-server StatefulSet with shared PVC
     scanJobTimeout: "5m"
-    concurrentScanJobsLimit: "1"
+    scanJobsConcurrentLimit: 1      # correct subchart key — concurrentScanJobsLimit was silently ignored
     vulnerabilityScannerEnabled: true
     configAuditScannerEnabled: false
     rbacAssessmentScannerEnabled: false
