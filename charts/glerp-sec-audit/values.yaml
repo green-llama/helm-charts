@@ -102,6 +102,7 @@ reportServer:
 # customer namespace is automatically included without naming convention)
 # ------------------------------------------------------------
 trivy-operator:
+  enabled: false    # Set true only on clusters with spare capacity; causes brownout on small dev clusters
   targetNamespaces: ""
   # Single-line string required — block scalars fold newlines into spaces which Trivy rejects.
   # Excludes all Rancher/RKE2/infrastructure namespaces; only GLerp app namespaces are scanned.

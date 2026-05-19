@@ -2,7 +2,7 @@ apiVersion: v2
 name: glerp-sec-audit
 description: Automated security compliance auditing for GLerp RKE2 clusters — Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
 type: application
-version: 0.2.10
+version: 0.2.11
 appVersion: "2026.05"
 keywords:
   - security
@@ -22,6 +22,7 @@ dependencies:
   - name: trivy-operator
     repository: "https://aquasecurity.github.io/helm-charts/"
     version: "0.32.1"
+    condition: trivy-operator.enabled
   - name: prometheus-pushgateway
     repository: "https://prometheus-community.github.io/helm-charts"
     version: "2.14.0"
