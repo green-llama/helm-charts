@@ -6,7 +6,7 @@ Namespace: {{ .Release.Namespace }}
 Version:   {{ .Chart.Version }}
 
 {{- if and .Values.ghcrRegistryAuth.enabled .Values.ghcrRegistryAuth.eso.enabled }}
-{{- if not (.Capabilities.APIVersions.Has "external-secrets.io/v1beta1/ExternalSecret") }}
+{{- if not (.Capabilities.APIVersions.Has "external-secrets.io/v1beta1") }}
 WARNING — ESO CRDs not found
   ghcrRegistryAuth.eso.enabled=true but external-secrets.io/v1beta1 CRDs are not
   installed in this cluster. The ExternalSecret, ClusterSecretStore, and
