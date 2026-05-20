@@ -206,7 +206,44 @@ trivy-operator:
 # ------------------------------------------------------------
 ghcrRegistryAuth:
   enabled: false
-  secretName: "ghcr-scan-credentials"   # pre-created in release namespace; never commit the token
+  secretName: "ghcr-scan-credentials"   # Secret name used in this namespace and in all labeled namespaces
+
+  # ------------------------------------------------------------------
+  # ESO integration — set enabled: true to have ESO create/maintain
+  # the Secret automatically instead of a manual kubectl create.
+  #
+  # Requires an existing ClusterSecretStore in the cluster.
+  # Credentials are pulled from the backend (Vault, AWS, etc.) — never
+  # stored in this values file or in git.
+  # ------------------------------------------------------------------
+  eso:
+    enabled: false
+    clusterSecretStoreName: ""     # name of an existing ClusterSecretStore
+    remoteRef:
+      key: ""                      # path/key in the backend (e.g. "glerp/ghcr-credentials")
+      usernameProperty: "username" # property holding the GitHub username
+      passwordProperty: "password" # property holding the GHCR PAT (read:packages scope)
+
+    # ------------------------------------------------------------------
+    # ClusterExternalSecret — zero-touch credential distribution.
+    #
+    # When enabled, ESO creates the ghcr-scan-credentials Secret in
+    # EVERY namespace that carries the glerp.io/private-registry: "true"
+    # label. New apps only need the label — no setup steps to remember.
+    #
+    # Label a namespace:
+    #   kubectl label namespace <ns> glerp.io/private-registry=true
+    #
+    # This covers two independent needs with one credential:
+    #   1. Pod image pulls   — kubelet uses the Secret for docker auth
+    #   2. Trivy scanning    — scan pods inherit the credentials via
+    #                          scanJobAdditionalEnvVars (wired above)
+    # ------------------------------------------------------------------
+    clusterExternalSecret:
+      enabled: false
+      namespaceSelector:
+        matchLabels:
+          glerp.io/private-registry: "true"
 
 # ------------------------------------------------------------
 # Grafana dashboard
