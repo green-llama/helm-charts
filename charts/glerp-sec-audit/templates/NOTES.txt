@@ -70,6 +70,11 @@ Debug — Pushgateway (kube-bench metrics)
     deploy/{{ include "glerp-sec-audit.fullname" . }}-prometheus-pushgateway -- \
     wget -q -O /dev/null --method=DELETE http://localhost:9091/metrics/job/kube-bench
 
+Debug — Pushgateway cleanup (busybox wget has no DELETE; restart clears all entries)
+  kubectl rollout restart -n {{ .Release.Namespace }} \
+    deploy/{{ include "glerp-sec-audit.fullname" . }}-prometheus-pushgateway --request-timeout=5s
+  # Then trigger a new kube-bench job to repopulate with the single rke2-node instance
+
 Debug — Grafana Dashboard
 --------------------------
   Expand the collapsed "Diagnostics — Metric Verification" row at the bottom of the

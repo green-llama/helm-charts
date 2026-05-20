@@ -138,8 +138,8 @@ trivy-operator:
   trivy:
     mode: ClientServer              # scan pods are thin clients; no per-pod DB download
     storageClassName: ""            # uses cluster default (longhorn)
-    storageSize: "2Gi"              # holds trivy-db (~250 MB) with ample headroom
-    skipJavaDBUpdate: true          # GLerp stack has no Java; saves 400 MB of storage/bandwidth
+    storageSize: "4Gi"              # vuln DB ~250 MB + Java DB ~400 MB = ~650 MB; 4Gi gives headroom
+    skipJavaDBUpdate: false         # Python images share base layers containing Java tooling; cannot skip on first run
     ignoreUnfixed: false
     severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
     slow: true
