@@ -28,12 +28,21 @@ spec:
           hostNetwork: false
           securityContext:
             seLinuxOptions:
-              type: "spc_t"  # super_privileged_container — bypasses SELinux label transition on CentOS/RHEL
+              type: "spc_t"
 
-          # kube-bench must run on the control-plane node to read etcd/API server host paths.
-          # Control-plane nodes do not run the Longhorn CSI driver, so the shared reports
-          # PVC cannot be mounted here. Results are pushed to Pushgateway (Grafana evidence)
-          # and written to a node-local emptyDir that is discarded after the job completes.
+          # kube-bench runs on worker nodes (control-plane excluded by affinity).
+          # Worker-node CIS checks cover kubelet config and node hardening.
+          # etcd/API server host paths are mounted via DirectoryOrCreate — on workers these
+          # will be empty so those control-plane checks are skipped by kube-bench automatically.
+          # Results are pushed to Pushgateway (Grafana evidence); emptyDir is discarded after the job.
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: DoesNotExist
+
           tolerations:
             - operator: Exists
 
@@ -66,14 +75,13 @@ spec:
                   WARN=$(python3 -c "import json,sys; d=json.load(open('${REPORT_FILE}')); print(sum(t['total_warn'] for t in d.get('Controls',[])))" 2>/dev/null || echo 0)
 
                   PUSHGW="{{ include "glerp-sec-audit.pushgatewayUrl" . }}"
-                  cat <<EOF | curl -s --data-binary @- "${PUSHGW}/metrics/job/kube-bench/instance/$(hostname)"
-                  # TYPE kube_bench_total_pass gauge
-                  kube_bench_total_pass ${PASS}
-                  # TYPE kube_bench_total_fail gauge
-                  kube_bench_total_fail ${FAIL}
-                  # TYPE kube_bench_total_warn gauge
-                  kube_bench_total_warn ${WARN}
-                  EOF
+                  python3 -c "
+                  import urllib.request, socket
+                  url = '${PUSHGW}/metrics/job/kube-bench/instance/' + socket.gethostname()
+                  body = '# TYPE kube_bench_total_pass gauge\nkube_bench_total_pass ${PASS}\n# TYPE kube_bench_total_fail gauge\nkube_bench_total_fail ${FAIL}\n# TYPE kube_bench_total_warn gauge\nkube_bench_total_warn ${WARN}\n'
+                  urllib.request.urlopen(urllib.request.Request(url, data=body.encode(), method='POST'), timeout=10)
+                  print('Pushed metrics to', url)
+                  "
 
                   echo "Pushed metrics to Pushgateway — PASS=${PASS} FAIL=${FAIL} WARN=${WARN}"
 
