@@ -176,6 +176,37 @@ trivy-operator:
     scanJobAnnotations: ""
     scanJobNodeSelector: {}
     scanJobTolerations: []
+    # Private GHCR registry auth — uncomment when ghcrRegistryAuth.enabled: true.
+    # Credentials are sourced from the pre-created Secret (never put tokens here).
+    # See NOTES.txt: "Setup — Private Registry (GHCR) Scanning" for the full procedure.
+    #
+    # scanJobAdditionalEnvVars:
+    #   - name: TRIVY_USERNAME
+    #     valueFrom:
+    #       secretKeyRef:
+    #         name: ghcr-scan-credentials
+    #         key: username
+    #   - name: TRIVY_PASSWORD
+    #     valueFrom:
+    #       secretKeyRef:
+    #         name: ghcr-scan-credentials
+    #         key: password
+
+# ------------------------------------------------------------
+# Private Registry Auth — GHCR (ghcr.io/green-llama/*)
+# Controls whether Trivy Operator can scan private GHCR images.
+#
+# Setup (one-time, do NOT put the token in this file):
+#   1. Create the Secret in the glerp-sec-audit namespace (see NOTES.txt)
+#   2. Set enabled: true here
+#   3. Uncomment scanJobAdditionalEnvVars in trivy-operator.trivyOperator above
+#   4. helm upgrade (no other changes needed)
+#
+# Disabled by default — GHCR scanning requires a PAT with read:packages scope.
+# ------------------------------------------------------------
+ghcrRegistryAuth:
+  enabled: false
+  secretName: "ghcr-scan-credentials"   # pre-created in release namespace; never commit the token
 
 # ------------------------------------------------------------
 # Grafana dashboard

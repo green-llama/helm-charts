@@ -41,6 +41,48 @@ Trigger a Manual Scan
     -n {{ $.Release.Namespace }} --request-timeout=5s
 {{- end }}
 
+Setup — Private Registry (GHCR) Scanning
+-----------------------------------------
+Trivy Operator needs credentials to scan private ghcr.io/green-llama/* images.
+Run these steps ONCE, then enable in values.yaml.
+
+  # 1. Create a GitHub PAT with read:packages scope at https://github.com/settings/tokens
+  #    Then create the Secret in the release namespace (token never goes in values.yaml):
+  kubectl create secret generic ghcr-scan-credentials \
+    -n {{ .Release.Namespace }} \
+    --from-literal=username=<github-username> \
+    --from-literal=password=<github-pat-with-read:packages> \
+    --request-timeout=5s
+
+  # 2. In your values override, set ghcrRegistryAuth.enabled: true
+  #    and uncomment scanJobAdditionalEnvVars in trivy-operator.trivyOperator:
+  #
+  #    ghcrRegistryAuth:
+  #      enabled: true
+  #      secretName: "ghcr-scan-credentials"
+  #
+  #    trivy-operator:
+  #      trivyOperator:
+  #        scanJobAdditionalEnvVars:
+  #          - name: TRIVY_USERNAME
+  #            valueFrom:
+  #              secretKeyRef:
+  #                name: ghcr-scan-credentials
+  #                key: username
+  #          - name: TRIVY_PASSWORD
+  #            valueFrom:
+  #              secretKeyRef:
+  #                name: ghcr-scan-credentials
+  #                key: password
+
+  # 3. Apply the upgrade (Secret already exists, just updating chart config):
+  helm upgrade {{ .Release.Name }} green-llama/glerp-sec-audit \
+    -n {{ .Release.Namespace }} -f <your-values-override.yaml> \
+    --request-timeout=60s
+
+  # 4. Force a re-scan of the private images:
+  kubectl delete vulnerabilityreports -A --all --request-timeout=30s
+
 Debug — Trivy Metrics
 ---------------------
   # Confirm metric name and label structure (status=Pass|Fail|Warn or PASS|FAIL|WARN)
