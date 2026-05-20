@@ -215,9 +215,9 @@ data:
           "title": "kube-bench Last Run",
           "type": "stat",
           "targets": [
-            { "expr": "kube_bench_total_pass",    "legendFormat": "PASS",    "refId": "A" },
-            { "expr": "kube_bench_total_fail",    "legendFormat": "FAIL",    "refId": "B" },
-            { "expr": "kube_bench_total_warn",    "legendFormat": "WARN",    "refId": "C" }
+            { "expr": "max(kube_bench_total_pass)",    "legendFormat": "PASS",    "refId": "A" },
+            { "expr": "max(kube_bench_total_fail)",    "legendFormat": "FAIL",    "refId": "B" },
+            { "expr": "max(kube_bench_total_warn)",    "legendFormat": "WARN",    "refId": "C" }
           ]
         },
         {
@@ -229,9 +229,9 @@ data:
           "title": "kube-bench Results Over Time",
           "type": "timeseries",
           "targets": [
-            { "expr": "kube_bench_total_pass", "legendFormat": "PASS", "refId": "A" },
-            { "expr": "kube_bench_total_fail", "legendFormat": "FAIL", "refId": "B" },
-            { "expr": "kube_bench_total_warn", "legendFormat": "WARN", "refId": "C" }
+            { "expr": "max(kube_bench_total_pass)", "legendFormat": "PASS", "refId": "A" },
+            { "expr": "max(kube_bench_total_fail)", "legendFormat": "FAIL", "refId": "B" },
+            { "expr": "max(kube_bench_total_warn)", "legendFormat": "WARN", "refId": "C" }
           ]
         },
         {

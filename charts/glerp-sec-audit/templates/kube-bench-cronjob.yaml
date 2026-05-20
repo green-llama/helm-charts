@@ -65,12 +65,11 @@ spec:
 
                   echo "Running kube-bench benchmark: {{ .Values.kubeBench.benchmark }}"
 
-                  # Text report for auditors — human-readable, lists each check with status and reason
-                  kube-bench run \
-                    --benchmark {{ .Values.kubeBench.benchmark }} \
-                    --outputfile "/reports/kube-bench/kube-bench-${TS}.txt"
+                  # Text report for auditors — shell redirect is more reliable than --outputfile for text format
+                  kube-bench run --benchmark {{ .Values.kubeBench.benchmark }} \
+                    > "/reports/kube-bench/kube-bench-${TS}.txt" 2>&1 || true
 
-                  # JSON report for metrics parsing
+                  # JSON report for metrics parsing — separate run with --json
                   JSON_FILE="/tmp/kube-bench-${TS}.json"
                   kube-bench run \
                     --benchmark {{ .Values.kubeBench.benchmark }} \
@@ -91,7 +90,7 @@ spec:
                     "${PASS}" "${FAIL}" "${WARN}" > "${METRICS_FILE}"
                   wget -q --tries=3 -O /dev/null \
                     --post-file="${METRICS_FILE}" \
-                    "${PUSHGW}/metrics/job/kube-bench/instance/$(hostname)"
+                    "${PUSHGW}/metrics/job/kube-bench/instance/rke2-node"
 
                   echo "Pushed metrics to Pushgateway — PASS=${PASS} FAIL=${FAIL} WARN=${WARN}"
 
