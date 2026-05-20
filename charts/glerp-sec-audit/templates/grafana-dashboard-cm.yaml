@@ -116,7 +116,7 @@ data:
           "type": "gauge",
           "targets": [
             {
-              "expr": "100 * sum(trivy_compliance_info{status=\"PASS\"}) / (sum(trivy_compliance_info{status=\"PASS\"}) + sum(trivy_compliance_info{status=\"FAIL\"}) + 0.001)",
+              "expr": "100 * sum(trivy_cluster_compliance{status=~\"(?i)pass\"}) / (sum(trivy_cluster_compliance{status=~\"(?i)pass\"}) + sum(trivy_cluster_compliance{status=~\"(?i)fail\"}) + 0.001)",
               "legendFormat": "Compliance %",
               "refId": "A"
             }
@@ -131,9 +131,9 @@ data:
           "title": "CIS Compliance Checks",
           "type": "stat",
           "targets": [
-            { "expr": "sum(trivy_compliance_info{status=\"PASS\"}) or vector(0)",    "legendFormat": "PASS",    "refId": "A" },
-            { "expr": "sum(trivy_compliance_info{status=\"FAIL\"}) or vector(0)",    "legendFormat": "FAIL",    "refId": "B" },
-            { "expr": "sum(trivy_compliance_info{status=\"WARNING\"}) or vector(0)", "legendFormat": "WARNING", "refId": "C" }
+            { "expr": "sum(trivy_cluster_compliance{status=~\"(?i)pass\"}) or vector(0)",    "legendFormat": "PASS",    "refId": "A" },
+            { "expr": "sum(trivy_cluster_compliance{status=~\"(?i)fail\"}) or vector(0)",    "legendFormat": "FAIL",    "refId": "B" },
+            { "expr": "sum(trivy_cluster_compliance{status=~\"(?i)warn.*\"}) or vector(0)", "legendFormat": "WARNING", "refId": "C" }
           ]
         },
         {
