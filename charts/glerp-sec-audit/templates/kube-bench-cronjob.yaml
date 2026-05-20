@@ -26,6 +26,9 @@ spec:
           priorityClassName: {{ .Values.scanPriorityClassName }}
           hostPID: true
           hostNetwork: false
+          securityContext:
+            seLinuxOptions:
+              type: "spc_t"  # super_privileged_container — bypasses SELinux label transition on CentOS/RHEL
 
           # kube-bench must run on the control-plane node to read etcd/API server host paths.
           # Control-plane nodes do not run the Longhorn CSI driver, so the shared reports

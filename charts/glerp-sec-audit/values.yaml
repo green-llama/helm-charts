@@ -25,8 +25,8 @@ scanPriorityClassName: "glerp-sec-audit-scan-low"
 # ------------------------------------------------------------
 domain: "dev.greenllama.tech"
 reportHostname: "security.dev.greenllama.tech"
-reportPort: ""                    # port suffix appended to report URLs — leave blank for production
-                                  # (standard HTTPS port 443 is implicit). Dev NAT: set to ":10443"
+reportPort: ""                    # non-standard HTTPS port number only — no colon (e.g. "10443" for dev NAT)
+                                  # leave blank for production (standard port 443 is implicit)
 externalDnsTarget: "pec.greenllama.tech"
 ingressEntrypoint: "websecure"
 tlsSecretName: "letsencrypt-greenllama-tech-tls"
@@ -162,6 +162,13 @@ trivy-operator:
         limits:
           cpu: "500m"
           memory: "1Gi"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
   serviceMonitor:
     enabled: true
   trivyOperator:
@@ -188,6 +195,13 @@ grafanaDashboard:
 # ------------------------------------------------------------
 prometheus-pushgateway:
   replicaCount: 1
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
   serviceMonitor:
     enabled: true
     namespace: ""              # defaults to release namespace

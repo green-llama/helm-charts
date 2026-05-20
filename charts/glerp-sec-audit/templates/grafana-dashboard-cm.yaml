@@ -32,7 +32,7 @@ data:
           "title": "Security Reports",
           "tooltip": "Browse kube-bench and ZAP HTML reports",
           "type": "link",
-          "url": "https://{{ .Values.reportHostname }}{{ .Values.reportPort }}/security/"
+          "url": "https://{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/"
         }
       ],
       "panels": [
@@ -245,7 +245,7 @@ data:
           "gridPos": { "h": 4, "w": 24, "x": 0, "y": 20 },
           "id": 13,
           "options": {
-            "content": "{{ range .Values.scanTargets }}## [{{ .name }} — Latest ZAP Report](https://{{ $.Values.reportHostname }}{{ $.Values.reportPort }}/security/{{ .name }}/)\n\nTarget: `{{ .url }}`  \nScan type: `{{ $.Values.zapScan.scanType }}`  \nSchedule: `{{ $.Values.zapScan.schedule }}` (weekly)\n\n{{ end }}\n\n**Browse all reports:** [{{ .Values.reportHostname }}{{ .Values.reportPort }}/security/](https://{{ .Values.reportHostname }}{{ .Values.reportPort }}/security/)",
+            "content": "{{ range .Values.scanTargets }}## [{{ .name }} — Latest ZAP Report](https://{{ $.Values.reportHostname }}{{ $.Values.reportPort }}/security/{{ .name }}/)\n\nTarget: `{{ .url }}`  \nScan type: `{{ $.Values.zapScan.scanType }}`  \nSchedule: `{{ $.Values.zapScan.schedule }}` (weekly)\n\n{{ end }}\n\n**Browse all reports:** [{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/](https://{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/)",
             "mode": "markdown"
           },
           "title": "GLerp Scan Targets & Report Links",
