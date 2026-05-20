@@ -5,20 +5,12 @@ Release:   {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}
 Version:   {{ .Chart.Version }}
 
-{{- if and .Values.ghcrRegistryAuth.enabled .Values.ghcrRegistryAuth.eso.enabled }}
-{{- if not (.Capabilities.APIVersions.Has "external-secrets.io/v1beta1") }}
-WARNING — ESO CRDs not found
-  ghcrRegistryAuth.eso.enabled=true but external-secrets.io/v1beta1 CRDs are not
-  installed in this cluster. The ExternalSecret, ClusterSecretStore, and
-  ClusterExternalSecret resources were SKIPPED — ghcr-pull-secret was NOT synced.
-
-  Diagnose:
-    kubectl get crd | grep external-secrets
+{{- if and .Values.ghcrRegistryAuth.enabled .Values.ghcrRegistryAuth.eso.enabled (not .Values.ghcrRegistryAuth.eso.createResources) }}
+NOTE — ESO resources not created (ghcrRegistryAuth.eso.createResources=false)
+  Set createResources: true in your values override once ESO CRDs are confirmed
+  present, then run helm upgrade to create the ClusterSecretStore, ExternalSecret,
+  and ClusterExternalSecret. Verify CRDs with:
     kubectl api-versions | grep external-secrets
-
-  If ESO is installed at v1alpha1: upgrade ESO to v0.6+ (v1beta1 required).
-  If ESO is not installed: install it, then run: helm upgrade {{ .Release.Name }} ...
-{{- end }}
 {{- end }}
 
 Scanning Configuration

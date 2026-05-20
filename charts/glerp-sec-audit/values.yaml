@@ -213,6 +213,8 @@ ghcrRegistryAuth:
 
   eso:
     enabled: false
+    createResources: false               # set true once ESO CRDs are confirmed present;
+                                         # bypasses unreliable .Capabilities check in Rancher Helm
     clusterSecretStoreName: "k8s-ghcr-source"  # name to assign to the ClusterSecretStore
     sourceNamespace: "glerp-ai-intake-sandbox"  # namespace where ghcr-pull-secret lives
                                          # override per environment: prod uses a different namespace
