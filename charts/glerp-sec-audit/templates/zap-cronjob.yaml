@@ -44,29 +44,24 @@ spec:
             - name: zap-scan
               image: {{ $.Values.zapScan.image | quote }}
               imagePullPolicy: {{ $.Values.zapScan.imagePullPolicy }}
-              {{- if eq $.Values.zapScan.scanType "full" }}
               command:
-                - zap-full-scan.py
-                - -t
-                - {{ .url | quote }}
-                - -r
-                - "zap-{{ .name }}-$(date +%Y%m%d-%H%M%S).html"
-                - -J
-                - "zap-{{ .name }}-$(date +%Y%m%d-%H%M%S).json"
-                - -I
-                - -m
-                - "60"
-              {{- else }}
-              command:
-                - zap-baseline.py
-                - -t
-                - {{ .url | quote }}
-                - -r
-                - "zap-{{ .name }}-$(date +%Y%m%d-%H%M%S).html"
-                - -J
-                - "zap-{{ .name }}-$(date +%Y%m%d-%H%M%S).json"
-                - -I
-              {{- end }}
+                - /bin/bash
+                - -c
+                - |
+                  TS=$(date +%Y%m%d-%H%M%S)
+                  {{- if eq $.Values.zapScan.scanType "full" }}
+                  zap-full-scan.py \
+                    -t {{ .url | quote }} \
+                    -r "zap-{{ .name }}-${TS}.html" \
+                    -J "zap-{{ .name }}-${TS}.json" \
+                    -I -m 60
+                  {{- else }}
+                  zap-baseline.py \
+                    -t {{ .url | quote }} \
+                    -r "zap-{{ .name }}-${TS}.html" \
+                    -J "zap-{{ .name }}-${TS}.json" \
+                    -I
+                  {{- end }}
               env:
                 - name: ZAP_TARGET
                   value: {{ .url | quote }}

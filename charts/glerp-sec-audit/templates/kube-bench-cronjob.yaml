@@ -60,19 +60,29 @@ spec:
                 - -c
                 - |
                   set -e
-                  REPORT_FILE="/tmp/kube-bench-$(date +%Y%m%d-%H%M%S).json"
+                  TS=$(date +%Y%m%d-%H%M%S)
+                  mkdir -p /reports/kube-bench
+
                   echo "Running kube-bench benchmark: {{ .Values.kubeBench.benchmark }}"
+
+                  # Text report for auditors — human-readable, lists each check with status and reason
+                  kube-bench run \
+                    --benchmark {{ .Values.kubeBench.benchmark }} \
+                    --outputfile "/reports/kube-bench/kube-bench-${TS}.txt"
+
+                  # JSON report for metrics parsing
+                  JSON_FILE="/tmp/kube-bench-${TS}.json"
                   kube-bench run \
                     --benchmark {{ .Values.kubeBench.benchmark }} \
                     --json \
-                    --outputfile "${REPORT_FILE}"
+                    --outputfile "${JSON_FILE}"
 
-                  echo "Report written to ${REPORT_FILE}"
+                  echo "Reports written: /reports/kube-bench/kube-bench-${TS}.(txt|json)"
 
                   # Parse summary counts with grep+awk — kube-bench image is Alpine/busybox (no python3/curl)
-                  PASS=$(grep -o '"total_pass":[0-9]*' "${REPORT_FILE}" | awk -F: '{s+=$2} END{print s+0}')
-                  FAIL=$(grep -o '"total_fail":[0-9]*' "${REPORT_FILE}" | awk -F: '{s+=$2} END{print s+0}')
-                  WARN=$(grep -o '"total_warn":[0-9]*' "${REPORT_FILE}" | awk -F: '{s+=$2} END{print s+0}')
+                  PASS=$(grep -o '"total_pass":[0-9]*' "${JSON_FILE}" | awk -F: '{s+=$2} END{print s+0}')
+                  FAIL=$(grep -o '"total_fail":[0-9]*' "${JSON_FILE}" | awk -F: '{s+=$2} END{print s+0}')
+                  WARN=$(grep -o '"total_warn":[0-9]*' "${JSON_FILE}" | awk -F: '{s+=$2} END{print s+0}')
 
                   # Push to Prometheus Pushgateway via wget (available in Alpine busybox)
                   PUSHGW="{{ include "glerp-sec-audit.pushgatewayUrl" . }}"
@@ -91,6 +101,8 @@ spec:
               volumeMounts:
                 - name: kube-bench-tmp
                   mountPath: /tmp
+                - name: reports
+                  mountPath: /reports
                 # RKE2 control-plane config
                 - name: etc-rancher-rke2
                   mountPath: /etc/rancher/rke2
@@ -122,6 +134,9 @@ spec:
           volumes:
             - name: kube-bench-tmp
               emptyDir: {}
+            - name: reports
+              persistentVolumeClaim:
+                claimName: {{ include "glerp-sec-audit.fullname" . }}-reports
             - name: etc-rancher-rke2
               hostPath:
                 path: /etc/rancher/rke2

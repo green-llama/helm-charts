@@ -223,7 +223,7 @@ data:
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
           "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "lineWidth": 2 } } },
-          "gridPos": { "h": 4, "w": 16, "x": 8, "y": 15 },
+          "gridPos": { "h": 4, "w": 12, "x": 8, "y": 15 },
           "id": 11,
           "options": { "legend": { "displayMode": "list", "placement": "right" }, "tooltip": { "mode": "multi" } },
           "title": "kube-bench Results Over Time",
@@ -233,6 +233,16 @@ data:
             { "expr": "kube_bench_total_fail", "legendFormat": "FAIL", "refId": "B" },
             { "expr": "kube_bench_total_warn", "legendFormat": "WARN", "refId": "C" }
           ]
+        },
+        {
+          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 15 },
+          "id": 14,
+          "options": {
+            "content": "### kube-bench Reports\n\nFull CIS check-by-check breakdown with PASS/FAIL/WARN reason for each control:\n\n**[Browse kube-bench reports](https://{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/kube-bench/)**\n\nOpen the latest `.txt` file for a human-readable audit trail.",
+            "mode": "markdown"
+          },
+          "title": "Detailed Reports",
+          "type": "text"
         },
         {
           "collapsed": false,
