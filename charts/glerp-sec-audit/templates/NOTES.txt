@@ -5,6 +5,22 @@ Release:   {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}
 Version:   {{ .Chart.Version }}
 
+{{- if and .Values.ghcrRegistryAuth.enabled .Values.ghcrRegistryAuth.eso.enabled }}
+{{- if not (.Capabilities.APIVersions.Has "external-secrets.io/v1beta1/ExternalSecret") }}
+WARNING — ESO CRDs not found
+  ghcrRegistryAuth.eso.enabled=true but external-secrets.io/v1beta1 CRDs are not
+  installed in this cluster. The ExternalSecret, ClusterSecretStore, and
+  ClusterExternalSecret resources were SKIPPED — ghcr-pull-secret was NOT synced.
+
+  Diagnose:
+    kubectl get crd | grep external-secrets
+    kubectl api-versions | grep external-secrets
+
+  If ESO is installed at v1alpha1: upgrade ESO to v0.6+ (v1beta1 required).
+  If ESO is not installed: install it, then run: helm upgrade {{ .Release.Name }} ...
+{{- end }}
+{{- end }}
+
 Scanning Configuration
 ----------------------
 Trivy Operator:   Continuous — all namespaces (system namespaces excluded)
