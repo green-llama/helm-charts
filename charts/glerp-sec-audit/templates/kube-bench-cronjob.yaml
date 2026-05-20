@@ -106,9 +106,10 @@ spec:
                 - name: lib-systemd
                   mountPath: /lib/systemd
                   readOnly: true
-                - name: proc
-                  mountPath: /proc
-                  readOnly: true
+                # /proc is intentionally not mounted — hostPID: true already shares the host
+                # PID namespace so the container's native /proc reflects host processes.
+                # Explicitly mounting host /proc as readOnly prevented runc from writing
+                # the SELinux process label to /proc/thread-self/attr/exec during container init.
 
           volumes:
             - name: kube-bench-tmp
@@ -139,7 +140,4 @@ spec:
             - name: lib-systemd
               hostPath:
                 path: /lib/systemd
-            - name: proc
-              hostPath:
-                path: /proc
 {{- end }}
