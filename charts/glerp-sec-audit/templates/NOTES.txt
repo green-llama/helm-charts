@@ -7,8 +7,8 @@ Version:   {{ .Chart.Version }}
 
 Scanning Configuration
 ----------------------
-Trivy Operator:   Continuous (every 6h) — all namespaces
-kube-bench:       {{ .Values.kubeBench.schedule }} (CIS K8s Benchmark, RKE2)
+Trivy Operator:   Continuous — all namespaces (system namespaces excluded)
+kube-bench:       {{ .Values.kubeBench.schedule }} (CIS K8s Benchmark, {{ .Values.kubeBench.benchmark }})
 OWASP ZAP:        {{ .Values.zapScan.schedule }} (web app, {{ .Values.zapScan.scanType }} scan)
 
 Scan Targets (ZAP):
@@ -20,34 +20,72 @@ Report Server
 -------------
 URL: https://{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/
 
-  Reports are accessible via the nginx report server after each scan run.
-  Trivy vulnerability and compliance reports are also available via kubectl:
+  kube-bench text reports:  /security/kube-bench/kube-bench-<date>.txt
+  ZAP HTML reports:         /security/zap-<target>-<date>.html
 
+  Trivy CRDs (kubectl):
     kubectl get vulnerabilityreports -A --request-timeout=5s
     kubectl get clustercompliancereports --request-timeout=5s
 
-Trigger a manual scan run
---------------------------
+Trigger a Manual Scan
+---------------------
   # kube-bench
-  kubectl create job kube-bench-manual \
+  kubectl create job kube-bench-manual-$(date +%s) \
     --from=cronjob/{{ include "glerp-sec-audit.fullname" . }}-kube-bench \
     -n {{ .Release.Namespace }} --request-timeout=5s
 
   # OWASP ZAP (per target)
 {{- range .Values.scanTargets }}
-  kubectl create job zap-{{ .name }}-manual \
+  kubectl create job zap-{{ .name }}-manual-$(date +%s) \
     --from=cronjob/{{ include "glerp-sec-audit.fullname" $ }}-zap-{{ .name | lower | replace "_" "-" }} \
     -n {{ $.Release.Namespace }} --request-timeout=5s
 {{- end }}
 
+Debug — Trivy Metrics
+---------------------
+  # Confirm metric name and label structure (status=Pass|Fail|Warn or PASS|FAIL|WARN)
+  kubectl exec -n {{ .Release.Namespace }} \
+    deploy/{{ include "glerp-sec-audit.fullname" . }}-trivy-operator -- \
+    wget -qO- http://localhost:8080/metrics 2>/dev/null \
+    | grep "^trivy_cluster_compliance" | head -10
+
+  # Confirm vulnerability scan data exists (0 = VulnerabilityReports empty, delete to re-scan)
+  kubectl exec -n {{ .Release.Namespace }} \
+    deploy/{{ include "glerp-sec-audit.fullname" . }}-trivy-operator -- \
+    wget -qO- http://localhost:8080/metrics 2>/dev/null \
+    | grep "^trivy_image_vulnerabilities" | wc -l
+
+  # Force re-scan when VulnerabilityReports are stale/empty
+  kubectl delete vulnerabilityreports -A --all --request-timeout=30s
+
+Debug — Pushgateway (kube-bench metrics)
+-----------------------------------------
+  # List what kube-bench metrics are stored and their instance labels
+  kubectl exec -n {{ .Release.Namespace }} \
+    deploy/{{ include "glerp-sec-audit.fullname" . }}-prometheus-pushgateway -- \
+    wget -qO- http://localhost:9091/metrics 2>/dev/null | grep "^kube_bench"
+
+  # Clear all kube-bench entries (removes duplicate-instance entries)
+  kubectl exec -n {{ .Release.Namespace }} \
+    deploy/{{ include "glerp-sec-audit.fullname" . }}-prometheus-pushgateway -- \
+    wget -q -O /dev/null --method=DELETE http://localhost:9091/metrics/job/kube-bench
+
+Debug — Grafana Dashboard
+--------------------------
+  Expand the collapsed "Diagnostics — Metric Verification" row at the bottom of the
+  GLerp Security dashboard. Three panels show:
+    - trivy_cluster_compliance: raw metric table (label structure visible)
+    - VulnerabilityReports with Data: 0 = stale empty reports, delete and re-scan
+    - Pushgateway kube-bench Instances: multiple rows = duplicate hostname push
+
 Grafana Dashboard
 -----------------
   Dashboard "GLerp Security — CIS/SOC2 Compliance" is auto-loaded into Grafana
-  (ConfigMap deployed to glerp-monitoring namespace with label grafana_dashboard=1).
+  via ConfigMap in {{ .Values.grafanaDashboard.namespace }} with label grafana_dashboard=1.
 
 Next Steps (Production)
 -----------------------
-  helm upgrade glerp-sec-audit . \
+  helm upgrade {{ .Release.Name }} . \
     --set reportHostname=security.greenllama.tech \
     --set externalDnsTarget=pec.greenllama.tech \
     --set domain=greenllama.tech

@@ -260,6 +260,80 @@ data:
           },
           "title": "GLerp Scan Targets & Report Links",
           "type": "text"
+        },
+        {
+          "collapsed": true,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+          "id": 15,
+          "title": "Diagnostics — Metric Verification (expand to debug)",
+          "type": "row",
+          "panels": [
+            {
+              "datasource": { "type": "prometheus", "uid": "$datasource" },
+              "fieldConfig": { "defaults": { "custom": { "align": "auto", "displayMode": "auto" } } },
+              "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+              "id": 16,
+              "options": { "footer": { "show": false }, "showHeader": true },
+              "title": "Trivy Compliance — Raw Metric (verify name + label structure)",
+              "description": "Shows all trivy_cluster_compliance series. If empty, Prometheus is not scraping the compliance metric. Labels reveal exact status values (Pass/PASS/etc).",
+              "type": "table",
+              "targets": [
+                {
+                  "expr": "trivy_cluster_compliance",
+                  "legendFormat": "",
+                  "refId": "A",
+                  "instant": true,
+                  "format": "table"
+                }
+              ],
+              "transformations": [
+                { "id": "organize", "options": { "excludeByName": { "__name__": true, "job": true, "instance": true } } }
+              ]
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "$datasource" },
+              "fieldConfig": {
+                "defaults": {
+                  "color": { "mode": "thresholds" },
+                  "thresholds": { "mode": "absolute", "steps": [
+                    { "color": "red",   "value": null },
+                    { "color": "green", "value": 1 }
+                  ]}
+                }
+              },
+              "gridPos": { "h": 4, "w": 6, "x": 12, "y": 25 },
+              "id": 17,
+              "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+              "title": "VulnerabilityReports with Data",
+              "description": "Count of trivy_image_vulnerabilities series. 0 means VulnerabilityReports exist but are empty — delete them to force a re-scan against the loaded DB.",
+              "type": "stat",
+              "targets": [
+                { "expr": "count(trivy_image_vulnerabilities) or vector(0)", "legendFormat": "CVE series", "refId": "A" }
+              ]
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "$datasource" },
+              "fieldConfig": { "defaults": { "custom": { "align": "auto", "displayMode": "auto" } } },
+              "gridPos": { "h": 4, "w": 6, "x": 18, "y": 25 },
+              "id": 18,
+              "options": { "footer": { "show": false }, "showHeader": true },
+              "title": "Pushgateway — kube-bench Instances",
+              "description": "Shows all kube_bench_total_pass series with their instance labels. Multiple rows = multiple hostnames pushed — clear old entries from Pushgateway.",
+              "type": "table",
+              "targets": [
+                {
+                  "expr": "kube_bench_total_pass",
+                  "legendFormat": "",
+                  "refId": "A",
+                  "instant": true,
+                  "format": "table"
+                }
+              ],
+              "transformations": [
+                { "id": "organize", "options": { "excludeByName": { "__name__": true, "job": true } } }
+              ]
+            }
+          ]
         }
       ],
       "refresh": "5m",

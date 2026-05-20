@@ -62,28 +62,31 @@ spec:
                   set -e
                   TS=$(date +%Y%m%d-%H%M%S)
                   mkdir -p /reports/kube-bench
+                  echo "=== kube-bench run: ${TS} benchmark={{ .Values.kubeBench.benchmark }} ==="
 
-                  echo "Running kube-bench benchmark: {{ .Values.kubeBench.benchmark }}"
-
-                  # Text report for auditors — shell redirect is more reliable than --outputfile for text format
+                  echo "--- Step 1: Text report (auditor-readable) ---"
                   kube-bench run --benchmark {{ .Values.kubeBench.benchmark }} \
-                    > "/reports/kube-bench/kube-bench-${TS}.txt" 2>&1 || true
+                    > "/reports/kube-bench/kube-bench-${TS}.txt" 2>&1
+                  TEXT_LINES=$(wc -l < "/reports/kube-bench/kube-bench-${TS}.txt" 2>/dev/null || echo 0)
+                  echo "Text report: ${TEXT_LINES} lines written"
+                  echo "Files in /reports/kube-bench/:"
+                  ls -lh /reports/kube-bench/
 
-                  # JSON report for metrics parsing — separate run with --json
+                  echo "--- Step 2: JSON report (metrics parsing) ---"
                   JSON_FILE="/tmp/kube-bench-${TS}.json"
                   kube-bench run \
                     --benchmark {{ .Values.kubeBench.benchmark }} \
                     --json \
                     --outputfile "${JSON_FILE}"
+                  echo "JSON size: $(wc -c < ${JSON_FILE} 2>/dev/null || echo 0) bytes"
 
-                  echo "Reports written: /reports/kube-bench/kube-bench-${TS}.(txt|json)"
-
-                  # Parse summary counts with grep+awk — kube-bench image is Alpine/busybox (no python3/curl)
+                  echo "--- Step 3: Parse metrics ---"
                   PASS=$(grep -o '"total_pass":[0-9]*' "${JSON_FILE}" | awk -F: '{s+=$2} END{print s+0}')
                   FAIL=$(grep -o '"total_fail":[0-9]*' "${JSON_FILE}" | awk -F: '{s+=$2} END{print s+0}')
                   WARN=$(grep -o '"total_warn":[0-9]*' "${JSON_FILE}" | awk -F: '{s+=$2} END{print s+0}')
+                  echo "Parsed: PASS=${PASS} FAIL=${FAIL} WARN=${WARN}"
 
-                  # Push to Prometheus Pushgateway via wget (available in Alpine busybox)
+                  echo "--- Step 4: Push to Pushgateway ---"
                   PUSHGW="{{ include "glerp-sec-audit.pushgatewayUrl" . }}"
                   METRICS_FILE="/tmp/kube-bench-metrics.txt"
                   printf '# TYPE kube_bench_total_pass gauge\nkube_bench_total_pass %d\n# TYPE kube_bench_total_fail gauge\nkube_bench_total_fail %d\n# TYPE kube_bench_total_warn gauge\nkube_bench_total_warn %d\n' \
@@ -91,8 +94,14 @@ spec:
                   wget -q --tries=3 -O /dev/null \
                     --post-file="${METRICS_FILE}" \
                     "${PUSHGW}/metrics/job/kube-bench/instance/rke2-node"
+                  echo "Pushed to: ${PUSHGW}/metrics/job/kube-bench/instance/rke2-node"
 
-                  echo "Pushed metrics to Pushgateway — PASS=${PASS} FAIL=${FAIL} WARN=${WARN}"
+                  echo "--- Step 5: Verify Pushgateway received metrics ---"
+                  wget -qO- "${PUSHGW}/metrics" 2>/dev/null \
+                    | grep "^kube_bench" \
+                    || echo "WARNING: kube_bench metrics not found in Pushgateway response"
+
+                  echo "=== kube-bench complete: PASS=${PASS} FAIL=${FAIL} WARN=${WARN} ==="
 
               resources:
                 {{- toYaml .Values.kubeBench.resources | nindent 16 }}
