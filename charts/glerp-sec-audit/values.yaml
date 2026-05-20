@@ -213,11 +213,16 @@ ghcrRegistryAuth:
 
   eso:
     enabled: false
-    clusterSecretStoreName: ""           # name of existing ClusterSecretStore (Kubernetes provider)
+    clusterSecretStoreName: "k8s-ghcr-source"  # name to assign to the ClusterSecretStore
     sourceNamespace: "glerp-ai-intake-sandbox"  # namespace where ghcr-pull-secret lives
                                          # override per environment: prod uses a different namespace
     usernameKey: "Username"              # exact key in the source Secret (capital U)
     passwordKey: "Password"              # exact key in the source Secret (capital P)
+
+    # ESO controller install coordinates — used to generate RBAC in NOTES.txt.
+    # Adjust if ESO was installed in a non-standard namespace or with a different SA name.
+    controllerNamespace: "external-secrets"
+    controllerServiceAccount: "external-secrets"
 
     # ------------------------------------------------------------------
     # ClusterExternalSecret — zero-touch distribution to all labeled namespaces.
