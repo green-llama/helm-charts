@@ -124,7 +124,7 @@ trivy-operator:
   enabled: false    # Set true only on clusters with spare capacity.
                     # Re-enable with: --set trivy-operator.enabled=true
   targetNamespaces: ""
-  excludeNamespaces: "kube-system,kube-public,kube-node-lease,cattle-fleet-system,cattle-fleet-local-system,cattle-provisioning-capi-system,cattle-monitoring-system,cattle-logging-system,cattle-alerting-system,cattle-dashboards,cattle-impersonation-system,fleet-local,fleet-default,rancher-operator-system,traefik-system,cert-manager,longhorn-system,glerp-sec-audit"
+  excludeNamespaces: "kube-system,kube-public,kube-node-lease,cattle-system,cattle-webhook-system,cattle-fleet-system,cattle-fleet-local-system,cattle-provisioning-capi-system,cattle-monitoring-system,cattle-logging-system,cattle-alerting-system,cattle-dashboards,cattle-impersonation-system,fleet-local,fleet-default,rancher-operator-system,traefik-system,cert-manager,longhorn-system,external-secrets,glerp-sec-audit"
   operator:
     builtInTrivyServer: true        # deploys the trivy-server StatefulSet with shared PVC
     scanJobTimeout: "5m"
