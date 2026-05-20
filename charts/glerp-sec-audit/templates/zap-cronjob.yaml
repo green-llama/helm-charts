@@ -29,6 +29,13 @@ spec:
         spec:
           restartPolicy: Never
           priorityClassName: {{ $.Values.scanPriorityClassName }}
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: DoesNotExist
           securityContext:
             runAsUser: 1000
             fsGroup: 1000

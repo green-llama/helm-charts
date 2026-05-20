@@ -49,6 +49,13 @@ spec:
         {{- include "glerp-sec-audit.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: report-server
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
       securityContext:
         fsGroup: 101  # nginx group in alpine — allows worker processes to read Longhorn-provisioned PVC
       containers:
