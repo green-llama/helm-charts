@@ -43,100 +43,112 @@ Trigger a Manual Scan
 
 Setup — Private Registry (GHCR) Scanning
 -----------------------------------------
-Trivy Operator needs credentials to scan private ghcr.io/green-llama/* images.
-The recommended path uses ESO so rotation and new-namespace distribution are automatic.
+Source of truth: ghcr-pull-secret in {{ .Values.ghcrRegistryAuth.eso.sourceNamespace }}
+  Keys: Username (GitHub username), Password (GHCR PAT, read:packages scope)
 
-RECOMMENDED: ESO + ClusterExternalSecret (zero ongoing maintenance)
-  Prerequisite: a ClusterSecretStore pointing to your secret backend, with the
-  GHCR PAT stored at a known key (e.g. "glerp/ghcr-credentials").
+ESO syncs that secret into this namespace (for Trivy) and into every namespace
+labeled glerp.io/private-registry=true (for pod pulls + future apps).
+New GLerp apps need only: kubectl label namespace <ns> glerp.io/private-registry=true
 
-  # 1. Store the GHCR PAT once in your ESO backend (Vault / AWS / K8s Secret in
-  #    a secure namespace). Key shape required:
-  #      username: <github-username>
-  #      password: <github-pat-with-read:packages>
+STEP 1 — One-time cluster prerequisites (cluster-admin, run once per environment)
+  # Grant ESO's controller SA read access to ghcr-pull-secret in the source namespace.
+  # Replace <eso-namespace> and <eso-sa-name> with your ESO install values
+  # (commonly: namespace=external-secrets, sa=external-secrets).
+  kubectl create role eso-ghcr-reader \
+    -n {{ .Values.ghcrRegistryAuth.eso.sourceNamespace }} \
+    --verb=get,list,watch \
+    --resource=secrets \
+    --resource-name={{ .Values.ghcrRegistryAuth.secretName }} \
+    --request-timeout=5s
 
-  # 2. Label all namespaces that have private GHCR images
-  #    (run once per namespace, including this one for Trivy access):
-  kubectl label namespace {{ .Release.Namespace }} glerp.io/private-registry=true --request-timeout=5s
-  kubectl label namespace <each-glerp-customer-ns> glerp.io/private-registry=true --request-timeout=5s
+  kubectl create rolebinding eso-ghcr-reader \
+    -n {{ .Values.ghcrRegistryAuth.eso.sourceNamespace }} \
+    --role=eso-ghcr-reader \
+    --serviceaccount=<eso-namespace>:<eso-sa-name> \
+    --request-timeout=5s
 
-  # 3. In your values override, enable ESO + ClusterExternalSecret and uncomment
-  #    the scanJobAdditionalEnvVars block in trivy-operator.trivyOperator:
+  # Create the ClusterSecretStore (Kubernetes provider, cross-namespace read).
+  # Name must match ghcrRegistryAuth.eso.clusterSecretStoreName in your values.
+  kubectl apply --request-timeout=5s -f - <<'EOF'
+  apiVersion: external-secrets.io/v1beta1
+  kind: ClusterSecretStore
+  metadata:
+    name: k8s-{{ .Values.ghcrRegistryAuth.eso.sourceNamespace }}
+  spec:
+    provider:
+      kubernetes:
+        remoteNamespace: {{ .Values.ghcrRegistryAuth.eso.sourceNamespace }}
+        server:
+          url: "https://kubernetes.default.svc"
+          caProvider:
+            type: ConfigMap
+            name: kube-root-ca.crt
+            key: ca.crt
+            namespace: <eso-namespace>
+        auth:
+          serviceAccount:
+            name: <eso-sa-name>
+            namespace: <eso-namespace>
+  EOF
+
+  # Label this namespace so ESO's ClusterExternalSecret includes it:
+  kubectl label namespace {{ .Release.Namespace }} \
+    glerp.io/private-registry=true --request-timeout=5s
+
+  # For production: repeat Step 1 with sourceNamespace pointing to the prod namespace
+  # that holds ghcr-pull-secret, then set ghcrRegistryAuth.eso.sourceNamespace in
+  # your prod values override.
+
+STEP 2 — Enable in values override and upgrade
+  # Add to your values override file:
   #
-  #    ghcrRegistryAuth:
-  #      enabled: true
-  #      secretName: "ghcr-scan-credentials"
-  #      eso:
-  #        enabled: true
-  #        clusterSecretStoreName: "<your-cluster-secret-store>"
-  #        remoteRef:
-  #          key: "glerp/ghcr-credentials"
-  #          usernameProperty: "username"
-  #          passwordProperty: "password"
-  #        clusterExternalSecret:
-  #          enabled: true          # ESO spreads the Secret to all labeled namespaces
+  #   ghcrRegistryAuth:
+  #     enabled: true
+  #     eso:
+  #       enabled: true
+  #       clusterSecretStoreName: "k8s-{{ .Values.ghcrRegistryAuth.eso.sourceNamespace }}"
+  #       clusterExternalSecret:
+  #         enabled: true             # spreads ghcr-pull-secret to all labeled namespaces
   #
-  #    trivy-operator:
-  #      trivyOperator:
-  #        scanJobAdditionalEnvVars:
-  #          - name: TRIVY_USERNAME
-  #            valueFrom:
-  #              secretKeyRef:
-  #                name: ghcr-scan-credentials
-  #                key: username
-  #          - name: TRIVY_PASSWORD
-  #            valueFrom:
-  #              secretKeyRef:
-  #                name: ghcr-scan-credentials
-  #                key: password
+  #   trivy-operator:
+  #     trivyOperator:
+  #       scanJobAdditionalEnvVars:
+  #         - name: TRIVY_USERNAME
+  #           valueFrom:
+  #             secretKeyRef:
+  #               name: {{ .Values.ghcrRegistryAuth.secretName }}
+  #               key: {{ .Values.ghcrRegistryAuth.eso.usernameKey }}
+  #         - name: TRIVY_PASSWORD
+  #           valueFrom:
+  #             secretKeyRef:
+  #               name: {{ .Values.ghcrRegistryAuth.secretName }}
+  #               key: {{ .Values.ghcrRegistryAuth.eso.passwordKey }}
 
-  # 4. Upgrade — ESO creates the Secret(s); Trivy scan pods inherit credentials:
   helm upgrade {{ .Release.Name }} green-llama/glerp-sec-audit \
     -n {{ .Release.Namespace }} -f <your-values-override.yaml> \
     --request-timeout=60s
 
-  # 5. Force re-scan of private images:
+  # Force re-scan of private images once credentials are in place:
   kubectl delete vulnerabilityreports -A --all --request-timeout=30s
-
-  After step 4, any NEW namespace only needs:
-    kubectl label namespace <new-ns> glerp.io/private-registry=true
-  ESO syncs the credentials within 1h; Trivy scans it automatically.
-
-FALLBACK: Manual Secret (no ESO required, no auto-rotation)
-  kubectl create secret generic ghcr-scan-credentials \
-    -n {{ .Release.Namespace }} \
-    --from-literal=username=<github-username> \
-    --from-literal=password=<github-pat-with-read:packages> \
-    --request-timeout=5s
-  Then set ghcrRegistryAuth.enabled: true and uncomment scanJobAdditionalEnvVars (see above).
 
 Diagnose — registry.k8s.io TLS errors in Trivy logs
 ------------------------------------------------------
-  Trivy pulls image layers directly (not via containerd), so it resolves DNS
-  independently of RKE2's registries.yaml mirrors. If registry.k8s.io is
-  DNS-intercepted inside the cluster, Trivy gets the wrong TLS cert.
+  DNS test confirmed registry.k8s.io resolves to its correct public IP (34.96.108.209).
+  If Trivy still reports TLS cert mismatch for registry.k8s.io, the cause is NOT DNS.
 
-  # Check what registry.k8s.io resolves to from inside the cluster:
-  kubectl run -it --rm net-debug --image=busybox --restart=Never \
-    --request-timeout=30s -- nslookup registry.k8s.io
-  # Public result: 34.96.108.209 (or similar). Internal IP = DNS override active.
+  Most likely cause — Rancher System Default Registry:
+    Rancher UI → Home → Global Settings → system-default-registry
+    If set to an internal cache URL, Rancher prepends that host to ALL image references
+    at the CRI level, including images pulled by Trivy scan pods.
+    Fix: clear the setting to empty, OR ensure the internal cache's IngressRoute does
+    NOT have the Google MFA middleware (registries authenticate with their own token
+    protocol; web-based MFA breaks all automated clients including Trivy and containerd).
 
-  Root cause — most likely Rancher System Default Registry:
-    Rancher UI → Global Settings → system-default-registry
-    If set to an internal cache hostname, ALL image pulls (including Trivy) are
-    prefixed with that hostname, causing cert mismatches.
-    Fix: clear the setting, or ensure the internal cache IngressRoute does NOT
-    have Google MFA middleware (registries use their own token auth, not web MFA).
+  Check the setting without Rancher UI:
+    kubectl get settings.management.cattle.io system-default-registry \
+      -o jsonpath='{.value}' --request-timeout=5s
 
-  Root cause — RKE2 node registries.yaml DNS override:
-    If /etc/rancher/rke2/registries.yaml maps registry.k8s.io to an internal
-    endpoint AND that endpoint's DNS name resolves cluster-internally through
-    Traefik, Trivy hits the wrong cert. RKE2 mirrors work at the CRI level
-    (safe for pods) but Trivy bypasses CRI — fix by ensuring DNS for
-    registry.k8s.io resolves to its public IP, using the mirrors: block only
-    for node-level redirection without overriding public DNS.
-
-  Temporary chart workaround (if the internal cert is trusted by your CA):
+  Temporary chart workaround (if the internal cert is from a trusted CA):
     Add to your values override under trivy-operator:
       trivy:
         insecureRegistries: "registry.k8s.io"

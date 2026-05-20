@@ -177,67 +177,52 @@ trivy-operator:
     scanJobNodeSelector: {}
     scanJobTolerations: []
     # Private GHCR registry auth — uncomment when ghcrRegistryAuth.enabled: true.
-    # Credentials are sourced from the pre-created Secret (never put tokens here).
+    # ESO syncs ghcr-pull-secret into this namespace; scan pods read credentials here.
     # See NOTES.txt: "Setup — Private Registry (GHCR) Scanning" for the full procedure.
     #
     # scanJobAdditionalEnvVars:
     #   - name: TRIVY_USERNAME
     #     valueFrom:
     #       secretKeyRef:
-    #         name: ghcr-scan-credentials
-    #         key: username
+    #         name: ghcr-pull-secret
+    #         key: Username
     #   - name: TRIVY_PASSWORD
     #     valueFrom:
     #       secretKeyRef:
-    #         name: ghcr-scan-credentials
-    #         key: password
+    #         name: ghcr-pull-secret
+    #         key: Password
 
 # ------------------------------------------------------------
 # Private Registry Auth — GHCR (ghcr.io/green-llama/*)
-# Controls whether Trivy Operator can scan private GHCR images.
 #
-# Setup (one-time, do NOT put the token in this file):
-#   1. Create the Secret in the glerp-sec-audit namespace (see NOTES.txt)
-#   2. Set enabled: true here
-#   3. Uncomment scanJobAdditionalEnvVars in trivy-operator.trivyOperator above
-#   4. helm upgrade (no other changes needed)
+# The source of truth is ghcr-pull-secret in sourceNamespace. ESO syncs
+# that secret into this namespace (for Trivy scans) and — when
+# clusterExternalSecret is enabled — into every namespace labeled
+# glerp.io/private-registry=true (for pod image pulls and Trivy scanning).
 #
-# Disabled by default — GHCR scanning requires a PAT with read:packages scope.
+# New GLerp apps only need: kubectl label namespace <ns> glerp.io/private-registry=true
+# No other setup steps to remember.
+#
+# Requires a ClusterSecretStore (Kubernetes provider) pointing at sourceNamespace.
+# See NOTES.txt: "Setup — Private Registry (GHCR) Scanning" for the one-time
+# cluster-level prerequisites and the full values block to uncomment.
 # ------------------------------------------------------------
 ghcrRegistryAuth:
   enabled: false
-  secretName: "ghcr-scan-credentials"   # Secret name used in this namespace and in all labeled namespaces
+  secretName: "ghcr-pull-secret"        # identical across all namespaces — signals same source
 
-  # ------------------------------------------------------------------
-  # ESO integration — set enabled: true to have ESO create/maintain
-  # the Secret automatically instead of a manual kubectl create.
-  #
-  # Requires an existing ClusterSecretStore in the cluster.
-  # Credentials are pulled from the backend (Vault, AWS, etc.) — never
-  # stored in this values file or in git.
-  # ------------------------------------------------------------------
   eso:
     enabled: false
-    clusterSecretStoreName: ""     # name of an existing ClusterSecretStore
-    remoteRef:
-      key: ""                      # path/key in the backend (e.g. "glerp/ghcr-credentials")
-      usernameProperty: "username" # property holding the GitHub username
-      passwordProperty: "password" # property holding the GHCR PAT (read:packages scope)
+    clusterSecretStoreName: ""           # name of existing ClusterSecretStore (Kubernetes provider)
+    sourceNamespace: "glerp-ai-intake-sandbox"  # namespace where ghcr-pull-secret lives
+                                         # override per environment: prod uses a different namespace
+    usernameKey: "Username"              # exact key in the source Secret (capital U)
+    passwordKey: "Password"              # exact key in the source Secret (capital P)
 
     # ------------------------------------------------------------------
-    # ClusterExternalSecret — zero-touch credential distribution.
-    #
-    # When enabled, ESO creates the ghcr-scan-credentials Secret in
-    # EVERY namespace that carries the glerp.io/private-registry: "true"
-    # label. New apps only need the label — no setup steps to remember.
-    #
-    # Label a namespace:
-    #   kubectl label namespace <ns> glerp.io/private-registry=true
-    #
-    # This covers two independent needs with one credential:
-    #   1. Pod image pulls   — kubelet uses the Secret for docker auth
-    #   2. Trivy scanning    — scan pods inherit the credentials via
-    #                          scanJobAdditionalEnvVars (wired above)
+    # ClusterExternalSecret — zero-touch distribution to all labeled namespaces.
+    # ESO creates ghcr-pull-secret in every namespace matching the selector.
+    # New apps need only: kubectl label namespace <ns> glerp.io/private-registry=true
     # ------------------------------------------------------------------
     clusterExternalSecret:
       enabled: false
