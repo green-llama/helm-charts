@@ -187,6 +187,11 @@ trivy-operator:
     # picks up credentials automatically on the next scan — no operator action required.
     # The secret name matches ghcrRegistryAuth.secretName (ghcr-pull-secret convention).
     scanJobCustomVolumes:
+      # Scan pods run with readOnlyRootFilesystem=true by default — Trivy needs
+      # a writable /tmp for layer analysis temp files. Without this, every scan
+      # fails with "stat /tmp/trivy-N: no such file or directory".
+      - name: tmp
+        emptyDir: {}
       - name: ghcr-docker-config
         secret:
           secretName: ghcr-pull-secret
@@ -195,6 +200,8 @@ trivy-operator:
             - key: .dockerconfigjson
               path: config.json
     scanJobCustomVolumeMounts:
+      - name: tmp
+        mountPath: /tmp
       - name: ghcr-docker-config
         mountPath: /etc/trivy-registry
         readOnly: true
