@@ -61,14 +61,14 @@ spec:
                   {{- if eq $.Values.zapScan.scanType "full" }}
                   zap-full-scan.py \
                     -t {{ .url | quote }} \
-                    -r "${REPORT_DIR}/zap-${TS}.html" \
-                    -J "${REPORT_DIR}/zap-${TS}.json" \
+                    -r "${TARGET_NAME}/zap-${TS}.html" \
+                    -J "${TARGET_NAME}/zap-${TS}.json" \
                     -I -m 60 || true
                   {{- else }}
                   zap-baseline.py \
                     -t {{ .url | quote }} \
-                    -r "${REPORT_DIR}/zap-${TS}.html" \
-                    -J "${REPORT_DIR}/zap-${TS}.json" \
+                    -r "${TARGET_NAME}/zap-${TS}.html" \
+                    -J "${TARGET_NAME}/zap-${TS}.json" \
                     -I || true
                   {{- end }}
                   echo "Reports in ${REPORT_DIR}:"
