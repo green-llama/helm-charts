@@ -36,40 +36,25 @@ data:
         }
       ],
       "panels": [
-        {
-          "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
-          "id": 1,
-          "title": "Vulnerability Summary",
-          "type": "row"
-        },
+
+        { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "id": 1, "title": "Vulnerability Summary", "type": "row" },
+
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
           "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "thresholds" },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  { "color": "green", "value": null },
-                  { "color": "yellow", "value": 1 },
-                  { "color": "orange", "value": 5 },
-                  { "color": "red", "value": 10 }
-                ]
-              }
-            },
+            "defaults": { "color": { "mode": "fixed" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } },
             "overrides": [
-              { "matcher": { "id": "byName", "options": "CRITICAL" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
-              { "matcher": { "id": "byName", "options": "HIGH" },     "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] },
-              { "matcher": { "id": "byName", "options": "MEDIUM" },   "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
-              { "matcher": { "id": "byName", "options": "LOW" },      "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }
+              { "matcher": { "id": "byName", "options": "CRITICAL" }, "properties": [{ "id": "color", "value": { "fixedColor": "dark-red",  "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "HIGH" },     "properties": [{ "id": "color", "value": { "fixedColor": "orange",    "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "MEDIUM" },   "properties": [{ "id": "color", "value": { "fixedColor": "yellow",    "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "LOW" },      "properties": [{ "id": "color", "value": { "fixedColor": "green",     "mode": "fixed" } }] }
             ]
           },
-          "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+          "gridPos": { "h": 6, "w": 5, "x": 0, "y": 1 },
           "id": 2,
           "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
           "title": "CVEs by Severity (All Namespaces)",
+          "description": "Counts from trivy_image_vulnerabilities. Shows 0 until VulnerabilityReports are generated — expand the Diagnostics row to check scan status.",
           "type": "stat",
           "targets": [
             { "expr": "sum(trivy_image_vulnerabilities{severity=\"CRITICAL\"}) or vector(0)", "legendFormat": "CRITICAL", "refId": "A" },
@@ -78,10 +63,17 @@ data:
             { "expr": "sum(trivy_image_vulnerabilities{severity=\"LOW\"}) or vector(0)",     "legendFormat": "LOW",      "refId": "D" }
           ]
         },
+
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "lineWidth": 2 } } },
-          "gridPos": { "h": 5, "w": 9, "x": 6, "y": 1 },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "custom": { "lineWidth": 2 } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "Critical CVEs" }, "properties": [{ "id": "color", "value": { "fixedColor": "dark-red", "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "High CVEs" },     "properties": [{ "id": "color", "value": { "fixedColor": "orange",   "mode": "fixed" } }] }
+            ]
+          },
+          "gridPos": { "h": 6, "w": 10, "x": 5, "y": 1 },
           "id": 3,
           "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
           "title": "Critical CVE Trend Over Time",
@@ -91,25 +83,17 @@ data:
             { "expr": "sum(trivy_image_vulnerabilities{severity=\"HIGH\"}) or vector(0)",    "legendFormat": "High CVEs",     "refId": "B" }
           ]
         },
+
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  { "color": "red",    "value": null },
-                  { "color": "yellow", "value": 60 },
-                  { "color": "green",  "value": 80 }
-                ]
-              },
-              "unit": "percent",
-              "min": 0,
-              "max": 100
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 60 }, { "color": "green", "value": 80 }] },
+              "unit": "percent", "min": 0, "max": 100
             }
           },
-          "gridPos": { "h": 5, "w": 4, "x": 15, "y": 1 },
+          "gridPos": { "h": 6, "w": 4, "x": 15, "y": 1 },
           "id": 4,
           "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "showThresholdLabels": true, "showThresholdMarkers": true },
           "title": "CIS K8s Compliance Score",
@@ -117,15 +101,22 @@ data:
           "targets": [
             {
               "expr": "100 * sum(trivy_cluster_compliance{status=\"Pass\"}) / (sum(trivy_cluster_compliance{status=\"Pass\"}) + sum(trivy_cluster_compliance{status=\"Fail\"}) + 0.001)",
-              "legendFormat": "Compliance %",
-              "refId": "A"
+              "legendFormat": "Compliance %", "refId": "A"
             }
           ]
         },
+
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } } },
-          "gridPos": { "h": 5, "w": 5, "x": 19, "y": 1 },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "fixed" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "PASS" }, "properties": [{ "id": "color", "value": { "fixedColor": "green",            "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "FAIL" }, "properties": [{ "id": "color", "value": { "fixedColor": "red",              "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "WARN" }, "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-yellow", "mode": "fixed" } }] }
+            ]
+          },
+          "gridPos": { "h": 6, "w": 5, "x": 19, "y": 1 },
           "id": 5,
           "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
           "title": "CIS Compliance Checks",
@@ -136,94 +127,134 @@ data:
             { "expr": "sum(trivy_cluster_compliance{status=\"Warn\"}) or vector(0)", "legendFormat": "WARN", "refId": "C" }
           ]
         },
-        {
-          "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
-          "id": 6,
-          "title": "Config Audit & RBAC",
-          "type": "row"
-        },
+
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
           "fieldConfig": {
             "defaults": { "custom": { "align": "auto", "displayMode": "auto" } },
             "overrides": [
-              { "matcher": { "id": "byName", "options": "namespace" }, "properties": [{ "id": "custom.width", "value": 200 }] },
-              { "matcher": { "id": "byName", "options": "severity" },  "properties": [{ "id": "custom.width", "value": 100 }] },
-              { "matcher": { "id": "byName", "options": "Value" },     "properties": [{ "id": "custom.width", "value": 80 }, { "id": "color", "value": { "mode": "thresholds" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }, { "id": "custom.displayMode", "value": "color-background" }] }
+              { "matcher": { "id": "byName", "options": "Namespace" }, "properties": [{ "id": "custom.width", "value": 180 }] },
+              { "matcher": { "id": "byName", "options": "Image" },     "properties": [{ "id": "custom.width", "value": 320 }] },
+              { "matcher": { "id": "byName", "options": "Severity" },  "properties": [{ "id": "custom.width", "value": 100 }] },
+              { "matcher": { "id": "byName", "options": "CVEs" }, "properties": [
+                { "id": "custom.width", "value": 80 },
+                { "id": "color", "value": { "mode": "thresholds" } },
+                { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } },
+                { "id": "custom.displayMode", "value": "color-background" }
+              ]}
             ]
           },
-          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 7 },
-          "id": 7,
-          "options": { "footer": { "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Value" }] },
-          "title": "Config Audit Findings by Namespace",
-          "type": "table",
-          "targets": [
-            {
-              "expr": "sum by (namespace, severity) (trivy_resource_configaudits) > 0",
-              "legendFormat": "{{ "{{namespace}}" }} / {{ "{{severity}}" }}",
-              "refId": "A",
-              "instant": true,
-              "format": "table"
-            }
-          ],
-          "transformations": [
-            { "id": "organize", "options": { "renameByName": { "namespace": "Namespace", "severity": "Severity", "Value": "Findings" } } }
-          ]
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "fieldConfig": {
-            "defaults": { "custom": { "align": "auto", "displayMode": "auto" } }
-          },
-          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 7 },
+          "gridPos": { "h": 7, "w": 24, "x": 0, "y": 7 },
           "id": 8,
-          "options": { "footer": { "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Value" }] },
-          "title": "CVEs by Namespace / Image",
+          "options": { "footer": { "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "CVEs" }] },
+          "title": "CVEs by Namespace / Image (Critical & High)",
+          "description": "Empty until VulnerabilityReports are generated — expand Diagnostics to check scan status.",
           "type": "table",
           "targets": [
             {
               "expr": "sum by (namespace, image_tag, severity) (trivy_image_vulnerabilities{severity=~\"CRITICAL|HIGH\"}) > 0",
-              "legendFormat": "",
-              "refId": "A",
-              "instant": true,
-              "format": "table"
+              "legendFormat": "", "refId": "A", "instant": true, "format": "table"
             }
           ],
           "transformations": [
             { "id": "organize", "options": { "renameByName": { "namespace": "Namespace", "image_tag": "Image", "severity": "Severity", "Value": "CVEs" } } }
           ]
         },
-        {
-          "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
-          "id": 9,
-          "title": "kube-bench — CIS Kubernetes Benchmark (Node)",
-          "type": "row"
-        },
+
+        { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }, "id": 6, "title": "Config Audit & RBAC", "type": "row" },
+
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
           "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "thresholds" },
-              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }
-            }
+            "defaults": { "custom": { "align": "auto", "displayMode": "auto" } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "Namespace" }, "properties": [{ "id": "custom.width", "value": 200 }] },
+              { "matcher": { "id": "byName", "options": "Severity" },  "properties": [{ "id": "custom.width", "value": 100 }] },
+              { "matcher": { "id": "byName", "options": "Findings" }, "properties": [
+                { "id": "custom.width", "value": 80 },
+                { "id": "color", "value": { "mode": "thresholds" } },
+                { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } },
+                { "id": "custom.displayMode", "value": "color-background" }
+              ]}
+            ]
           },
-          "gridPos": { "h": 4, "w": 8, "x": 0, "y": 15 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+          "id": 7,
+          "options": { "footer": { "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Findings" }] },
+          "title": "Config Audit Findings by Namespace",
+          "type": "table",
+          "targets": [
+            {
+              "expr": "sum by (namespace, severity) (trivy_resource_configaudits) > 0",
+              "legendFormat": "{{ "{{namespace}}" }} / {{ "{{severity}}" }}",
+              "refId": "A", "instant": true, "format": "table"
+            }
+          ],
+          "transformations": [
+            { "id": "organize", "options": { "renameByName": { "namespace": "Namespace", "severity": "Severity", "Value": "Findings" } } }
+          ]
+        },
+
+        {
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "custom": { "lineWidth": 2 } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "Critical" }, "properties": [{ "id": "color", "value": { "fixedColor": "dark-red", "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "High" },     "properties": [{ "id": "color", "value": { "fixedColor": "orange",   "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "Medium" },   "properties": [{ "id": "color", "value": { "fixedColor": "yellow",   "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "Low" },      "properties": [{ "id": "color", "value": { "fixedColor": "green",    "mode": "fixed" } }] }
+            ]
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+          "id": 19,
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+          "title": "Config Audit Findings — Trend Over Time",
+          "description": "Cluster-wide config audit findings by severity over time. A downward trend indicates remediation progress — useful as SOC2 continuous improvement evidence.",
+          "type": "timeseries",
+          "targets": [
+            { "expr": "sum(trivy_resource_configaudits{severity=~\"CRITICAL|Critical\"})", "legendFormat": "Critical", "refId": "A" },
+            { "expr": "sum(trivy_resource_configaudits{severity=~\"HIGH|High\"})",         "legendFormat": "High",     "refId": "B" },
+            { "expr": "sum(trivy_resource_configaudits{severity=~\"MEDIUM|Medium\"})",     "legendFormat": "Medium",   "refId": "C" },
+            { "expr": "sum(trivy_resource_configaudits{severity=~\"LOW|Low\"})",           "legendFormat": "Low",      "refId": "D" }
+          ]
+        },
+
+        { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }, "id": 9, "title": "kube-bench — CIS Kubernetes Benchmark (Node)", "type": "row" },
+
+        {
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "fixed" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "PASS" }, "properties": [{ "id": "color", "value": { "fixedColor": "green",            "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "FAIL" }, "properties": [{ "id": "color", "value": { "fixedColor": "red",              "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "WARN" }, "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-yellow", "mode": "fixed" } }] }
+            ]
+          },
+          "gridPos": { "h": 4, "w": 8, "x": 0, "y": 24 },
           "id": 10,
           "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] } },
           "title": "kube-bench Last Run",
           "type": "stat",
           "targets": [
-            { "expr": "max(kube_bench_total_pass)",    "legendFormat": "PASS",    "refId": "A" },
-            { "expr": "max(kube_bench_total_fail)",    "legendFormat": "FAIL",    "refId": "B" },
-            { "expr": "max(kube_bench_total_warn)",    "legendFormat": "WARN",    "refId": "C" }
+            { "expr": "max(kube_bench_total_pass)", "legendFormat": "PASS", "refId": "A" },
+            { "expr": "max(kube_bench_total_fail)", "legendFormat": "FAIL", "refId": "B" },
+            { "expr": "max(kube_bench_total_warn)", "legendFormat": "WARN", "refId": "C" }
           ]
         },
+
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "lineWidth": 2 } } },
-          "gridPos": { "h": 4, "w": 12, "x": 8, "y": 15 },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "custom": { "lineWidth": 2 } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "PASS" }, "properties": [{ "id": "color", "value": { "fixedColor": "green",            "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "FAIL" }, "properties": [{ "id": "color", "value": { "fixedColor": "red",              "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "WARN" }, "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-yellow", "mode": "fixed" } }] }
+            ]
+          },
+          "gridPos": { "h": 4, "w": 12, "x": 8, "y": 24 },
           "id": 11,
           "options": { "legend": { "displayMode": "list", "placement": "right" }, "tooltip": { "mode": "multi" } },
           "title": "kube-bench Results Over Time",
@@ -234,8 +265,9 @@ data:
             { "expr": "max(kube_bench_total_warn)", "legendFormat": "WARN", "refId": "C" }
           ]
         },
+
         {
-          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 15 },
+          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 24 },
           "id": 14,
           "options": {
             "content": "### kube-bench Reports\n\nFull CIS check-by-check breakdown with PASS/FAIL/WARN reason for each control:\n\n**[Browse kube-bench reports](https://{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/kube-bench/)**\n\nOpen the latest `.txt` file for a human-readable audit trail.",
@@ -244,26 +276,23 @@ data:
           "title": "Detailed Reports",
           "type": "text"
         },
+
+        { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 }, "id": 12, "title": "OWASP ZAP — Web Application Scan Reports", "type": "row" },
+
         {
-          "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
-          "id": 12,
-          "title": "OWASP ZAP — Web Application Scan Reports",
-          "type": "row"
-        },
-        {
-          "gridPos": { "h": 4, "w": 24, "x": 0, "y": 20 },
+          "gridPos": { "h": 5, "w": 24, "x": 0, "y": 29 },
           "id": 13,
           "options": {
-            "content": "{{ range .Values.scanTargets }}## [{{ .name }} — Latest ZAP Report](https://{{ $.Values.reportHostname }}{{ $.Values.reportPort }}/security/{{ .name }}/)\n\nTarget: `{{ .url }}`  \nScan type: `{{ $.Values.zapScan.scanType }}`  \nSchedule: `{{ $.Values.zapScan.schedule }}` (weekly)\n\n{{ end }}\n\n**Browse all reports:** [{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/](https://{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/)",
+            "content": "{{ range .Values.scanTargets }}## [{{ .name }} — Latest ZAP Report](https://{{ $.Values.reportHostname }}{{ if $.Values.reportPort }}:{{ $.Values.reportPort }}{{ end }}/security/{{ .name }}/)\n\nTarget: `{{ .url }}`  \nScan type: `{{ $.Values.zapScan.scanType }}`  \nSchedule: `{{ $.Values.zapScan.schedule }}` (weekly)\n\n{{ end }}\n**Browse all reports:** [{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/](https://{{ .Values.reportHostname }}{{ if .Values.reportPort }}:{{ .Values.reportPort }}{{ end }}/security/)",
             "mode": "markdown"
           },
           "title": "GLerp Scan Targets & Report Links",
           "type": "text"
         },
+
         {
           "collapsed": true,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
           "id": 15,
           "title": "Diagnostics — Metric Verification (expand to debug)",
           "type": "row",
@@ -271,70 +300,46 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "$datasource" },
               "fieldConfig": { "defaults": { "custom": { "align": "auto", "displayMode": "auto" } } },
-              "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+              "gridPos": { "h": 8, "w": 12, "x": 0, "y": 35 },
               "id": 16,
               "options": { "footer": { "show": false }, "showHeader": true },
               "title": "Trivy Compliance — Raw Metric (verify name + label structure)",
               "description": "Shows all trivy_cluster_compliance series. If empty, Prometheus is not scraping the compliance metric. Labels reveal exact status values (Pass/PASS/etc).",
               "type": "table",
-              "targets": [
-                {
-                  "expr": "trivy_cluster_compliance",
-                  "legendFormat": "",
-                  "refId": "A",
-                  "instant": true,
-                  "format": "table"
-                }
-              ],
-              "transformations": [
-                { "id": "organize", "options": { "excludeByName": { "__name__": true, "job": true, "instance": true } } }
-              ]
+              "targets": [{ "expr": "trivy_cluster_compliance", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
+              "transformations": [{ "id": "organize", "options": { "excludeByName": { "__name__": true, "job": true, "instance": true } } }]
             },
             {
               "datasource": { "type": "prometheus", "uid": "$datasource" },
               "fieldConfig": {
                 "defaults": {
                   "color": { "mode": "thresholds" },
-                  "thresholds": { "mode": "absolute", "steps": [
-                    { "color": "red",   "value": null },
-                    { "color": "green", "value": 1 }
-                  ]}
+                  "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
                 }
               },
-              "gridPos": { "h": 4, "w": 6, "x": 12, "y": 25 },
+              "gridPos": { "h": 4, "w": 6, "x": 12, "y": 35 },
               "id": 17,
               "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
               "title": "VulnerabilityReports with Data",
-              "description": "Count of trivy_image_vulnerabilities series. 0 means VulnerabilityReports exist but are empty — delete them to force a re-scan against the loaded DB.",
+              "description": "Count of trivy_image_vulnerabilities series. 0 = VulnerabilityReports empty or not yet generated. Delete existing reports to force re-scan: kubectl delete vulnerabilityreports -A --all",
               "type": "stat",
-              "targets": [
-                { "expr": "count(trivy_image_vulnerabilities) or vector(0)", "legendFormat": "CVE series", "refId": "A" }
-              ]
+              "targets": [{ "expr": "count(trivy_image_vulnerabilities) or vector(0)", "legendFormat": "CVE series", "refId": "A" }]
             },
             {
               "datasource": { "type": "prometheus", "uid": "$datasource" },
               "fieldConfig": { "defaults": { "custom": { "align": "auto", "displayMode": "auto" } } },
-              "gridPos": { "h": 4, "w": 6, "x": 18, "y": 25 },
+              "gridPos": { "h": 4, "w": 6, "x": 18, "y": 35 },
               "id": 18,
               "options": { "footer": { "show": false }, "showHeader": true },
               "title": "Pushgateway — kube-bench Instances",
-              "description": "Shows all kube_bench_total_pass series with their instance labels. Multiple rows = multiple hostnames pushed — clear old entries from Pushgateway.",
+              "description": "Shows all kube_bench_total_pass series with their instance labels. Multiple rows = duplicate hostname entries — clear with: kubectl exec deploy/...-prometheus-pushgateway -- wget -q -O /dev/null --method=DELETE http://localhost:9091/metrics/job/kube-bench",
               "type": "table",
-              "targets": [
-                {
-                  "expr": "kube_bench_total_pass",
-                  "legendFormat": "",
-                  "refId": "A",
-                  "instant": true,
-                  "format": "table"
-                }
-              ],
-              "transformations": [
-                { "id": "organize", "options": { "excludeByName": { "__name__": true, "job": true } } }
-              ]
+              "targets": [{ "expr": "kube_bench_total_pass", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
+              "transformations": [{ "id": "organize", "options": { "excludeByName": { "__name__": true, "job": true } } }]
             }
           ]
         }
+
       ],
       "refresh": "5m",
       "schemaVersion": 36,
@@ -359,6 +364,6 @@ data:
       "timezone": "browser",
       "title": "GLerp Security — CIS/SOC2 Compliance",
       "uid": "glerp-sec-audit-cis",
-      "version": 1
+      "version": 2
     }
 {{- end }}
