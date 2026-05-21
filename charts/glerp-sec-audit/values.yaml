@@ -93,6 +93,9 @@ reports:
   accessMode: ReadWriteMany    # RWX required — report-server and scan jobs (kube-bench, ZAP)
                                # mount the same PVC simultaneously; Longhorn supports RWX natively
   retentionDays: 90
+  cleanup:
+    enabled: true
+    schedule: "0 4 * * *"     # Daily at 04:00 UTC — runs after weekly scans have completed
 
 reportServer:
   image: "nginx:alpine"
