@@ -52,7 +52,7 @@ Trigger a Manual Scan
 Setup — Private Registry (GHCR) Scanning
 -----------------------------------------
 Source of truth: {{ .Values.ghcrRegistryAuth.secretName }} in {{ .Values.ghcrRegistryAuth.eso.sourceNamespace }}
-  Keys: {{ .Values.ghcrRegistryAuth.eso.usernameKey }} / {{ .Values.ghcrRegistryAuth.eso.passwordKey }}
+  Type: kubernetes.io/dockerconfigjson  Key: .dockerconfigjson
 
 ESO syncs that secret into this namespace (for Trivy) and into every namespace
 labeled glerp.io/private-registry=true (for pod image pulls + future apps).
@@ -98,17 +98,18 @@ STEP 2 — Enable in your values override and upgrade
   #
   #   trivy-operator:
   #     trivyOperator:
+  #       scanJobCustomVolumes:
+  #         - name: ghcr-docker-config
+  #           secret:
+  #             secretName: {{ .Values.ghcrRegistryAuth.secretName }}
+  #       scanJobCustomVolumeMounts:
+  #         - name: ghcr-docker-config
+  #           mountPath: /etc/trivy-registry/config.json
+  #           subPath: .dockerconfigjson
+  #           readOnly: true
   #       scanJobAdditionalEnvVars:
-  #         - name: TRIVY_USERNAME
-  #           valueFrom:
-  #             secretKeyRef:
-  #               name: {{ .Values.ghcrRegistryAuth.secretName }}
-  #               key: {{ .Values.ghcrRegistryAuth.eso.usernameKey }}
-  #         - name: TRIVY_PASSWORD
-  #           valueFrom:
-  #             secretKeyRef:
-  #               name: {{ .Values.ghcrRegistryAuth.secretName }}
-  #               key: {{ .Values.ghcrRegistryAuth.eso.passwordKey }}
+  #         - name: DOCKER_CONFIG
+  #           value: /etc/trivy-registry
 
   helm upgrade {{ .Release.Name }} green-llama/glerp-sec-audit \
     -n {{ .Release.Namespace }} -f <your-values-override.yaml> \

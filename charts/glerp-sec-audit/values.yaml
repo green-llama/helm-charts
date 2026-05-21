@@ -177,20 +177,22 @@ trivy-operator:
     scanJobNodeSelector: {}
     scanJobTolerations: []
     # Private GHCR registry auth — uncomment when ghcrRegistryAuth.enabled: true.
-    # ESO syncs ghcr-pull-secret into this namespace; scan pods read credentials here.
+    # ESO syncs ghcr-pull-secret (kubernetes.io/dockerconfigjson type) into this namespace.
+    # Scan pods mount the .dockerconfigjson file and DOCKER_CONFIG points Trivy at it.
     # See NOTES.txt: "Setup — Private Registry (GHCR) Scanning" for the full procedure.
     #
+    # scanJobCustomVolumes:
+    #   - name: ghcr-docker-config
+    #     secret:
+    #       secretName: ghcr-pull-secret
+    # scanJobCustomVolumeMounts:
+    #   - name: ghcr-docker-config
+    #     mountPath: /etc/trivy-registry/config.json
+    #     subPath: .dockerconfigjson
+    #     readOnly: true
     # scanJobAdditionalEnvVars:
-    #   - name: TRIVY_USERNAME
-    #     valueFrom:
-    #       secretKeyRef:
-    #         name: ghcr-pull-secret
-    #         key: Username
-    #   - name: TRIVY_PASSWORD
-    #     valueFrom:
-    #       secretKeyRef:
-    #         name: ghcr-pull-secret
-    #         key: Password
+    #   - name: DOCKER_CONFIG
+    #     value: /etc/trivy-registry
 
 # ------------------------------------------------------------
 # Private Registry Auth — GHCR (ghcr.io/green-llama/*)
@@ -218,9 +220,6 @@ ghcrRegistryAuth:
     clusterSecretStoreName: "k8s-ghcr-source"  # name to assign to the ClusterSecretStore
     sourceNamespace: "glerp-ai-intake-sandbox"  # namespace where ghcr-pull-secret lives
                                          # override per environment: prod uses a different namespace
-    usernameKey: "Username"              # exact key in the source Secret (capital U)
-    passwordKey: "Password"              # exact key in the source Secret (capital P)
-
     # ESO controller install coordinates — used to generate RBAC in NOTES.txt.
     # Adjust if ESO was installed in a non-standard namespace or with a different SA name.
     controllerNamespace: "external-secrets"
