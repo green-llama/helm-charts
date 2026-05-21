@@ -1,20 +1,7 @@
 ---
-# Strip-prefix middleware stays in the app namespace; referenced cross-namespace from the IngressRoute.
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: {{ include "glerp-sec-audit.fullname" . }}-strip-prefix
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "glerp-sec-audit.labels" . | nindent 4 }}
-    app.kubernetes.io/component: report-server
-spec:
-  stripPrefix:
-    prefixes:
-      - /security
----
 # IngressRoute in traefik-system so it can access letsencrypt-greenllama-tech-tls directly.
-# Service and middleware are referenced cross-namespace.
+# filebrowser handles the /security prefix internally via baseURL — no StripPrefix middleware needed.
+# Service is referenced cross-namespace.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -32,16 +19,6 @@ spec:
     - {{ .Values.ingressEntrypoint }}
   routes:
     - match: Host(`{{ .Values.reportHostname }}`) && PathPrefix(`/security`)
-      kind: Rule
-      middlewares:
-        - name: {{ include "glerp-sec-audit.fullname" . }}-strip-prefix
-          namespace: {{ .Release.Namespace }}
-      services:
-        - name: {{ include "glerp-sec-audit.fullname" . }}-report-server
-          namespace: {{ .Release.Namespace }}
-          port: 80
-          scheme: http
-    - match: Host(`{{ .Values.reportHostname }}`) && Path(`/`)
       kind: Rule
       services:
         - name: {{ include "glerp-sec-audit.fullname" . }}-report-server

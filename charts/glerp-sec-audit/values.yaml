@@ -98,9 +98,12 @@ reports:
     schedule: "0 4 * * *"     # Daily at 04:00 UTC — runs after weekly scans have completed
 
 reportServer:
-  image: "nginx:alpine"
+  image: "filebrowser/filebrowser:v2"
   imagePullPolicy: IfNotPresent
   replicas: 1
+  branding:
+    name: "GLerp Security Reports"
+    color: "#2d7d46"           # forest green — override to match environment branding
   resources:
     requests:
       cpu: "10m"
