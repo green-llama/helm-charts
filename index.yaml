@@ -626,6 +626,40 @@ entries:
   glerp-sec-audit:
   - apiVersion: v2
     appVersion: "2026.05"
+    created: "2026-05-21T02:27:34.946940055Z"
+    dependencies:
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: Automated security compliance auditing for GLerp RKE2 clusters —
+      Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly
+      web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
+    digest: 6db0bce608b75aaf05482ee02213ca762d8075d20976aa184eb843c60a0372b6
+    home: https://github.com/green-llama/k8-glerp-security
+    keywords:
+    - security
+    - cis
+    - soc2
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - vulnerability-scanning
+    maintainers:
+    - email: rjbloesser@greenllama.tech
+      name: greenllama
+    name: glerp-sec-audit
+    sources:
+    - https://github.com/green-llama/k8-glerp-security
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-0.2.37/glerp-sec-audit-0.2.37.tgz
+    version: 0.2.37
+  - apiVersion: v2
+    appVersion: "2026.05"
     created: "2026-05-21T02:17:45.102428173Z"
     dependencies:
     - condition: trivy-operator.enabled
@@ -1956,4 +1990,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.0/k8-glerp-ai-intake-0.3.0.tgz
     version: 0.3.0
-generated: "2026-05-21T02:17:45.102701044Z"
+generated: "2026-05-21T02:27:34.947324802Z"
