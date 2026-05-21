@@ -52,6 +52,7 @@ spec:
             - "--auth.method=noauth"
             - "--branding.name={{ .Values.reportServer.branding.name }}"
             - "--branding.color={{ .Values.reportServer.branding.color }}"
+            - "--branding.files=/branding"
             - "--baseURL=/security"
             - "--port=80"
             - "--address=0.0.0.0"
@@ -87,12 +88,23 @@ spec:
               mountPath: /reports
             - name: fb-database
               mountPath: /db
+            - name: branding
+              mountPath: /branding/img/logo.svg
+              subPath: logo.svg
+              readOnly: true
+            - name: branding
+              mountPath: /branding/custom.css
+              subPath: custom.css
+              readOnly: true
       volumes:
         - name: reports
           persistentVolumeClaim:
             claimName: {{ include "glerp-sec-audit.fullname" . }}-reports
         - name: fb-database
           emptyDir: {}
+        - name: branding
+          configMap:
+            name: {{ include "glerp-sec-audit.fullname" . }}-branding
 ---
 apiVersion: v1
 kind: Service
