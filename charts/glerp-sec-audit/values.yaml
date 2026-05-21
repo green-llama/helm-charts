@@ -176,23 +176,25 @@ trivy-operator:
     scanJobAnnotations: ""
     scanJobNodeSelector: {}
     scanJobTolerations: []
-    # Private GHCR registry auth — uncomment when ghcrRegistryAuth.enabled: true.
-    # ESO syncs ghcr-pull-secret (kubernetes.io/dockerconfigjson type) into this namespace.
-    # Scan pods mount the .dockerconfigjson file and DOCKER_CONFIG points Trivy at it.
-    # See NOTES.txt: "Setup — Private Registry (GHCR) Scanning" for the full procedure.
-    #
-    # scanJobCustomVolumes:
-    #   - name: ghcr-docker-config
-    #     secret:
-    #       secretName: ghcr-pull-secret
-    # scanJobCustomVolumeMounts:
-    #   - name: ghcr-docker-config
-    #     mountPath: /etc/trivy-registry/config.json
-    #     subPath: .dockerconfigjson
-    #     readOnly: true
-    # scanJobAdditionalEnvVars:
-    #   - name: DOCKER_CONFIG
-    #     value: /etc/trivy-registry
+    # GHCR registry credentials — always mounted; optional: true means scan pods start
+    # even before ESO has synced the secret. Once ESO creates ghcr-pull-secret, Trivy
+    # picks up credentials automatically on the next scan — no operator action required.
+    # The secret name matches ghcrRegistryAuth.secretName (ghcr-pull-secret convention).
+    scanJobCustomVolumes:
+      - name: ghcr-docker-config
+        secret:
+          secretName: ghcr-pull-secret
+          optional: true
+          items:
+            - key: .dockerconfigjson
+              path: config.json
+    scanJobCustomVolumeMounts:
+      - name: ghcr-docker-config
+        mountPath: /etc/trivy-registry
+        readOnly: true
+    scanJobAdditionalEnvVars:
+      - name: DOCKER_CONFIG
+        value: /etc/trivy-registry
 
 # ------------------------------------------------------------
 # Private Registry Auth — GHCR (ghcr.io/green-llama/*)

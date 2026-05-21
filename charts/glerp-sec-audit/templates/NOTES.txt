@@ -86,30 +86,17 @@ STEP 1 — One-time RBAC grant (cluster-admin, run ONCE per environment)
   No other environment-specific steps — the chart handles the rest.
 
 STEP 2 — Enable in your values override and upgrade
-  # Add to your values override file (the chart creates the ClusterSecretStore
-  # and ExternalSecret automatically — no additional kubectl apply needed):
+  # Add to your values override file. The chart handles everything else —
+  # ClusterSecretStore, ExternalSecret, ClusterExternalSecret, and Trivy
+  # credential mounting are all automatic. No additional kubectl apply needed.
   #
   #   ghcrRegistryAuth:
   #     enabled: true
   #     eso:
   #       enabled: true
+  #       createResources: true
   #       clusterExternalSecret:
   #         enabled: true   # spreads {{ .Values.ghcrRegistryAuth.secretName }} to all labeled namespaces
-  #
-  #   trivy-operator:
-  #     trivyOperator:
-  #       scanJobCustomVolumes:
-  #         - name: ghcr-docker-config
-  #           secret:
-  #             secretName: {{ .Values.ghcrRegistryAuth.secretName }}
-  #       scanJobCustomVolumeMounts:
-  #         - name: ghcr-docker-config
-  #           mountPath: /etc/trivy-registry/config.json
-  #           subPath: .dockerconfigjson
-  #           readOnly: true
-  #       scanJobAdditionalEnvVars:
-  #         - name: DOCKER_CONFIG
-  #           value: /etc/trivy-registry
 
   helm upgrade {{ .Release.Name }} green-llama/glerp-sec-audit \
     -n {{ .Release.Namespace }} -f <your-values-override.yaml> \
