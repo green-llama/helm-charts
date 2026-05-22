@@ -72,6 +72,7 @@ spec:
             - "--baseURL=/security"
             - "--address=0.0.0.0"
             - "--port=80"
+            - "--noauth"
           ports:
             - name: http
               containerPort: 80
