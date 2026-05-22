@@ -61,6 +61,23 @@ spec:
           volumeMounts:
             - name: fb-database
               mountPath: /db
+        # Step 3: create the admin user — noauth mode auto-logs in as this user;
+        # without any user in the database noauth returns 500 "resource does not exist".
+        # Password is irrelevant since authentication is disabled.
+        - name: fb-user
+          image: {{ .Values.reportServer.image | quote }}
+          imagePullPolicy: {{ .Values.reportServer.imagePullPolicy }}
+          args:
+            - "-d"
+            - "/db/filebrowser.db"
+            - "users"
+            - "add"
+            - "admin"
+            - "admin"
+            - "--perm.admin"
+          volumeMounts:
+            - name: fb-database
+              mountPath: /db
       containers:
         - name: filebrowser
           image: {{ .Values.reportServer.image | quote }}
