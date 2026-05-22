@@ -73,7 +73,7 @@ spec:
             - "users"
             - "add"
             - "admin"
-            - "admin"
+            - "noauth-disabled"
             - "--perm.admin"
           volumeMounts:
             - name: fb-database
