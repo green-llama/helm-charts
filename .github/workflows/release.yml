@@ -8,6 +8,13 @@ on:
       - 'charts/**'
   workflow_dispatch:   # allow manual trigger from GitHub Actions UI
 
+# Only one release can deploy to GitHub Pages at a time.
+# cancel-in-progress: false means newer runs wait rather than cancel,
+# so every version bump is published even when pushes arrive in a burst.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 # Forward-compatible with GitHub's Node.js 24 enforcement (June 2026).
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
