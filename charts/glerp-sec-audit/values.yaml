@@ -187,10 +187,12 @@ trivy-operator:
     # picks up credentials automatically on the next scan — no operator action required.
     # The secret name matches ghcrRegistryAuth.secretName (ghcr-pull-secret convention).
     #
-    # WARNING: scanJobCustomVolumes and scanJobCustomVolumeMounts are LISTS.
+    # WARNING: scanJobCustomVolumes and scanJobCustomVolumesMount are LISTS.
     # Helm list values DO NOT merge — an override file replaces the entire list.
     # Any override that sets scanJobCustomVolumes MUST include BOTH the tmp emptyDir
     # entry AND the ghcr-docker-config entry, or one of them will be lost.
+    # NOTE: volume mounts key is scanJobCustomVolumesMount (singular), NOT
+    # scanJobCustomVolumeMounts — trivy-operator 0.32.1 silently ignores the plural form.
     scanJobCustomVolumes:
       # Scan pods run with readOnlyRootFilesystem=true by default — Trivy needs
       # a writable /tmp for layer analysis temp files. Without this, every scan
@@ -204,7 +206,7 @@ trivy-operator:
           items:
             - key: .dockerconfigjson
               path: config.json
-    scanJobCustomVolumeMounts:
+    scanJobCustomVolumesMount:
       - name: tmp
         mountPath: /tmp
       - name: ghcr-docker-config
