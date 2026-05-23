@@ -62,19 +62,18 @@ spec:
                 - |
                   set -e
                   TS=$(date +%Y%m%d-%H%M%S)
-                  mkdir -p /reports/kube-bench
+                  mkdir -p /tmp/kube-bench
                   echo "=== kube-bench run: ${TS} benchmark={{ .Values.kubeBench.benchmark }} ==="
 
                   echo "--- Step 1: Text report (auditor-readable) ---"
+                  TXT_FILE="/tmp/kube-bench/kube-bench-${TS}.txt"
                   kube-bench run --benchmark {{ .Values.kubeBench.benchmark }} \
-                    > "/reports/kube-bench/kube-bench-${TS}.txt" 2>&1
-                  TEXT_LINES=$(wc -l < "/reports/kube-bench/kube-bench-${TS}.txt" 2>/dev/null || echo 0)
+                    > "${TXT_FILE}" 2>&1
+                  TEXT_LINES=$(wc -l < "${TXT_FILE}" 2>/dev/null || echo 0)
                   echo "Text report: ${TEXT_LINES} lines written"
-                  echo "Files in /reports/kube-bench/:"
-                  ls -lh /reports/kube-bench/
 
                   echo "--- Step 2: JSON report (metrics parsing) ---"
-                  JSON_FILE="/tmp/kube-bench-${TS}.json"
+                  JSON_FILE="/tmp/kube-bench/kube-bench-${TS}.json"
                   kube-bench run \
                     --benchmark {{ .Values.kubeBench.benchmark }} \
                     --json \
@@ -102,6 +101,33 @@ spec:
                     | grep "^kube_bench" \
                     || echo "WARNING: kube_bench metrics not found in Pushgateway response"
 
+                  echo "--- Step 6: Upload reports to file server ---"
+                  # Reports PVC cannot be mounted on control-plane nodes (Longhorn CSI not present).
+                  # Upload via filebrowser internal API instead — no node-level storage dependency.
+                  FB_URL="http://{{ include "glerp-sec-audit.fullname" . }}-report-server.{{ .Release.Namespace }}.svc.cluster.local"
+                  FB_TOKEN=$(wget -qO- --post-data='' "${FB_URL}/api/login" 2>/dev/null | tr -d '"')
+                  if [ -n "${FB_TOKEN}" ]; then
+                    wget -q --tries=1 -O /dev/null \
+                      --post-data='' --header="X-Auth: ${FB_TOKEN}" \
+                      "${FB_URL}/api/resources/kube-bench/?override=true" 2>/dev/null || true
+                    wget -q --tries=2 -O /dev/null \
+                      --post-file="${TXT_FILE}" \
+                      --header="X-Auth: ${FB_TOKEN}" \
+                      --header="Content-Type: application/octet-stream" \
+                      "${FB_URL}/api/resources/kube-bench/kube-bench-${TS}.txt?override=true" \
+                      && echo "Uploaded: kube-bench-${TS}.txt" \
+                      || echo "WARNING: text report upload failed"
+                    wget -q --tries=2 -O /dev/null \
+                      --post-file="${JSON_FILE}" \
+                      --header="X-Auth: ${FB_TOKEN}" \
+                      --header="Content-Type: application/octet-stream" \
+                      "${FB_URL}/api/resources/kube-bench/kube-bench-${TS}.json?override=true" \
+                      && echo "Uploaded: kube-bench-${TS}.json" \
+                      || echo "WARNING: JSON report upload failed"
+                  else
+                    echo "WARNING: could not reach report server — reports in pod logs only"
+                  fi
+
                   echo "=== kube-bench complete: PASS=${PASS} FAIL=${FAIL} WARN=${WARN} ==="
 
               resources:
@@ -110,8 +136,6 @@ spec:
               volumeMounts:
                 - name: kube-bench-tmp
                   mountPath: /tmp
-                - name: reports
-                  mountPath: /reports
                 # RKE2 control-plane config
                 - name: etc-rancher-rke2
                   mountPath: /etc/rancher/rke2
@@ -140,9 +164,6 @@ spec:
           volumes:
             - name: kube-bench-tmp
               emptyDir: {}
-            - name: reports
-              persistentVolumeClaim:
-                claimName: {{ include "glerp-sec-audit.fullname" . }}-reports
             - name: etc-rancher-rke2
               hostPath:
                 path: /etc/rancher/rke2
