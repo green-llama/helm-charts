@@ -69,7 +69,7 @@ kubeBench:
 zapScan:
   enabled: true
   image: "ghcr.io/zaproxy/zaproxy:stable"
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent    # stable tag changes infrequently; Always caused a ~1.5 GB pull every weekly run
   schedule: "0 2 * * 0"       # Weekly: Sunday 02:00 UTC
   scanType: "baseline"         # baseline = passive only (low load, adequate SOC2 evidence)
                                # full = active attack probes (high load, run manually if needed)
