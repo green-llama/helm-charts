@@ -189,16 +189,13 @@ trivy-operator:
     #
     # WARNING: scanJobCustomVolumes and scanJobCustomVolumesMount are LISTS.
     # Helm list values DO NOT merge — an override file replaces the entire list.
-    # Any override that sets scanJobCustomVolumes MUST include BOTH the tmp emptyDir
-    # entry AND the ghcr-docker-config entry, or one of them will be lost.
     # NOTE: volume mounts key is scanJobCustomVolumesMount (singular), NOT
     # scanJobCustomVolumeMounts — trivy-operator 0.32.1 silently ignores the plural form.
+    #
+    # DO NOT add a "tmp" emptyDir here — trivy-operator v0.32.1 already injects
+    # a tmp emptyDir into every scan job internally. Adding one here creates a
+    # duplicate volume name that causes the Kubernetes API to reject every scan job.
     scanJobCustomVolumes:
-      # Scan pods run with readOnlyRootFilesystem=true by default — Trivy needs
-      # a writable /tmp for layer analysis temp files. Without this, every scan
-      # fails with "stat /tmp/trivy-N: no such file or directory".
-      - name: tmp
-        emptyDir: {}
       - name: ghcr-docker-config
         secret:
           secretName: ghcr-pull-secret
@@ -207,8 +204,6 @@ trivy-operator:
             - key: .dockerconfigjson
               path: config.json
     scanJobCustomVolumesMount:
-      - name: tmp
-        mountPath: /tmp
       - name: ghcr-docker-config
         mountPath: /etc/trivy-registry
         readOnly: true
