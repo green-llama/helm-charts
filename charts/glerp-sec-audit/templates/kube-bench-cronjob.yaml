@@ -30,18 +30,19 @@ spec:
             seLinuxOptions:
               type: "spc_t"
 
-          # kube-bench runs on worker nodes (control-plane excluded by affinity).
-          # Worker-node CIS checks cover kubelet config and node hardening.
-          # etcd/API server host paths are mounted via DirectoryOrCreate — on workers these
-          # will be empty so those control-plane checks are skipped by kube-bench automatically.
-          # Results are pushed to Pushgateway (Grafana evidence); emptyDir is discarded after the job.
+          # kube-bench MUST run on a control-plane node — that is where the API server,
+          # etcd, scheduler, and controller-manager configs live. Running on a worker node
+          # causes every control-plane check (~50 of ~70 checks) to fail immediately because
+          # the config files and processes are absent, producing a falsely low score (~14%).
+          # The existing tolerations (operator: Exists) already permit scheduling on
+          # control-plane nodes regardless of their taints.
           affinity:
             nodeAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
                 nodeSelectorTerms:
                   - matchExpressions:
                       - key: node-role.kubernetes.io/control-plane
-                        operator: DoesNotExist
+                        operator: Exists
 
           tolerations:
             - operator: Exists

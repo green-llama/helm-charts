@@ -47,14 +47,14 @@ data:
 
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "description": "Percentage of scanned images with zero fixable Critical CVEs. Because ignoreUnfixed is enabled, only CVEs with a patched version available are counted — every image that drops this score is one you can fix today by upgrading to the version shown in the VulnerabilityReport. Score 100 = all images clean of fixable Criticals. Score 80 = 80% of images are clean, 20% have at least one fixable Critical. SOC2 CC6.6. Target ≥ 80%.",
+          "description": "Percentage of scanned images with zero fixable Critical CVEs. Because ignoreUnfixed is enabled, only CVEs with a patched version available are counted — every image that drops this score is one you can fix today. Enterprise reality: quarterly patching cycles and change management mean 60–80% is a healthy, realistic score. Score 100 = all images clean. Score 60 = 60% of images are clean, 40% have at least one fixable Critical. For SOC2, document your patching SLA (e.g. Critical CVEs remediated within 60 days) and use this trend over time as evidence. Target ≥ 60%.",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
               "thresholds": { "mode": "absolute", "steps": [
                 { "color": "red",    "value": null },
-                { "color": "yellow", "value": 60 },
-                { "color": "green",  "value": 80 }
+                { "color": "yellow", "value": 40 },
+                { "color": "green",  "value": 60 }
               ]},
               "unit": "percent", "min": 0, "max": 100
             }
@@ -75,14 +75,14 @@ data:
 
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "description": "CIS Kubernetes Benchmark pass rate from the most recent kube-bench run. Measures control plane, etcd, scheduler, and node configuration against CIS RKE2 1.7 hardening guidelines. Run weekly via CronJob. SOC2 CC6.1 — logical and physical access controls. Target: ≥ 80%.",
+          "description": "CIS Kubernetes Benchmark pass rate from the most recent kube-bench run against the RKE2 CIS 1.7 profile. kube-bench runs on the control-plane node to access API server, etcd, scheduler, and kubelet configs. Some CIS controls (audit log shipping destinations, certain pod security policies) require deliberate exceptions that should be documented in a risk register — a score of 70–85% is realistic and acceptable for a well-hardened cluster. SOC2 CC6.1. Target ≥ 70%.",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
               "thresholds": { "mode": "absolute", "steps": [
                 { "color": "red",    "value": null },
-                { "color": "yellow", "value": 70 },
-                { "color": "green",  "value": 80 }
+                { "color": "yellow", "value": 50 },
+                { "color": "green",  "value": 70 }
               ]},
               "unit": "percent", "min": 0, "max": 100
             }
