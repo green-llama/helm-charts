@@ -57,10 +57,10 @@ data:
           "description": "Counts from trivy_image_vulnerabilities. Shows 0 until VulnerabilityReports are generated — expand Diagnostics to check scan status.",
           "type": "stat",
           "targets": [
-            { "expr": "sum(trivy_image_vulnerabilities{severity=\"CRITICAL\"}) or vector(0)", "legendFormat": "CRITICAL", "refId": "A" },
-            { "expr": "sum(trivy_image_vulnerabilities{severity=\"HIGH\"}) or vector(0)",    "legendFormat": "HIGH",     "refId": "B" },
-            { "expr": "sum(trivy_image_vulnerabilities{severity=\"MEDIUM\"}) or vector(0)",  "legendFormat": "MEDIUM",   "refId": "C" },
-            { "expr": "sum(trivy_image_vulnerabilities{severity=\"LOW\"}) or vector(0)",     "legendFormat": "LOW",      "refId": "D" }
+            { "expr": "sum(trivy_image_vulnerabilities{severity=\"Critical\"}) or vector(0)", "legendFormat": "CRITICAL", "refId": "A" },
+            { "expr": "sum(trivy_image_vulnerabilities{severity=\"High\"}) or vector(0)",    "legendFormat": "HIGH",     "refId": "B" },
+            { "expr": "sum(trivy_image_vulnerabilities{severity=\"Medium\"}) or vector(0)",  "legendFormat": "MEDIUM",   "refId": "C" },
+            { "expr": "sum(trivy_image_vulnerabilities{severity=\"Low\"}) or vector(0)",     "legendFormat": "LOW",      "refId": "D" }
           ]
         },
 
@@ -79,8 +79,8 @@ data:
           "title": "Critical CVE Trend Over Time",
           "type": "timeseries",
           "targets": [
-            { "expr": "sum(trivy_image_vulnerabilities{severity=\"CRITICAL\"}) or vector(0)", "legendFormat": "Critical CVEs", "refId": "A" },
-            { "expr": "sum(trivy_image_vulnerabilities{severity=\"HIGH\"}) or vector(0)",    "legendFormat": "High CVEs",     "refId": "B" }
+            { "expr": "sum(trivy_image_vulnerabilities{severity=\"Critical\"}) or vector(0)", "legendFormat": "Critical CVEs", "refId": "A" },
+            { "expr": "sum(trivy_image_vulnerabilities{severity=\"High\"}) or vector(0)",    "legendFormat": "High CVEs",     "refId": "B" }
           ]
         },
 
@@ -152,7 +152,7 @@ data:
           "type": "table",
           "targets": [
             {
-              "expr": "sum by (namespace, image_tag, severity) (trivy_image_vulnerabilities{severity=~\"CRITICAL|HIGH\"}) > 0",
+              "expr": "sum by (namespace, image_tag, severity) (trivy_image_vulnerabilities{severity=~\"Critical|High\"}) > 0",
               "legendFormat": "", "refId": "A", "instant": true, "format": "table"
             }
           ],
