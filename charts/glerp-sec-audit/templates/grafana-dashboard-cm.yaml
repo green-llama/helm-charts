@@ -47,7 +47,7 @@ data:
 
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "description": "Weighted patch-backlog score: 100 − (Critical fixable CVEs × 10) − (High fixable CVEs × 2), floored at 0. Because ignoreUnfixed is enabled, every CVE counted here has a patched image version available — this score directly measures your patching backlog, not the universe of all known CVEs. Score 100 = no actionable findings. Each unpatched Critical drops the score by 10 points. SOC2 CC6.6. Target ≥ 80.",
+          "description": "Percentage of scanned images with zero fixable Critical CVEs. Because ignoreUnfixed is enabled, only CVEs with a patched version available are counted — every image that drops this score is one you can fix today by upgrading to the version shown in the VulnerabilityReport. Score 100 = all images clean of fixable Criticals. Score 80 = 80% of images are clean, 20% have at least one fixable Critical. SOC2 CC6.6. Target ≥ 80%.",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
@@ -56,7 +56,7 @@ data:
                 { "color": "yellow", "value": 60 },
                 { "color": "green",  "value": 80 }
               ]},
-              "unit": "none", "min": 0, "max": 100
+              "unit": "percent", "min": 0, "max": 100
             }
           },
           "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
@@ -66,8 +66,8 @@ data:
           "type": "gauge",
           "targets": [
             {
-              "expr": "clamp_min(100 - (sum(trivy_image_vulnerabilities{severity=\"Critical\"}) or vector(0)) * 10 - (sum(trivy_image_vulnerabilities{severity=\"High\"}) or vector(0)) * 2, 0)",
-              "legendFormat": "Patch Backlog Score",
+              "expr": "(100 * count(trivy_image_vulnerabilities{severity=\"Critical\"} == 0) / count(trivy_image_vulnerabilities{severity=\"Critical\"})) or vector(100)",
+              "legendFormat": "% Images Clean",
               "refId": "A"
             }
           ]
