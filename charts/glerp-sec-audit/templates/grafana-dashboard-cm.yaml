@@ -47,16 +47,16 @@ data:
 
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "description": "Fixable Critical + High CVEs per image currently tracked by Trivy — a fleet-size-normalized risk metric. Denominator = distinct (namespace, workload, image) tuples with any Trivy data, so it grows automatically as new namespaces and images are deployed. A falling density over time means patching is outpacing fleet growth. A rising density means CVE debt is accumulating faster than remediation. Target < 1.0 (average less than one fixable C/H CVE per image). SOC2 CC6.6 — use the trend chart below as the audit evidence of continuous improvement.",
+          "description": "Fixable Critical + High CVEs per image tracked by Trivy — fleet-size-normalized so adding namespaces does not inflate the score. 'Fixable' means a patched version of a dependency exists, but does NOT always mean you can patch today — upstream images (MetalLB, Longhorn, etc.) must first incorporate the dependency fix and ship a new release. A falling density trend over time is the meaningful SOC2 evidence. Enterprise reality: 10–25 is typical for actively-maintained infrastructure images on a quarterly patch cycle; < 10 reflects aggressive patching or distroless base images. Target < 15 (green). SOC2 CC6.6.",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
               "thresholds": { "mode": "absolute", "steps": [
                 { "color": "green",  "value": null },
-                { "color": "yellow", "value": 1 },
-                { "color": "red",    "value": 2 }
+                { "color": "yellow", "value": 15 },
+                { "color": "red",    "value": 30 }
               ]},
-              "unit": "none", "min": 0, "max": 5,
+              "unit": "none", "min": 0, "max": 50,
               "decimals": 2
             }
           },
