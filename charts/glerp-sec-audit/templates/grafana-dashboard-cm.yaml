@@ -240,7 +240,7 @@ data:
               ]}
             ]
           },
-          "gridPos": { "h": 9, "w": 24, "x": 0, "y": 17 },
+          "gridPos": { "h": 9, "w": 14, "x": 0, "y": 17 },
           "id": 8,
           "options": { "footer": { "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Critical" }] },
           "title": "Fixable Critical & High CVEs — by Workload and Image",
@@ -280,6 +280,17 @@ data:
         },
 
         {
+          "gridPos": { "h": 9, "w": 10, "x": 14, "y": 17 },
+          "id": 21,
+          "options": {
+            "content": "### CVEs — What They Are & How to Remediate\n\n**CVE** (Common Vulnerabilities & Exposures) — a public identifier for a known security flaw in a software component, published by NIST.\n\n**Why your images have CVEs:** Container images bundle dozens of open-source libraries. When a vulnerability is discovered in a library, a CVE is published. Trivy compares your images against the NVD database.\n\n**\"Fixable\" means actionable:** This table shows *only* CVEs where a patched dependency version exists. To fix:\n1. Find the target version: `kubectl get vulnerabilityreport -n <ns> <name> -o json | jq '.report.vulnerabilities[] | select(.severity==\"CRITICAL\") | {id:.vulnerabilityID, fixedIn:.fixedVersion}'`\n2. The upstream image (Vault, Longhorn, etc.) must ship a release that picks up the fix\n3. Update the workload to that newer image tag\n\n**Is it normal?** Yes — a density of 10–30 C+H CVEs per image is typical for enterprise infrastructure images on a quarterly patch cycle. The *downward trend* over time is the SOC2 evidence that matters.\n\n**Severity targets:**  \n🔴 **Critical** — remediate within 30 days  \n🟠 **High** — remediate within 90 days",
+            "mode": "markdown"
+          },
+          "title": "CVE Explanation & Remediation Guide",
+          "type": "text"
+        },
+
+        {
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
           "id": 9,
@@ -295,7 +306,11 @@ data:
             "overrides": [
               { "matcher": { "id": "byName", "options": "PASS" }, "properties": [{ "id": "color", "value": { "fixedColor": "green",            "mode": "fixed" } }] },
               { "matcher": { "id": "byName", "options": "FAIL" }, "properties": [{ "id": "color", "value": { "fixedColor": "red",              "mode": "fixed" } }] },
-              { "matcher": { "id": "byName", "options": "WARN" }, "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-yellow", "mode": "fixed" } }] }
+              { "matcher": { "id": "byName", "options": "WARN" }, "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-yellow", "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "Last Run" }, "properties": [
+                { "id": "color", "value": { "fixedColor": "text", "mode": "fixed" } },
+                { "id": "unit",  "value": "dateTimeAsLocal" }
+              ]}
             ]
           },
           "gridPos": { "h": 7, "w": 6, "x": 0, "y": 27 },
@@ -306,7 +321,8 @@ data:
           "targets": [
             { "expr": "sum(kube_bench_total_pass) or vector(0)", "legendFormat": "PASS", "refId": "A" },
             { "expr": "sum(kube_bench_total_fail) or vector(0)", "legendFormat": "FAIL", "refId": "B" },
-            { "expr": "sum(kube_bench_total_warn) or vector(0)", "legendFormat": "WARN", "refId": "C" }
+            { "expr": "sum(kube_bench_total_warn) or vector(0)", "legendFormat": "WARN", "refId": "C" },
+            { "expr": "max(push_time_seconds{job=\"kube-bench\"}) * 1000 or vector(0)", "legendFormat": "Last Run", "refId": "D" }
           ]
         },
 
@@ -361,10 +377,14 @@ data:
               { "matcher": { "id": "byName", "options": "High" },          "properties": [{ "id": "color", "value": { "fixedColor": "red",     "mode": "fixed" } }] },
               { "matcher": { "id": "byName", "options": "Medium" },        "properties": [{ "id": "color", "value": { "fixedColor": "orange",  "mode": "fixed" } }] },
               { "matcher": { "id": "byName", "options": "Low" },           "properties": [{ "id": "color", "value": { "fixedColor": "yellow",  "mode": "fixed" } }] },
-              { "matcher": { "id": "byName", "options": "Informational" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue",    "mode": "fixed" } }] }
+              { "matcher": { "id": "byName", "options": "Informational" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue",    "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "Last Scan" },     "properties": [
+                { "id": "color", "value": { "fixedColor": "text", "mode": "fixed" } },
+                { "id": "unit",  "value": "dateTimeAsLocal" }
+              ]}
             ]
           },
-          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 35 },
+          "gridPos": { "h": 7, "w": 6, "x": 0, "y": 35 },
           "id": 14,
           "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
           "title": "ZAP Alert Types — All Targets",
@@ -373,33 +393,11 @@ data:
             { "expr": "sum(zap_alerts_total{job=\"zap\", risk=\"High\"})          or vector(0)", "legendFormat": "High",          "refId": "A" },
             { "expr": "sum(zap_alerts_total{job=\"zap\", risk=\"Medium\"})        or vector(0)", "legendFormat": "Medium",        "refId": "B" },
             { "expr": "sum(zap_alerts_total{job=\"zap\", risk=\"Low\"})           or vector(0)", "legendFormat": "Low",           "refId": "C" },
-            { "expr": "sum(zap_alerts_total{job=\"zap\", risk=\"Informational\"}) or vector(0)", "legendFormat": "Informational", "refId": "D" }
+            { "expr": "sum(zap_alerts_total{job=\"zap\", risk=\"Informational\"}) or vector(0)", "legendFormat": "Informational", "refId": "D" },
+            { "expr": "max(zap_scan_timestamp_seconds{job=\"zap\"}) * 1000 or vector(0)",        "legendFormat": "Last Scan",      "refId": "E" }
           ]
         },
 
-        {
-          "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "description": "Unix timestamp of the most recent ZAP scan completion, converted to local time. Yellow = scan is more than 7 days old (overdue). Red = more than 14 days old (check CronJob status). A scan older than one week may indicate a scheduling or connectivity issue.",
-          "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "thresholds" },
-              "thresholds": { "mode": "absolute", "steps": [
-                { "color": "green",  "value": null },
-                { "color": "yellow", "value": 604800000 },
-                { "color": "red",    "value": 1209600000 }
-              ]},
-              "unit": "dateTimeAsLocal"
-            }
-          },
-          "gridPos": { "h": 7, "w": 4, "x": 8, "y": 35 },
-          "id": 15,
-          "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
-          "title": "ZAP — Last Scan Time",
-          "type": "stat",
-          "targets": [
-            { "expr": "max(zap_scan_timestamp_seconds{job=\"zap\"}) * 1000 or vector(0)", "legendFormat": "Last scan", "refId": "A" }
-          ]
-        },
 
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
@@ -413,7 +411,7 @@ data:
               { "matcher": { "id": "byName", "options": "Informational" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue",   "mode": "fixed" } }] }
             ]
           },
-          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 35 },
+          "gridPos": { "h": 7, "w": 18, "x": 6, "y": 35 },
           "id": 16,
           "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
           "title": "ZAP Findings — Trend Over Time",
