@@ -119,10 +119,7 @@ spec:
                 - name: var-lib-rancher-rke2
                   mountPath: /var/lib/rancher/rke2
                   readOnly: true
-                # Standard Kubernetes paths (kube-bench expects these)
-                - name: etc-kubernetes
-                  mountPath: /etc/kubernetes
-                  readOnly: true
+                # RKE2 symlinks /etc/kubernetes → /etc/rancher/rke2/; kube-bench resolves both
                 - name: var-lib-kubelet
                   mountPath: /var/lib/kubelet
                   readOnly: true
@@ -153,10 +150,6 @@ spec:
             - name: var-lib-rancher-rke2
               hostPath:
                 path: /var/lib/rancher/rke2
-                type: DirectoryOrCreate
-            - name: etc-kubernetes
-              hostPath:
-                path: /etc/kubernetes
                 type: DirectoryOrCreate
             - name: var-lib-kubelet
               hostPath:
