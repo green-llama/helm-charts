@@ -189,40 +189,68 @@ data:
 
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "description": "Fixable Critical and High CVEs by image — every row is an image you can patch today. The 'CVEs' count is how many fixable vulnerabilities that image has at that severity. The fixed version is not available in Prometheus metrics (Trivy stores it only in the VulnerabilityReport CRD). To see the specific CVE IDs and the exact version to upgrade to, run: kubectl get vulnerabilityreport -n <namespace> <report-name> -o json | jq '.report.vulnerabilities[] | select(.severity==\"CRITICAL\") | {id:.vulnerabilityID, title:.title, installed:.installedVersion, fixedIn:.fixedVersion}' — or browse the report server linked above. SOC2 CC6.6.",
+          "description": "Fixable Critical and High CVEs per workload and image — every row has a patch available today. Critical and High are separate columns so each carries its own colour scale (red shades = Critical severity, orange shades = High severity). Workload is the Kubernetes resource name (Deployment/StatefulSet/DaemonSet). Fixed version and individual CVE IDs are in the VulnerabilityReport CRD — run: kubectl get vulnerabilityreport -n <namespace> -o json | jq '.report.vulnerabilities[] | select(.severity==\"CRITICAL\") | {id:.vulnerabilityID, fixedIn:.fixedVersion}' to see what version to upgrade to. SOC2 CC6.6.",
           "fieldConfig": {
-            "defaults": { "custom": { "align": "left", "displayMode": "auto", "minWidth": 100 } },
+            "defaults": { "custom": { "align": "left", "displayMode": "auto", "minWidth": 60 } },
             "overrides": [
-              { "matcher": { "id": "byName", "options": "Namespace" }, "properties": [{ "id": "custom.width", "value": 200 }] },
-              { "matcher": { "id": "byName", "options": "Image" },     "properties": [{ "id": "custom.width", "value": 380 }] },
-              { "matcher": { "id": "byName", "options": "Severity" },  "properties": [{ "id": "custom.width", "value": 100 }] },
-              { "matcher": { "id": "byName", "options": "CVEs" }, "properties": [
-                { "id": "custom.width", "value": 80 },
+              { "matcher": { "id": "byName", "options": "Namespace" }, "properties": [{ "id": "custom.width", "value": 160 }] },
+              { "matcher": { "id": "byName", "options": "Workload" },  "properties": [{ "id": "custom.width", "value": 120 }] },
+              { "matcher": { "id": "byName", "options": "Image" },     "properties": [{ "id": "custom.width", "value": 340 }] },
+              { "matcher": { "id": "byName", "options": "Critical" }, "properties": [
+                { "id": "custom.width", "value": 90 },
                 { "id": "color", "value": { "mode": "thresholds" } },
-                { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "orange", "value": 4 }, { "color": "red", "value": 7 }] } },
+                { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                  { "color": "light-red",     "value": null },
+                  { "color": "semi-dark-red", "value": 4 },
+                  { "color": "dark-red",      "value": 8 }
+                ]}},
+                { "id": "custom.displayMode", "value": "color-background" }
+              ]},
+              { "matcher": { "id": "byName", "options": "High" }, "properties": [
+                { "id": "custom.width", "value": 90 },
+                { "id": "color", "value": { "mode": "thresholds" } },
+                { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                  { "color": "light-orange",     "value": null },
+                  { "color": "semi-dark-orange", "value": 6 },
+                  { "color": "dark-orange",      "value": 12 }
+                ]}},
                 { "id": "custom.displayMode", "value": "color-background" }
               ]}
             ]
           },
           "gridPos": { "h": 9, "w": 24, "x": 0, "y": 17 },
           "id": 8,
-          "options": { "footer": { "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "CVEs" }] },
-          "title": "Critical & High CVEs — by Image and Namespace",
+          "options": { "footer": { "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Critical" }] },
+          "title": "Fixable Critical & High CVEs — by Workload and Image",
           "type": "table",
           "targets": [
             {
-              "expr": "sum by (namespace, image_tag, severity) (trivy_image_vulnerabilities{severity=~\"Critical|High\"}) > 0",
+              "expr": "sum by (namespace, resource_name, image_tag) (trivy_image_vulnerabilities{severity=\"Critical\"}) > 0",
               "legendFormat": "",
               "refId": "A",
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "expr": "sum by (namespace, resource_name, image_tag) (trivy_image_vulnerabilities{severity=\"High\"}) > 0",
+              "legendFormat": "",
+              "refId": "B",
               "instant": true,
               "format": "table"
             }
           ],
           "transformations": [
+            { "id": "merge", "options": {} },
             {
               "id": "organize",
               "options": {
-                "renameByName": { "namespace": "Namespace", "image_tag": "Image", "severity": "Severity", "Value": "CVEs" },
+                "renameByName": {
+                  "namespace":     "Namespace",
+                  "resource_name": "Workload",
+                  "image_tag":     "Image",
+                  "Value #A":      "Critical",
+                  "Value #B":      "High"
+                },
                 "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true }
               }
             }
