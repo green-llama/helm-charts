@@ -19,6 +19,10 @@ spec:
         {{- include "glerp-sec-audit.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: report-server
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
