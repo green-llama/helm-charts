@@ -68,6 +68,9 @@ spec:
         # Step 3: create the admin user — noauth mode auto-logs in as this user;
         # without any user in the database noauth returns 500 "resource does not exist".
         # Password is irrelevant since authentication is disabled.
+        # The reports PVC must be mounted here: filebrowser reads root=/reports from
+        # the DB and calls os.MkdirAll(/reports) when adding a user. Without the mount,
+        # /reports doesn't exist in the scratch container and uid 1000 can't create it.
         - name: fb-user
           image: {{ .Values.reportServer.image | quote }}
           imagePullPolicy: {{ .Values.reportServer.imagePullPolicy }}
@@ -82,6 +85,8 @@ spec:
           volumeMounts:
             - name: fb-database
               mountPath: /db
+            - name: reports
+              mountPath: /reports
       containers:
         - name: filebrowser
           image: {{ .Values.reportServer.image | quote }}
