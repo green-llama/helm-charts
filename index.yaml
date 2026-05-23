@@ -3,7 +3,7 @@ entries:
   glerp-documenso:
   - apiVersion: v2
     appVersion: v1.8.1
-    created: '2026-05-18T22:35:18.164650273Z'
+    created: "2026-05-18T22:35:18.164650273Z"
     description: A Helm chart for Documenso — green-llama infrastructure edition (Traefik
       IngressRoute + external-dns)
     digest: f1b86b558d8e769f950bb8822f212a48e6d999436e0591acee0e94897f461ae0
@@ -16,7 +16,7 @@ entries:
   glerp-monitoring:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-21T23:50:40.969778494Z'
+    created: "2026-05-21T23:50:40.969778494Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -49,7 +49,7 @@ entries:
     version: 1.0.1
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-18T18:38:31.050433032Z'
+    created: "2026-05-18T18:38:31.050433032Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -82,7 +82,7 @@ entries:
     version: 1.0.0
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-18T03:10:45.840932599Z'
+    created: "2026-05-18T03:10:45.840932599Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -114,7 +114,7 @@ entries:
     version: 0.2.39
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-18T02:23:34.233376028Z'
+    created: "2026-05-18T02:23:34.233376028Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -146,7 +146,7 @@ entries:
     version: 0.2.38
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-18T01:52:27.294809478Z'
+    created: "2026-05-18T01:52:27.294809478Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -178,7 +178,7 @@ entries:
     version: 0.2.37
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-18T00:15:56.938257308Z'
+    created: "2026-05-18T00:15:56.938257308Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -210,7 +210,7 @@ entries:
     version: 0.2.36
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-17T23:57:57.944916686Z'
+    created: "2026-05-17T23:57:57.944916686Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -242,7 +242,7 @@ entries:
     version: 0.2.35
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-17T23:32:12.919296912Z'
+    created: "2026-05-17T23:32:12.919296912Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -274,7 +274,7 @@ entries:
     version: 0.2.34
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-17T03:24:02.456285104Z'
+    created: "2026-05-17T03:24:02.456285104Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -306,7 +306,7 @@ entries:
     version: 0.2.33
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-17T02:55:29.169888501Z'
+    created: "2026-05-17T02:55:29.169888501Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -338,7 +338,7 @@ entries:
     version: 0.2.32
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-17T02:33:11.52227661Z'
+    created: "2026-05-17T02:33:11.52227661Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -370,7 +370,7 @@ entries:
     version: 0.2.31
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-17T01:40:14.343941556Z'
+    created: "2026-05-17T01:40:14.343941556Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -402,7 +402,7 @@ entries:
     version: 0.2.30
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-17T00:41:22.112050067Z'
+    created: "2026-05-17T00:41:22.112050067Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -434,7 +434,7 @@ entries:
     version: 0.2.29
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-15T21:39:05.149403738Z'
+    created: "2026-05-15T21:39:05.149403738Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -466,7 +466,7 @@ entries:
     version: 0.2.28
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-15T21:17:21.964597161Z'
+    created: "2026-05-15T21:17:21.964597161Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -498,7 +498,7 @@ entries:
     version: 0.2.27
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-15T20:03:35.283576392Z'
+    created: "2026-05-15T20:03:35.283576392Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -530,7 +530,7 @@ entries:
     version: 0.2.26
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-15T13:32:25.902058282Z'
+    created: "2026-05-15T13:32:25.902058282Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -562,7 +562,7 @@ entries:
     version: 0.2.25
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-15T13:16:50.982570704Z'
+    created: "2026-05-15T13:16:50.982570704Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -594,7 +594,7 @@ entries:
     version: 0.2.24
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-15T13:08:27.217290018Z'
+    created: "2026-05-15T13:08:27.217290018Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -626,7 +626,7 @@ entries:
     version: 0.2.23
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-15T13:00:08.973164707Z'
+    created: "2026-05-15T13:00:08.973164707Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -658,8 +658,42 @@ entries:
     version: 0.2.22
   glerp-sec-audit:
   - apiVersion: v2
-    appVersion: '2026.05'
-    created: '2026-05-22T12:05:20.097778838Z'
+    appVersion: "2026.05"
+    created: "2026-05-23T00:13:42.870874076Z"
+    dependencies:
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: Automated security compliance auditing for GLerp RKE2 clusters —
+      Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly
+      web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
+    digest: 4b875524cbf0c4479a8cb060748dc6f640cf060127b38e5eee43a9b84635ee36
+    home: https://github.com/green-llama/k8-glerp-security
+    keywords:
+    - security
+    - cis
+    - soc2
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - vulnerability-scanning
+    maintainers:
+    - email: rjbloesser@greenllama.tech
+      name: greenllama
+    name: glerp-sec-audit
+    sources:
+    - https://github.com/green-llama/k8-glerp-security
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-0.2.52/glerp-sec-audit-0.2.52.tgz
+    version: 0.2.52
+  - apiVersion: v2
+    appVersion: "2026.05"
+    created: "2026-05-22T12:05:20.097778838Z"
     dependencies:
     - condition: trivy-operator.enabled
       name: trivy-operator
@@ -692,8 +726,8 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-0.2.51/glerp-sec-audit-0.2.51.tgz
     version: 0.2.51
   - apiVersion: v2
-    appVersion: '2026.05'
-    created: '2026-05-22T02:30:52.289262257Z'
+    appVersion: "2026.05"
+    created: "2026-05-22T02:30:52.289262257Z"
     dependencies:
     - condition: trivy-operator.enabled
       name: trivy-operator
@@ -726,8 +760,8 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-0.2.50/glerp-sec-audit-0.2.50.tgz
     version: 0.2.50
   - apiVersion: v2
-    appVersion: '2026.05'
-    created: '2026-05-22T01:38:46.886211712Z'
+    appVersion: "2026.05"
+    created: "2026-05-22T01:38:46.886211712Z"
     dependencies:
     - condition: trivy-operator.enabled
       name: trivy-operator
@@ -761,8 +795,8 @@ entries:
     version: 0.2.49
   glerp-security:
   - apiVersion: v2
-    appVersion: '2026.05'
-    created: '2026-05-18T22:07:52.635206577Z'
+    appVersion: "2026.05"
+    created: "2026-05-18T22:07:52.635206577Z"
     dependencies:
     - name: trivy-operator
       repository: https://aquasecurity.github.io/helm-charts/
@@ -796,7 +830,7 @@ entries:
   k8-glerp-ai-intake:
   - apiVersion: v2
     appVersion: 0.3.1
-    created: '2026-04-22T17:27:24.33800416Z'
+    created: "2026-04-22T17:27:24.33800416Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: 4469a34731bbafa44dbb635917ddba042f438a76bab1e77eef492a42ec2cd530
     home: https://github.com/green-llama/k8-glerp-ai-intake
@@ -817,7 +851,7 @@ entries:
     version: 0.3.3
   - apiVersion: v2
     appVersion: 0.3.0
-    created: '2026-04-22T03:30:18.806430986Z'
+    created: "2026-04-22T03:30:18.806430986Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: b35a393688a84512df3b5bb2e3cc4d063e5a3c404d2991d80943f9dae361bee9
     home: https://github.com/green-llama/k8-glerp-ai-intake
@@ -838,7 +872,7 @@ entries:
     version: 0.3.2
   - apiVersion: v2
     appVersion: 0.3.0
-    created: '2026-04-21T20:01:02.825415333Z'
+    created: "2026-04-21T20:01:02.825415333Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: 96f9a9d23ebb1ad03f4b9e8d671313568cc9855eb4f1bb524a079f0271a0c706
     home: https://github.com/green-llama/k8-glerp-ai-intake
@@ -859,7 +893,7 @@ entries:
     version: 0.3.1
   - apiVersion: v2
     appVersion: 0.3.0
-    created: '2026-03-17T03:37:26.898069097Z'
+    created: "2026-03-17T03:37:26.898069097Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: 46f9387230ca0b8210084f1473fea4c71541b71338e4fd0e12b7fa74b5f38d26
     home: https://github.com/green-llama/k8-glerp-ai-intake
@@ -878,4 +912,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.0/k8-glerp-ai-intake-0.3.0.tgz
     version: 0.3.0
-generated: '2026-05-22T12:05:20.098035719Z'
+generated: "2026-05-23T00:13:42.870959224Z"
