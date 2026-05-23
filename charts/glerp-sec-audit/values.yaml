@@ -146,7 +146,8 @@ trivy-operator:
     storageClassName: ""            # uses cluster default (longhorn)
     storageSize: "4Gi"              # vuln DB ~250 MB + Java DB ~400 MB = ~650 MB; 4Gi gives headroom
     skipJavaDBUpdate: false         # Python images share base layers containing Java tooling; cannot skip on first run
-    ignoreUnfixed: false
+    ignoreUnfixed: true               # only report CVEs where a patched version exists; eliminates noise from
+                                      # unfixable CVEs and makes every finding actionable
     severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
     slow: true
     priorityClassName: "glerp-sec-audit-scan-low"

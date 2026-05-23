@@ -47,16 +47,16 @@ data:
 
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "description": "Percentage of scanned container images with zero Critical CVEs. 100% means no image in any customer namespace has a known critical vulnerability. Produced by Trivy Operator scanning all cluster namespaces continuously. SOC2 CC6.6 — logical access and change management. Target: ≥ 95%.",
+          "description": "Weighted patch-backlog score: 100 − (Critical fixable CVEs × 10) − (High fixable CVEs × 2), floored at 0. Because ignoreUnfixed is enabled, every CVE counted here has a patched image version available — this score directly measures your patching backlog, not the universe of all known CVEs. Score 100 = no actionable findings. Each unpatched Critical drops the score by 10 points. SOC2 CC6.6. Target ≥ 80.",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
               "thresholds": { "mode": "absolute", "steps": [
                 { "color": "red",    "value": null },
-                { "color": "yellow", "value": 80 },
-                { "color": "green",  "value": 95 }
+                { "color": "yellow", "value": 60 },
+                { "color": "green",  "value": 80 }
               ]},
-              "unit": "percent", "min": 0, "max": 100
+              "unit": "none", "min": 0, "max": 100
             }
           },
           "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
@@ -66,8 +66,8 @@ data:
           "type": "gauge",
           "targets": [
             {
-              "expr": "(100 * count(trivy_image_vulnerabilities{severity=\"Critical\"} == 0) / count(trivy_image_vulnerabilities{severity=\"Critical\"})) or vector(100)",
-              "legendFormat": "% Images Clean",
+              "expr": "clamp_min(100 - (sum(trivy_image_vulnerabilities{severity=\"Critical\"}) or vector(0)) * 10 - (sum(trivy_image_vulnerabilities{severity=\"High\"}) or vector(0)) * 2, 0)",
+              "legendFormat": "Patch Backlog Score",
               "refId": "A"
             }
           ]
@@ -139,7 +139,7 @@ data:
 
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "description": "Total CVE counts by severity across all scanned images in all cluster namespaces. Trivy Operator runs continuously and re-scans images on a 6-hour cycle. Each GLerp customer namespace is included automatically — no configuration required when a new site is added. SOC2 CC7.1 — detection of security events.",
+          "description": "Fixable CVE counts by severity — only CVEs with a patched image version available are shown (ignoreUnfixed: true). Trivy Operator re-scans every 6 hours across all namespaces. Every finding here is directly actionable: update the image to the version shown in the VulnerabilityReport. SOC2 CC7.1 — detection and response to security events.",
           "fieldConfig": {
             "defaults": { "color": { "mode": "fixed" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } },
             "overrides": [
@@ -189,7 +189,7 @@ data:
 
         {
           "datasource": { "type": "prometheus", "uid": "$datasource" },
-          "description": "Per-image breakdown of Critical and High CVEs, grouped by namespace. Use this table to identify which specific images require patching. Image tag is the full registry path including version. Sorted by severity count descending — Critical images appear first. SOC2 CC6.6 evidence: shows the specific images reviewed.",
+          "description": "Fixable Critical and High CVEs by image — every row is an image you can patch today. The 'CVEs' count is how many fixable vulnerabilities that image has at that severity. The fixed version is not available in Prometheus metrics (Trivy stores it only in the VulnerabilityReport CRD). To see the specific CVE IDs and the exact version to upgrade to, run: kubectl get vulnerabilityreport -n <namespace> <report-name> -o json | jq '.report.vulnerabilities[] | select(.severity==\"CRITICAL\") | {id:.vulnerabilityID, title:.title, installed:.installedVersion, fixedIn:.fixedVersion}' — or browse the report server linked above. SOC2 CC6.6.",
           "fieldConfig": {
             "defaults": { "custom": { "align": "left", "displayMode": "auto", "minWidth": 100 } },
             "overrides": [
@@ -199,7 +199,7 @@ data:
               { "matcher": { "id": "byName", "options": "CVEs" }, "properties": [
                 { "id": "custom.width", "value": 80 },
                 { "id": "color", "value": { "mode": "thresholds" } },
-                { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 }] } },
+                { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "orange", "value": 4 }, { "color": "red", "value": 7 }] } },
                 { "id": "custom.displayMode", "value": "color-background" }
               ]}
             ]
