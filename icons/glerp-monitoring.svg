@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background: GLerp dark forest green -->
+  <rect width="512" height="512" rx="72" fill="#00534c"/>
+
+  <!-- Chart axes -->
+  <line x1="100" y1="78" x2="100" y2="355"
+        stroke="white" stroke-width="14" stroke-linecap="round" opacity="0.35"/>
+  <line x1="100" y1="355" x2="412" y2="355"
+        stroke="white" stroke-width="14" stroke-linecap="round" opacity="0.35"/>
+
+  <!-- Subtle horizontal grid lines -->
+  <line x1="100" y1="275" x2="412" y2="275"
+        stroke="white" stroke-width="3" opacity="0.12"/>
+  <line x1="100" y1="195" x2="412" y2="195"
+        stroke="white" stroke-width="3" opacity="0.12"/>
+  <line x1="100" y1="115" x2="412" y2="115"
+        stroke="white" stroke-width="3" opacity="0.12"/>
+
+  <!-- Rising metric line: Grafana/Prometheus trend -->
+  <polyline points="100,332 168,296 220,314 278,240 336,195 412,112"
+            fill="none" stroke="white" stroke-width="16"
+            stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Data point circles in GLerp teal -->
+  <circle cx="100" cy="332" r="13" fill="#27b093"/>
+  <circle cx="168" cy="296" r="13" fill="#27b093"/>
+  <circle cx="220" cy="314" r="13" fill="#27b093"/>
+  <circle cx="278" cy="240" r="13" fill="#27b093"/>
+  <circle cx="336" cy="195" r="13" fill="#27b093"/>
+  <circle cx="412" cy="112" r="13" fill="#27b093"/>
+
+  <!-- Alert bell: monitoring alerting -->
+  <path d="M360,370 Q360,355 375,350 L390,380 L330,380 L345,350 Q360,355 360,370 Z"
+        fill="white" opacity="0.0"/>
+
+  <!-- GL badge -->
+  <circle cx="414" cy="414" r="54" fill="white"/>
+  <text x="414" y="430" text-anchor="middle"
+        font-family="Inter, 'Inter Display', Arial, sans-serif"
+        font-weight="700" font-size="34" fill="#00534c">GL</text>
+</svg>

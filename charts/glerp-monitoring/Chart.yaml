@@ -17,6 +17,7 @@ keywords:
   - sla
   - glerp
   - erpnext
+icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
 home: https://github.com/green-llama/k8-glerp-monitoring
 sources:
   - https://github.com/green-llama/k8-glerp-monitoring

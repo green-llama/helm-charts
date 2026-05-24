@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background: GLerp dark forest green -->
+  <rect width="512" height="512" rx="72" fill="#00534c"/>
+
+  <!-- Document body with subtle fill -->
+  <path d="M138,68 L316,68 L376,128 L376,368
+           C376,382 364,392 350,392
+           L154,392 C140,392 138,382 138,368 Z"
+        fill="rgba(255,255,255,0.08)"
+        stroke="white" stroke-width="18" stroke-linejoin="round"/>
+
+  <!-- Fold corner -->
+  <path d="M316,68 L316,128 L376,128"
+        fill="none" stroke="white" stroke-width="18" stroke-linejoin="round"/>
+
+  <!-- Document content lines -->
+  <line x1="172" y1="178" x2="342" y2="178"
+        stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+  <line x1="172" y1="214" x2="318" y2="214"
+        stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+  <line x1="172" y1="250" x2="330" y2="250"
+        stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Signature base line in teal -->
+  <line x1="162" y1="338" x2="306" y2="338"
+        stroke="#27b093" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- Signature flourish in teal -->
+  <path d="M162,326 Q182,304 204,322 Q226,342 250,314 Q268,295 288,313 Q302,325 312,318"
+        fill="none" stroke="#27b093" stroke-width="10"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- GL badge -->
+  <circle cx="414" cy="414" r="54" fill="white"/>
+  <text x="414" y="430" text-anchor="middle"
+        font-family="Inter, 'Inter Display', Arial, sans-serif"
+        font-weight="700" font-size="34" fill="#00534c">GL</text>
+</svg>

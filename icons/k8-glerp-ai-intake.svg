@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background: GLerp dark forest green -->
+  <rect width="512" height="512" rx="72" fill="#00534c"/>
+
+  <!-- Input nodes (left column): document intake sources -->
+  <circle cx="108" cy="148" r="26" fill="none" stroke="white" stroke-width="12"/>
+  <circle cx="108" cy="256" r="26" fill="none" stroke="white" stroke-width="12"/>
+  <circle cx="108" cy="364" r="26" fill="none" stroke="white" stroke-width="12"/>
+
+  <!-- Hidden layer nodes (center): AI processing in GLerp teal -->
+  <circle cx="256" cy="148" r="26" fill="#27b093" stroke="white" stroke-width="12"/>
+  <circle cx="256" cy="256" r="26" fill="#27b093" stroke="white" stroke-width="12"/>
+  <circle cx="256" cy="364" r="26" fill="#27b093" stroke="white" stroke-width="12"/>
+
+  <!-- Output node (right): result -->
+  <circle cx="394" cy="256" r="34" fill="white"/>
+  <!-- Right-facing arrow in output node -->
+  <path d="M378,256 L412,256 M398,240 L414,256 L398,272"
+        fill="none" stroke="#00534c" stroke-width="6"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Connections: input → hidden (subtle white) -->
+  <line x1="134" y1="148" x2="230" y2="148" stroke="white" stroke-width="4" opacity="0.28"/>
+  <line x1="134" y1="148" x2="230" y2="256" stroke="white" stroke-width="4" opacity="0.18"/>
+  <line x1="134" y1="148" x2="230" y2="364" stroke="white" stroke-width="4" opacity="0.12"/>
+  <line x1="134" y1="256" x2="230" y2="148" stroke="white" stroke-width="4" opacity="0.18"/>
+  <line x1="134" y1="256" x2="230" y2="256" stroke="white" stroke-width="4" opacity="0.28"/>
+  <line x1="134" y1="256" x2="230" y2="364" stroke="white" stroke-width="4" opacity="0.18"/>
+  <line x1="134" y1="364" x2="230" y2="148" stroke="white" stroke-width="4" opacity="0.12"/>
+  <line x1="134" y1="364" x2="230" y2="256" stroke="white" stroke-width="4" opacity="0.18"/>
+  <line x1="134" y1="364" x2="230" y2="364" stroke="white" stroke-width="4" opacity="0.28"/>
+
+  <!-- Connections: hidden → output (teal, prominent) -->
+  <line x1="282" y1="148" x2="368" y2="256" stroke="#27b093" stroke-width="7" opacity="0.75"/>
+  <line x1="282" y1="256" x2="368" y2="256" stroke="#27b093" stroke-width="7" opacity="0.90"/>
+  <line x1="282" y1="364" x2="368" y2="256" stroke="#27b093" stroke-width="7" opacity="0.75"/>
+
+  <!-- GL badge -->
+  <circle cx="414" cy="414" r="54" fill="white"/>
+  <text x="414" y="430" text-anchor="middle"
+        font-family="Inter, 'Inter Display', Arial, sans-serif"
+        font-weight="700" font-size="34" fill="#00534c">GL</text>
+</svg>
