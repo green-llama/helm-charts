@@ -166,7 +166,7 @@ data:
         },
 
         {
-          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "datasource": { "type": "prometheus", "uid": "${vm_datasource}" },
           "description": "Raw fixable CVE counts (left axis) plus fleet-normalized C+H density (right axis, dashed purple). The density line accounts for fleet growth — if you add namespaces over time the raw counts naturally rise, but a falling or flat density line means patching is keeping pace. Use the density trend as your SOC2 evidence of continuous improvement. Data points appear as Trivy completes its 6-hour scan cycles.",
           "fieldConfig": {
             "defaults": { "color": { "mode": "palette-classic" }, "custom": { "lineWidth": 2, "fillOpacity": 8 } },
@@ -322,7 +322,7 @@ data:
         },
 
         {
-          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "datasource": { "type": "prometheus", "uid": "${vm_datasource}" },
           "description": "Weekly trend of CIS Kubernetes Benchmark results. Each data point represents one kube-bench run (Sunday 03:00 UTC). A decreasing FAIL count indicates hardening progress. Metrics are pushed to Prometheus Pushgateway immediately after each job and retained for 90 days.",
           "fieldConfig": {
             "defaults": { "color": { "mode": "palette-classic" }, "custom": { "lineWidth": 2, "fillOpacity": 8 } },
@@ -390,7 +390,7 @@ data:
 
 
         {
-          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "datasource": { "type": "prometheus", "uid": "${vm_datasource}" },
           "description": "Weekly trend of ZAP alert types per risk level across all scan targets. Each data point = one Sunday scan run. Downward trend in High/Medium = effective remediation. Informational alerts are expected and do not indicate risk.",
           "fieldConfig": {
             "defaults": { "color": { "mode": "palette-classic" }, "custom": { "lineWidth": 2, "fillOpacity": 8 } },
@@ -491,13 +491,28 @@ data:
       "templating": {
         "list": [
           {
-            "current": {},
+            "hide": 2,
+            "includeAll": false,
+            "name": "vm_datasource",
+            "options": [],
+            "query": "prometheus",
+            "refresh": 1,
+            "regex": "GLerp.*VictoriaMetrics",
+            "type": "datasource"
+          },
+          {
+            "current": {
+              "selected": true,
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
             "hide": 0,
             "includeAll": false,
             "name": "datasource",
             "options": [],
             "query": "prometheus",
             "refresh": 1,
+            "regex": "^Prometheus$",
             "type": "datasource"
           }
         ]
