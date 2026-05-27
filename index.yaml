@@ -3,7 +3,7 @@ entries:
   glerp-documenso:
   - apiVersion: v2
     appVersion: v1.8.1
-    created: '2026-05-18T22:35:18.164650273Z'
+    created: "2026-05-18T22:35:18.164650273Z"
     description: A Helm chart for Documenso — green-llama infrastructure edition (Traefik
       IngressRoute + external-dns)
     digest: f1b86b558d8e769f950bb8822f212a48e6d999436e0591acee0e94897f461ae0
@@ -16,7 +16,7 @@ entries:
   glerp-monitoring:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-21T23:50:40.969778494Z'
+    created: "2026-05-21T23:50:40.969778494Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -31,6 +31,7 @@ entries:
       Kubernetes Service. '
     digest: c1c132fbf990de7a3e099d24aa389f161e644872fdadebcdbdf06a40049c4537
     home: https://github.com/green-llama/k8-glerp-monitoring
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
     keywords:
     - monitoring
     - uptime
@@ -47,10 +48,9 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-1.0.1/glerp-monitoring-1.0.1.tgz
     version: 1.0.1
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-18T18:38:31.050433032Z'
+    created: "2026-05-18T18:38:31.050433032Z"
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -65,6 +65,7 @@ entries:
       Kubernetes Service. '
     digest: 8d22a5a5affa9955d6b9f6e2ce0cb313bf09e25bf3471258b384032e455a528a
     home: https://github.com/green-llama/k8-glerp-monitoring
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
     keywords:
     - monitoring
     - uptime
@@ -81,11 +82,45 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-1.0.0/glerp-monitoring-1.0.0.tgz
     version: 1.0.0
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
   glerp-sec-audit:
   - apiVersion: v2
-    appVersion: '2026.05'
-    created: '2026-05-23T22:58:08.778925857Z'
+    appVersion: "2026.05"
+    created: "2026-05-27T20:29:35.33212174Z"
+    dependencies:
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: Automated security compliance auditing for GLerp RKE2 clusters —
+      Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly
+      web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
+    digest: 223dc0d2eead4ab37a44da80d0745cc697326defd4ebd8baac1559e771943b1b
+    home: https://github.com/green-llama/k8-glerp-security
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
+    keywords:
+    - security
+    - cis
+    - soc2
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - vulnerability-scanning
+    maintainers:
+    - email: rjbloesser@greenllama.tech
+      name: greenllama
+    name: glerp-sec-audit
+    sources:
+    - https://github.com/green-llama/k8-glerp-security
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-1.0.4/glerp-sec-audit-1.0.4.tgz
+    version: 1.0.4
+  - apiVersion: v2
+    appVersion: "2026.05"
+    created: "2026-05-23T22:58:08.778925857Z"
     dependencies:
     - condition: trivy-operator.enabled
       name: trivy-operator
@@ -99,6 +134,7 @@ entries:
       web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
     digest: 79f132e87ebd431a8e982aee26942cf251c96acce7ff588e9702cced1b2c8e8f
     home: https://github.com/green-llama/k8-glerp-security
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
     keywords:
     - security
     - cis
@@ -117,10 +153,9 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-1.0.3/glerp-sec-audit-1.0.3.tgz
     version: 1.0.3
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
   - apiVersion: v2
-    appVersion: '2026.05'
-    created: '2026-05-23T22:21:15.993515961Z'
+    appVersion: "2026.05"
+    created: "2026-05-23T22:21:15.993515961Z"
     dependencies:
     - condition: trivy-operator.enabled
       name: trivy-operator
@@ -134,6 +169,7 @@ entries:
       web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
     digest: 71c15bd5d1a800d926d34e22b3a942378f2b97a1b1fba2c5a73c85151e3846f8
     home: https://github.com/green-llama/k8-glerp-security
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
     keywords:
     - security
     - cis
@@ -152,14 +188,14 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-1.0.2/glerp-sec-audit-1.0.2.tgz
     version: 1.0.2
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
   k8-glerp-ai-intake:
   - apiVersion: v2
     appVersion: 0.3.1
-    created: '2026-04-22T17:27:24.33800416Z'
+    created: "2026-04-22T17:27:24.33800416Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: 4469a34731bbafa44dbb635917ddba042f438a76bab1e77eef492a42ec2cd530
     home: https://github.com/green-llama/k8-glerp-ai-intake
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
     keywords:
     - glerp
     - erpnext
@@ -175,13 +211,13 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.3/k8-glerp-ai-intake-0.3.3.tgz
     version: 0.3.3
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
   - apiVersion: v2
     appVersion: 0.3.0
-    created: '2026-04-22T03:30:18.806430986Z'
+    created: "2026-04-22T03:30:18.806430986Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
     digest: b35a393688a84512df3b5bb2e3cc4d063e5a3c404d2991d80943f9dae361bee9
     home: https://github.com/green-llama/k8-glerp-ai-intake
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
     keywords:
     - glerp
     - erpnext
@@ -197,5 +233,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.2/k8-glerp-ai-intake-0.3.2.tgz
     version: 0.3.2
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
-generated: '2026-05-23T22:58:08.778989551Z'
+generated: "2026-05-27T20:29:35.332139967Z"
