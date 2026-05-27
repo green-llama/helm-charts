@@ -1,0 +1,24 @@
+apiVersion: v2
+name: glerp-storage-monitor
+description: >
+  Storage utilization monitoring for GLerp RKE2 clusters.
+  Covers Longhorn block storage, MinIO object storage (via MinIO Operator),
+  DirectPV drives, and node filesystems. Includes per-customer quota tracking,
+  fleet-wide capacity planning, and 90-day historical trend analysis via a
+  self-contained VictoriaMetrics instance.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - monitoring
+  - storage
+  - longhorn
+  - minio
+  - directpv
+  - grafana
+  - glerp
+  - erpnext
+maintainers:
+  - name: Green Llama Technologies
+    email: ops@greenllama.tech
+icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-storage-monitor.svg

@@ -1,0 +1,75 @@
+{{- /*
+AlertmanagerConfig routes storage alerts to email and optionally Telegram.
+Rancher Monitoring's Alertmanager picks up AlertmanagerConfig objects in any
+namespace that match the alertmanagerConfigSelector label (default: all).
+
+Routes: all alerts carrying alert_type="storage" are matched here.
+Critical alerts get a 10s groupWait and 1h repeatInterval.
+Warnings batch for 5 minutes and repeat every 4 hours.
+
+Note: cluster-level inhibit rules (suppress warning when critical fires on same
+node) must be added to the global Alertmanager config in rancher-monitoring,
+as inhibitRules in v1alpha1 AlertmanagerConfig only apply within this config's
+own routes, not globally.
+*/ -}}
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: {{ .Release.Name }}-storage
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "glerp-storage-monitor.labels" . | nindent 4 }}
+spec:
+  route:
+    receiver: storage-email
+    groupBy: ["alertname", "namespace", "node", "cluster"]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    matchers:
+      - name: alert_type
+        value: storage
+    routes:
+      - receiver: storage-email
+        matchers:
+          - name: severity
+            value: critical
+        groupWait: 10s
+        groupInterval: 1m
+        repeatInterval: 1h
+      {{- if .Values.alertmanager.telegram.enabled }}
+      - receiver: storage-telegram
+        matchers:
+          - name: alert_type
+            value: storage
+        groupWait: 30s
+        groupInterval: 5m
+        repeatInterval: 4h
+      {{- end }}
+
+  receivers:
+    - name: storage-email
+      emailConfigs:
+        - smarthost: {{ .Values.alertmanager.email.smarthost | quote }}
+          from: {{ .Values.alertmanager.email.from | quote }}
+          to: {{ .Values.alertmanager.email.to | quote }}
+          authUsername: {{ .Values.alertmanager.email.authUsername | quote }}
+          authPassword:
+            name: {{ .Values.alertmanager.email.passwordSecret.name | quote }}
+            key: {{ .Values.alertmanager.email.passwordSecret.key | quote }}
+          requireTLS: {{ .Values.alertmanager.email.requireTLS }}
+          sendResolved: true
+          headers:
+            - key: Subject
+              value: '[{{ .Values.cluster.name }}][{{ "{{" }} .CommonLabels.severity | toUpper {{ "}}" }}] {{ "{{" }} .GroupLabels.alertname {{ "}}" }} storage alert'
+
+    {{- if .Values.alertmanager.telegram.enabled }}
+    - name: storage-telegram
+      telegramConfigs:
+        - chatID: {{ .Values.alertmanager.telegram.chatId }}
+          botToken:
+            name: {{ .Values.alertmanager.telegram.botTokenSecret.name | quote }}
+            key: {{ .Values.alertmanager.telegram.botTokenSecret.key | quote }}
+          parseMode: HTML
+          sendResolved: true
+    {{- end }}

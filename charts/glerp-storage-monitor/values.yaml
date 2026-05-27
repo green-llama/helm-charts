@@ -1,0 +1,171 @@
+# glerp-storage-monitor chart values.
+# Override these in the Rancher GUI when installing the chart.
+# All cluster-specific settings are here — no values are hardcoded in templates.
+
+# ── Cluster identity ──────────────────────────────────────────────────────────
+cluster:
+  # Human-readable cluster name used in alert annotations and dashboard titles.
+  name: gl-dev2
+
+# ── Namespace created by this chart ──────────────────────────────────────────
+# The chart creates this namespace on install and annotates it to survive
+# helm uninstall (preserves VictoriaMetrics PVC data).
+namespace: glerp-storage-monitor
+
+# ── Prometheus Operator selector labels ───────────────────────────────────────
+# Rancher Monitoring's Prometheus only picks up PrometheusRule and ServiceMonitor
+# objects that carry the `release: rancher-monitoring` label. Do not change this
+# unless your Rancher Monitoring installation uses a different release name.
+prometheusRuleLabels:
+  release: rancher-monitoring
+  app: kube-prometheus-stack
+
+# ── Grafana dashboard and datasource import ───────────────────────────────────
+# Rancher's Grafana sidecar watches for ConfigMaps with grafana_dashboard="1"
+# in the cattle-dashboards namespace only. Datasources use grafana_datasource="1".
+grafana:
+  dashboardLabel: "1"
+  datasourceLabel: "1"
+  folderName: "GLerp Storage"
+  # Rancher Monitoring watches cattle-dashboards for dashboards.
+  dashboardNamespace: cattle-dashboards
+  # Datasource ConfigMap namespace — the datasource sidecar watches BOTH
+  # cattle-dashboards and cattle-monitoring-system on this cluster. The storage
+  # datasource lives here; glerp-monitoring's datasource lives in cattle-dashboards.
+  datasourceNamespace: cattle-monitoring-system
+
+# ── VictoriaMetrics — self-contained long-term storage ────────────────────────
+# Ships its own VictoriaMetrics instance — no dependency on glerp-monitoring.
+# Receives only storage-relevant metrics via Prometheus remoteWrite (filtered).
+#
+# ONE-TIME post-install step required in Rancher UI
+# (Apps → rancher-monitoring → Edit → prometheus.prometheusSpec):
+#
+#   remoteWrite:
+#     - url: http://<release-name>-victoriametrics.<namespace>.svc:8428/api/v1/write
+#       writeRelabelConfigs:
+#         - sourceLabels: [__name__]
+#           regex: "node_filesystem.*|longhorn.*|minio.*|directpv.*|kube_customresource_directpv.*|kube_persistentvolume.*|kube_persistentvolumeclaim.*|glerp:.*|probe_.*|glerp_maintenance.*|trivy_.*|kube_bench_.*|zap_.*"
+#           action: keep
+#
+# This narrow filter prevents VictoriaMetrics from receiving all cluster metrics,
+# which would cause storage to balloon. See README.md for the full config snippet.
+victoriaMetrics:
+  enabled: true
+  imageTag: "v1.101.0"
+  # How long to retain storage metrics. 90d covers 3 SLA reporting months.
+  retention: 90d
+  storage:
+    size: 5Gi
+    # StorageClass for the VictoriaMetrics PVC. Use a Longhorn class that matches
+    # your cluster's encryption policy. Leave empty for the cluster default.
+    storageClass: "longhorn"
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ── Longhorn storage monitoring ────────────────────────────────────────────────
+# Longhorn manager exposes Prometheus metrics on port 9500 at /metrics.
+# This chart creates a ServiceMonitor targeting the longhorn-manager service.
+longhorn:
+  enabled: true
+  # Namespace where Longhorn is deployed (standard is longhorn-system).
+  namespace: longhorn-system
+  serviceMonitor:
+    # Scrape interval for Longhorn metrics (volume sizes don't change rapidly).
+    scrapeInterval: "60s"
+    scrapeTimeout: "30s"
+
+# ── DirectPV storage monitoring ────────────────────────────────────────────────
+# DirectPV is MinIO's CSI driver for direct-attached storage.
+# It exposes per-drive metrics on each node via its node server DaemonSet.
+directpv:
+  enabled: true
+  # Namespace where DirectPV is deployed.
+  namespace: directpv
+  # Pod selector for the node-server DaemonSet. The value is installation-specific.
+  # Get it with:
+  #   kubectl get daemonset node-server -n directpv \
+  #     -o jsonpath='{.spec.selector.matchLabels}' --request-timeout=5s
+  podSelectorKey: "selector.directpv.min.io"
+  podSelectorValue: ""
+  serviceMonitor:
+    scrapeInterval: "60s"
+    scrapeTimeout: "30s"
+
+# ── AlertManager receivers ────────────────────────────────────────────────────
+alertmanager:
+  email:
+    smarthost: "smtp.example.com:587"
+    from: "alerts@greenllama.tech"
+    # Storage alerts are separate from ops@ so they can be routed to a
+    # storage-ops alias or ticketing system independently.
+    to: "alerts@greenllama.tech"
+    authUsername: "alerts@greenllama.tech"
+    # Pre-create this Secret before installing the chart:
+    #   kubectl create secret generic alertmanager-smtp-secret \
+    #     --namespace cattle-monitoring-system \
+    #     --from-literal=smtp_auth_password='YOUR_PASSWORD'
+    passwordSecret:
+      name: alertmanager-smtp-secret
+      key: smtp_auth_password
+    requireTLS: true
+
+  # ── Telegram (optional) ─────────────────────────────────────────────────────
+  # Setup:
+  #   1. Message @BotFather → /newbot → copy the bot token
+  #   2. Get the chat ID: add @userinfobot to the group
+  #   3. Create the Secret:
+  #        kubectl create secret generic telegram-storage-secret \
+  #          --namespace cattle-monitoring-system \
+  #          --from-literal=bot_token='YOUR_BOT_TOKEN'
+  #   4. Set enabled: true and chatId below, then helm upgrade
+  telegram:
+    enabled: false
+    chatId: 0
+    botTokenSecret:
+      name: telegram-storage-secret
+      key: bot_token
+
+# ── Alert thresholds ───────────────────────────────────────────────────────────
+alerts:
+  # Longhorn node-level thresholds (% of node storage used)
+  longhornNodeWarningPct: 80
+  longhornNodeCriticalPct: 90
+  # Per-customer Longhorn allotment thresholds (% of quota used)
+  customerLonghornWarningPct: 80
+  customerLonghornCriticalPct: 100
+  # Per-customer MinIO usable capacity thresholds (% of usable used)
+  minioUsageWarningPct: 80
+  minioUsageCriticalPct: 95
+  # DirectPV drive-level thresholds
+  directpvDriveWarningPct: 80
+  # Node filesystem thresholds (% of filesystem used, non-tmpfs)
+  nodeFilesystemWarningPct: 80
+  nodeFilesystemCriticalPct: 90
+
+# ── Customer list ──────────────────────────────────────────────────────────────
+# Each entry creates:
+#   - A MinIO ServiceMonitor for the customer namespace (if minio.enabled)
+#   - Optional Longhorn soft-cap recording rules (if quotaGi.longhorn is set)
+#
+# Namespace naming: matches the ERPNext site domain (e.g. acme.greenllama.tech
+# becomes the Kubernetes namespace name "acme.greenllama.tech").
+#
+# IMPORTANT: Lists do NOT merge across override files — the entire list is
+# replaced by the override. Document all customers in one values file.
+customers: []
+# Example:
+#  - name: "Acme Corp"         # display name in dashboards and alerts
+#    slug: "acme"              # short slug for label values (no spaces)
+#    namespace: "acme.greenllama.tech"  # exact Kubernetes namespace name
+#    quotaGi:
+#      # null = auto-detect from sum of Longhorn PVC requests (recommended)
+#      # number = soft cap in Gi; alerts fire at customerLonghornWarningPct% of this
+#      longhorn: null
+#    minio:
+#      enabled: true           # false if no MinIO Tenant in this namespace

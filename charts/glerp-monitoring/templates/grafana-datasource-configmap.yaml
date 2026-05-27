@@ -11,7 +11,7 @@ data:
   victoriametrics-datasource.yaml: |
     apiVersion: 1
     datasources:
-      - name: VictoriaMetrics (GLerp Long-term)
+      - name: GLerp Security — VictoriaMetrics
         uid: glerp-victoriametrics
         type: prometheus
         # VictoriaMetrics exposes a Prometheus-compatible query API on port 8428

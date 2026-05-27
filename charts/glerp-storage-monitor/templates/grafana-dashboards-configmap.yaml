@@ -1,0 +1,25 @@
+{{- /*
+Grafana dashboard ConfigMap.
+Rancher Monitoring's Grafana sidecar watches for ConfigMaps with the label
+grafana_dashboard="1" in the cattle-dashboards namespace and auto-imports them.
+Dashboards appear in Grafana within ~60 seconds — no Grafana restart needed.
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-dashboards
+  namespace: {{ .Values.grafana.dashboardNamespace }}
+  labels:
+    {{- include "glerp-storage-monitor.labels" . | nindent 4 }}
+    grafana_dashboard: {{ .Values.grafana.dashboardLabel | quote }}
+  annotations:
+    grafana_folder: {{ .Values.grafana.folderName | quote }}
+data:
+  glerp-storage-fleet.json: |-
+    {{ .Files.Get "files/dashboards/glerp-storage-fleet.json" | nindent 4 }}
+  glerp-storage-customer.json: |-
+    {{ .Files.Get "files/dashboards/glerp-storage-customer.json" | nindent 4 }}
+  glerp-storage-namespaces.json: |-
+    {{ .Files.Get "files/dashboards/glerp-storage-namespaces.json" | nindent 4 }}
+  glerp-storage-growth.json: |-
+    {{ .Files.Get "files/dashboards/glerp-storage-growth.json" | nindent 4 }}
