@@ -17,7 +17,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-maintenance-admin-script
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
 data:
@@ -29,7 +29,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: {{ .Release.Name }}-maintenance-admin-secret
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
 type: Opaque
@@ -42,7 +42,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-maintenance-admin
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
     app.kubernetes.io/component: maintenance-admin
@@ -74,7 +74,7 @@ spec:
               protocol: TCP
           env:
             - name: VM_URL
-              value: "http://{{ .Release.Name }}-victoriametrics.{{ .Values.monitoringNamespace }}.svc.cluster.local:8428"
+              value: "http://{{ .Release.Name }}-victoriametrics.{{ .Values.namespace }}.svc.cluster.local:8428"
             - name: GRAFANA_URL
               value: {{ .Values.maintenanceAdmin.grafanaUrl | quote }}
             - name: AM_URL
@@ -107,7 +107,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Release.Name }}-maintenance-admin
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
     app.kubernetes.io/component: maintenance-admin
@@ -145,7 +145,7 @@ spec:
           namespace: {{ .Values.maintenanceAdmin.googleMfaMiddleware.namespace }}
       services:
         - name: {{ .Release.Name }}-maintenance-admin
-          namespace: {{ .Values.monitoringNamespace }}
+          namespace: {{ .Values.namespace }}
           port: 80
           scheme: http
   tls:

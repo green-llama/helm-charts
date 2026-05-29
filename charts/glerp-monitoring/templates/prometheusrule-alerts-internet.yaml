@@ -2,7 +2,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: {{ .Release.Name }}-internet-alerts
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
     {{- include "glerp-monitoring.prometheusRuleLabels" . | nindent 4 }}
@@ -17,7 +17,7 @@ spec:
           labels:
             severity: critical
             alert_type: isp
-            namespace: {{ .Values.monitoringNamespace }}
+            namespace: {{ .Values.namespace }}
           annotations:
             summary: "ISP / Internet connectivity LOST ({{ .Values.cluster.name }})"
             description: >
@@ -34,7 +34,7 @@ spec:
           labels:
             severity: info
             alert_type: isp_partial
-            namespace: {{ .Values.monitoringNamespace }}
+            namespace: {{ .Values.namespace }}
           annotations:
             summary: "One external internet probe is failing ({{ .Values.cluster.name }})"
             description: >

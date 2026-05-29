@@ -4,7 +4,9 @@ Rancher Monitoring's Grafana sidecar watches for ConfigMaps with the label
 grafana_dashboard="1" and auto-imports them. Dashboards appear in Grafana
 within ~60 seconds of this ConfigMap being created — no Grafana restart needed.
 
-All three dashboards are embedded from files/dashboards/ in this chart.
+All eight dashboards (4 uptime + 4 storage) are embedded from files/dashboards/.
+The security dashboard is in a separate ConfigMap (grafana-security-dashboard-configmap.yaml)
+because it requires Helm template expression processing for the report server URL.
 */ -}}
 apiVersion: v1
 kind: ConfigMap
@@ -33,3 +35,11 @@ data:
     {{ .Files.Get "files/dashboards/internet-connectivity.json" | replace "__MAINTENANCE_ADMIN_LINK__" $maintLink | nindent 4 }}
   customer-sla-report.json: |-
     {{ .Files.Get "files/dashboards/customer-sla-report.json" | replace "__MAINTENANCE_ADMIN_LINK__" $maintLink | nindent 4 }}
+  glerp-storage-fleet.json: |-
+    {{ .Files.Get "files/dashboards/glerp-storage-fleet.json" | nindent 4 }}
+  glerp-storage-customer.json: |-
+    {{ .Files.Get "files/dashboards/glerp-storage-customer.json" | nindent 4 }}
+  glerp-storage-namespaces.json: |-
+    {{ .Files.Get "files/dashboards/glerp-storage-namespaces.json" | nindent 4 }}
+  glerp-storage-growth.json: |-
+    {{ .Files.Get "files/dashboards/glerp-storage-growth.json" | nindent 4 }}

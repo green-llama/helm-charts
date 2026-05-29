@@ -2,7 +2,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: {{ .Release.Name }}-recording-rules
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
     {{- include "glerp-monitoring.prometheusRuleLabels" . | nindent 4 }}

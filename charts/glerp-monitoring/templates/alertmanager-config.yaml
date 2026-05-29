@@ -2,7 +2,7 @@ apiVersion: monitoring.coreos.com/v1alpha1
 kind: AlertmanagerConfig
 metadata:
   name: {{ .Release.Name }}
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "glerp-monitoring.labels" . | nindent 4 }}
     {{- include "glerp-monitoring.prometheusRuleLabels" . | nindent 4 }}
@@ -16,7 +16,7 @@ spec:
       - name: alert_type
         matchType: =~
         value: ".+"
-    groupBy: [alertname, site]
+    groupBy: [alertname, site, namespace, node, cluster]
     groupWait: 30s
     groupInterval: 5m
     repeatInterval: 4h

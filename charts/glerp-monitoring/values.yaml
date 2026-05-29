@@ -1,23 +1,71 @@
-# glerp-monitoring chart values.
+# glerp-monitoring v2 chart values.
 # Override these in the Rancher GUI when installing the chart.
 # All cluster-specific settings are here — no values are hardcoded in templates.
 
 # ── Cluster identity ──────────────────────────────────────────────────────────
 cluster:
-  # Human-readable name used in alert annotations.
+  # Human-readable name used in alert annotations and dashboard titles.
   name: gl-dev2
   # Base domain. Sites probed at https://<company>.<domain>/login
   domain: greenllama.tech
 
-# ── Namespace where Rancher Monitoring (kube-prometheus-stack) is deployed ────
-monitoringNamespace: cattle-monitoring-system
+# ── Namespace created by this chart ──────────────────────────────────────────
+# The chart creates this namespace on install and annotates it to survive
+# helm uninstall (preserves VictoriaMetrics PVC data).
+namespace: glerp-monitoring
 
 # ── Prometheus Operator selector labels ───────────────────────────────────────
-# Rancher Monitoring's Prometheus only picks up PrometheusRule/AlertmanagerConfig
-# objects that carry the `release: rancher-monitoring` label. Do not change this
-# unless your Rancher Monitoring installation uses a different release name.
+# Rancher Monitoring's Prometheus picks up PrometheusRule and ServiceMonitor
+# objects carrying BOTH these labels.
 prometheusRuleLabels:
   release: rancher-monitoring
+  app: kube-prometheus-stack
+
+# ── Grafana dashboard and datasource import ───────────────────────────────────
+# Rancher's Grafana sidecar watches for ConfigMaps with grafana_dashboard="1"
+# in the cattle-dashboards namespace. Datasources use grafana_datasource="1".
+grafana:
+  dashboardLabel: "1"
+  datasourceLabel: "1"
+  # All nine dashboards (uptime, storage, security) appear in one unified folder.
+  folderName: "GLerp Monitoring"
+  # Rancher Monitoring watches cattle-dashboards for dashboards.
+  dashboardNamespace: cattle-dashboards
+  # Datasource ConfigMap namespace — the datasource sidecar watches BOTH
+  # cattle-dashboards and cattle-monitoring-system on this cluster.
+  datasourceNamespace: cattle-monitoring-system
+
+# ── VictoriaMetrics — shared long-term storage ────────────────────────────────
+# Single shared instance for all GLerp projects. Receives filtered metrics via
+# Prometheus remoteWrite and retains them for 90 days.
+#
+# ONE-TIME post-install step required in Rancher UI
+# (Apps → rancher-monitoring → Edit → prometheus.prometheusSpec):
+#
+#   remoteWrite:
+#     - url: http://<release-name>-victoriametrics.<namespace>.svc:8428/api/v1/write
+#       writeRelabelConfigs:
+#         - sourceLabels: [__name__]
+#           regex: "node_filesystem.*|longhorn.*|minio.*|directpv.*|kube_customresource_directpv.*|kube_persistentvolume.*|kube_persistentvolumeclaim.*|glerp:.*|probe_.*|glerp_maintenance.*|trivy_.*|kube_bench_.*|zap_.*"
+#           action: keep
+#
+# This filter prevents VictoriaMetrics from receiving all cluster metrics.
+victoriaMetrics:
+  enabled: true
+  imageTag: "v1.101.0"
+  # How long to retain metrics. 90d covers 3 SLA reporting months.
+  retention: 90d
+  storage:
+    size: 5Gi
+    # StorageClass for the VictoriaMetrics PVC.
+    storageClass: "longhorn"
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
 
 # ── Internet connectivity probes ───────────────────────────────────────────────
 # Three distinct external endpoints for ISP health detection.
@@ -28,70 +76,9 @@ internetProbes:
     - https://www.cloudflare.com
     - https://www.microsoft.com
 
-# ── AlertManager receivers ────────────────────────────────────────────────────
-alertmanager:
-  email:
-    # SMTP relay host and port
-    smarthost: "smtp.example.com:587"
-    # Sender address shown in alert emails
-    from: "alerts@greenllama.tech"
-    # Recipient(s) — comma-separated for multiple
-    to: "ops@greenllama.tech"
-    # Auth username for SMTP (often same as from address)
-    authUsername: "alerts@greenllama.tech"
-    # Name of a pre-existing Kubernetes Secret containing the SMTP password.
-    # Create it BEFORE installing this chart:
-    #   kubectl create secret generic alertmanager-smtp-secret \
-    #     --namespace cattle-monitoring-system \
-    #     --from-literal=smtp_auth_password='YOUR_PASSWORD'
-    passwordSecret:
-      name: alertmanager-smtp-secret
-      key: smtp_auth_password
-    requireTLS: true
-
-  # ── Telegram (optional) ─────────────────────────────────────────────────────
-  # Native AlertManager receiver — no intermediary service required.
-  # Setup:
-  #   1. Message @BotFather on Telegram → /newbot → copy the bot token
-  #   2. Add the bot to a group/channel, or start a personal chat with it
-  #   3. Get the chat ID: add @userinfobot to the group, or message @userinfobot directly
-  #   4. Create the Kubernetes Secret:
-  #        kubectl create secret generic telegram-alertmanager-secret \
-  #          --namespace cattle-monitoring-system \
-  #          --from-literal=bot_token='YOUR_BOT_TOKEN'
-  #   5. Set enabled: true, chatId, and secretName below, then helm upgrade
-  telegram:
-    enabled: false
-    # Chat ID to send alerts to. Group/channel IDs are negative integers (e.g. -1234567890).
-    # Personal chat IDs are positive (e.g. 987654321).
-    chatId: 0
-    # Kubernetes Secret holding the bot token created in step 4 above.
-    botTokenSecret:
-      name: telegram-alertmanager-secret
-      key: bot_token
-
-  # ── Slack (optional) ────────────────────────────────────────────────────────
-  # Native AlertManager receiver — requires a Slack Incoming Webhook URL.
-  # Setup:
-  #   1. Slack → Administration → Manage apps → Incoming Webhooks → Add New Webhook
-  #      (or create a Slack App with Incoming Webhooks enabled)
-  #   2. Select the channel and copy the webhook URL
-  #   3. Create the Kubernetes Secret:
-  #        kubectl create secret generic slack-alertmanager-secret \
-  #          --namespace cattle-monitoring-system \
-  #          --from-literal=webhook_url='https://hooks.slack.com/services/...'
-  #   4. Set enabled: true, channel, and secretName below, then helm upgrade
-  slack:
-    enabled: false
-    # Slack channel to post alerts to (must match the webhook's workspace).
-    channel: "#alerts"
-    # Kubernetes Secret holding the Slack webhook URL created in step 3 above.
-    webhookSecret:
-      name: slack-alertmanager-secret
-      key: webhook_url
-
 # ── Alert thresholds ───────────────────────────────────────────────────────────
 alerts:
+  # ── Uptime / SLA ─────────────────────────────────────────────────────────────
   # Minutes before a complete outage fires GLerpSiteDown (critical)
   siteDownMinutes: 2
   # Minutes before a degraded login page fires GLerpSiteDegraded (warning)
@@ -101,53 +88,26 @@ alerts:
   # Fraction of internet probes that must fail to declare ISP down (0.5 = majority)
   ispFailureThreshold: "0.5"
 
+  # ── Storage ──────────────────────────────────────────────────────────────────
+  # Longhorn node-level thresholds (% of node storage used)
+  longhornNodeWarningPct: 80
+  longhornNodeCriticalPct: 90
+  # Per-customer Longhorn allotment thresholds (% of quota used)
+  customerLonghornWarningPct: 80
+  customerLonghornCriticalPct: 100
+  # Per-customer MinIO usable capacity thresholds (% of usable used)
+  minioUsageWarningPct: 80
+  minioUsageCriticalPct: 95
+  # DirectPV drive-level thresholds
+  directpvDriveWarningPct: 80
+  # Node filesystem thresholds (% of filesystem used, non-tmpfs)
+  nodeFilesystemWarningPct: 80
+  nodeFilesystemCriticalPct: 90
+
 # ── SLA target ─────────────────────────────────────────────────────────────────
 sla:
   # Uptime percentage target (used for dashboard threshold coloring and SLA table)
   targetPercent: 99.5
-
-# ── Grafana dashboard import ───────────────────────────────────────────────────
-grafana:
-  # Label that Rancher's Grafana sidecar uses to auto-import dashboard ConfigMaps.
-  dashboardLabel: "1"
-  # Grafana folder name for all GLerp dashboards.
-  folderName: "GLerp Monitoring"
-  # Namespace that Rancher's Grafana sidecars watch for dashboard/datasource ConfigMaps.
-  # Rancher sets NAMESPACE=cattle-dashboards in both grafana-sc-dashboard and grafana-sc-datasources.
-  dashboardNamespace: cattle-dashboards
-
-# ── VictoriaMetrics — long-term uptime metric storage ─────────────────────────
-# Prometheus retains all cluster metrics for a short window (8-10 days by default)
-# to keep disk usage low. VictoriaMetrics receives ONLY the probe metrics via
-# Prometheus remoteWrite and stores them for 90 days, enabling accurate 30-day
-# SLA reporting without affecting overall Prometheus storage.
-#
-# After installing this chart, add the following to Rancher Monitoring values
-# (prometheus.prometheusSpec) to activate the remote write — see deployment-guide.md:
-#
-#   remoteWrite:
-#     - url: http://<release-name>-victoriametrics.cattle-monitoring-system.svc.cluster.local:8428/api/v1/write
-#       writeRelabelConfigs:
-#         - sourceLabels: [job]
-#           regex: "glerp-sites-basic|glerp-sites-login|internet-connectivity"
-#           action: keep
-victoriaMetrics:
-  # Disabled: glerp-storage-monitor provides the shared "GLerp — VictoriaMetrics" instance.
-  enabled: false
-  imageTag: "v1.101.0"
-  # How long to retain uptime metrics. 90d covers 3 full SLA reporting months.
-  retention: 90d
-  storage:
-    size: 2Gi
-    # Leave empty to use the cluster's default StorageClass.
-    storageClass: ""
-  resources:
-    requests:
-      cpu: 10m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
 
 # ── Maintenance Window Admin ───────────────────────────────────────────────────
 # Optional browser-based tool for defining maintenance windows.
@@ -159,20 +119,13 @@ victoriaMetrics:
 #      Grafana → Administration → Service accounts → Add service account token
 #   2. Set grafanaToken, auth.password, and hostname below
 #   3. helm upgrade with maintenanceAdmin.enabled: true
-#
-# Day-to-day (Grafana-UI-only admin): bookmark the hostname URL.
 maintenanceAdmin:
   enabled: false
-  # External hostname for the admin form (bare DNS name, no port). Must be reachable by the admin's browser.
-  # e.g. maintenance.greenllama.tech
+  # External hostname for the admin form (bare DNS name, no port).
   hostname: ""
-  # External DNS target — the cluster's public entry point that external-dns should point the hostname at.
-  # When set, external-dns will automatically create/update the Cloudflare DNS record on deploy.
-  # e.g. pec.greenllama.tech
-  # Leave empty to manage the DNS record manually.
+  # External DNS target for automatic Cloudflare DNS record creation.
   externalDnsTarget: ""
-  # External port when the admin form is served on a non-standard HTTPS port.
-  # Leave empty for standard HTTPS (443). Set to e.g. "10443" for dev clusters.
+  # External port when served on a non-standard HTTPS port (e.g. "10443" for dev).
   port: ""
   # Internal Grafana URL (default works with Rancher Monitoring)
   grafanaUrl: "http://rancher-monitoring-grafana.cattle-monitoring-system.svc.cluster.local"
@@ -184,18 +137,184 @@ maintenanceAdmin:
     username: "admin"
     # Set a strong password — this is the only protection for the admin form
     password: ""
-  # IngressRoute is placed in traefik-system so Traefik can reach it directly.
-  # tlsSecretName: name of the TLS Secret in traefik-system holding the wildcard cert.
+  # TLS Secret in traefik-system holding the wildcard cert.
   tlsSecretName: "letsencrypt-greenllama-tech-tls"
   # Google MFA middleware reference (must exist in traefik-system).
   googleMfaMiddleware:
     name: "google-mfa"
     namespace: "traefik-system"
 
+# ── Longhorn storage monitoring ────────────────────────────────────────────────
+# Longhorn manager exposes Prometheus metrics on port 9500 at /metrics.
+# This chart creates a ServiceMonitor targeting the longhorn-manager service.
+longhorn:
+  enabled: true
+  # Namespace where Longhorn is deployed.
+  namespace: longhorn-system
+  serviceMonitor:
+    scrapeInterval: "60s"
+    scrapeTimeout: "30s"
+
+# ── DirectPV storage monitoring ────────────────────────────────────────────────
+# DirectPV is MinIO's CSI driver for direct-attached storage.
+directpv:
+  enabled: true
+  # Namespace where DirectPV is deployed.
+  namespace: directpv
+  # Pod selector for the node-server DaemonSet. Get it with:
+  #   kubectl get daemonset node-server -n directpv \
+  #     -o jsonpath='{.spec.selector.matchLabels}' --request-timeout=5s
+  podSelectorKey: "selector.directpv.min.io"
+  podSelectorValue: ""
+  serviceMonitor:
+    scrapeInterval: "60s"
+    scrapeTimeout: "30s"
+
+# ── Customer list ──────────────────────────────────────────────────────────────
+# Each entry creates:
+#   - A MinIO ServiceMonitor for the customer namespace (if minio.enabled)
+#   - Optional Longhorn soft-cap recording rules (if quotaGi.longhorn is set)
+#
+# IMPORTANT: Lists do NOT merge across override files — the entire list is
+# replaced by the override. Document all customers in one values file.
+customers: []
+# Example:
+#  - name: "Acme Corp"         # display name in dashboards and alerts
+#    slug: "acme"              # short slug for label values (no spaces)
+#    namespace: "acme.greenllama.tech"  # exact Kubernetes namespace name
+#    quotaGi:
+#      longhorn: null          # null = auto-detect; number = soft cap in Gi
+#    minio:
+#      enabled: true           # false if no MinIO Tenant in this namespace
+
+# ── Security scanning ─────────────────────────────────────────────────────────
+# PriorityClass for scan jobs — preempted first under node pressure.
+scanPriorityClassName: "glerp-scan-low"
+
+# Report server hostname and ingress configuration.
+reportHostname: ""            # e.g. security.greenllama.tech
+reportPort: ""                # non-standard HTTPS port only (e.g. "10443" for dev); blank = 443
+externalDnsTarget: ""         # e.g. pec.greenllama.tech — triggers external-dns Cloudflare record
+ingressEntrypoint: "websecure"
+ingressNamespace: "traefik-system"
+
+# GLerp web app scan targets — one ZAP CronJob created per entry.
+scanTargets: []
+# Example:
+#  - name: backuptest
+#    url: "https://backuptest.dev.greenllama.tech:10443"
+
+# ── kube-bench — CIS Kubernetes Benchmark ─────────────────────────────────────
+kubeBench:
+  enabled: false
+  image: "aquasec/kube-bench:v0.15.0"
+  imagePullPolicy: IfNotPresent
+  schedule: "0 3 * * 0"       # Weekly: Sunday 03:00 UTC
+  benchmark: "rke2-cis-1.7"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+
+# ── OWASP ZAP — web application scan ─────────────────────────────────────────
+zapScan:
+  enabled: false
+  image: "ghcr.io/zaproxy/zaproxy:stable"
+  imagePullPolicy: IfNotPresent
+  schedule: "0 2 * * 0"       # Weekly: Sunday 02:00 UTC
+  scanType: "baseline"         # baseline = passive; full = active attack probes
+  exitOnWarning: false
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+# ── Reports storage and server ────────────────────────────────────────────────
+reports:
+  storageSize: "10Gi"
+  storageClassName: ""         # blank = cluster default (longhorn)
+  accessMode: ReadWriteMany    # RWX required — report-server and scan jobs mount simultaneously
+  retentionDays: 90
+  cleanup:
+    enabled: true
+    schedule: "0 4 * * *"     # Daily at 04:00 UTC
+
+reportServer:
+  image: "filebrowser/filebrowser:v2"
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  branding:
+    name: "GLerp Security Reports"
+    color: "#27B093"           # GL Mint Green
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "32Mi"
+    limits:
+      cpu: "100m"
+      memory: "64Mi"
+
+# ── GHCR private registry auth (via ESO) ─────────────────────────────────────
+# Distributes ghcr-pull-secret to namespaces labeled glerp.io/private-registry=true.
+ghcrRegistryAuth:
+  enabled: false
+  secretName: "ghcr-pull-secret"
+  eso:
+    enabled: false
+    createResources: false
+    clusterSecretStoreName: "k8s-ghcr-source"
+    sourceNamespace: "glerp-ai-intake-sandbox"
+    controllerNamespace: "external-secrets"
+    controllerServiceAccount: "external-secrets"
+    clusterExternalSecret:
+      enabled: false
+      namespaceSelector:
+        matchLabels:
+          glerp.io/private-registry: "true"
+
+# ── AlertManager receivers ────────────────────────────────────────────────────
+# Unified configuration — all alert types (uptime, storage, security) route here.
+alertmanager:
+  email:
+    smarthost: "smtp.example.com:587"
+    from: "alerts@greenllama.tech"
+    # Recipient(s) — comma-separated for multiple
+    to: "alerts@greenllama.tech"
+    authUsername: "alerts@greenllama.tech"
+    # Pre-create this Secret before installing the chart:
+    #   kubectl create secret generic alertmanager-smtp-secret \
+    #     --namespace glerp-monitoring \
+    #     --from-literal=smtp_auth_password='YOUR_PASSWORD'
+    passwordSecret:
+      name: alertmanager-smtp-secret
+      key: smtp_auth_password
+    requireTLS: true
+
+  # ── Telegram (optional) ─────────────────────────────────────────────────────
+  telegram:
+    enabled: false
+    chatId: 0
+    # Pre-create: kubectl create secret generic telegram-alertmanager-secret \
+    #   --namespace glerp-monitoring --from-literal=bot_token='YOUR_BOT_TOKEN'
+    botTokenSecret:
+      name: telegram-alertmanager-secret
+      key: bot_token
+
+  # ── Slack (optional) ────────────────────────────────────────────────────────
+  slack:
+    enabled: false
+    channel: "#alerts"
+    webhookSecret:
+      name: slack-alertmanager-secret
+      key: webhook_url
+
 # ── Blackbox Exporter subchart values ─────────────────────────────────────────
-# These are passed directly to the prometheus-blackbox-exporter chart.
-# See: https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-blackbox-exporter
-# Alias is "blackbox-exporter" (lowercase) so Kubernetes resource names are valid RFC 1123.
 blackbox-exporter:
   enabled: true
 
@@ -206,7 +325,6 @@ blackbox-exporter:
     type: ClusterIP
     port: 9115
 
-  # ServiceMonitor so Rancher Monitoring Prometheus scrapes this exporter.
   serviceMonitor:
     enabled: true
     interval: 30s
@@ -235,7 +353,7 @@ blackbox-exporter:
 
   config:
     modules:
-      # ── Tier 1: Basic HTTPS reachability (fast 200 OK, no body check) ────────
+      # ── Tier 1: Basic HTTPS reachability ─────────────────────────────────────
       http_2xx:
         prober: http
         timeout: 10s
@@ -248,12 +366,6 @@ blackbox-exporter:
             insecure_skip_verify: false
 
       # ── Tier 2: ERPNext v16 login page content validation ─────────────────────
-      # Detects degraded state: Nginx up, but Frappe workers down or overloaded.
-      # A healthy GLerp /login page always contains these markers:
-      #   'frappe'       — JS namespace injected on every Frappe page
-      #   'form-signin'  — class on the login <form> element rendered by Frappe
-      #   'btn-login'    — class on the login submit button
-      # If workers are down, Nginx returns a small error stub that fails these checks.
       http_glerp_login:
         prober: http
         timeout: 10s
@@ -272,9 +384,7 @@ blackbox-exporter:
           tls_config:
             insecure_skip_verify: false
 
-      # ── Internal Frappe worker health (diagnostic, not SLA signal) ────────────
-      # Probes /api/method/ping on the internal ClusterIP Service.
-      # Not used for alerts. Helps diagnose "Nginx up / Frappe down" root cause.
+      # ── Internal Frappe worker health (diagnostic) ────────────────────────────
       http_2xx_internal:
         prober: http
         timeout: 5s
@@ -295,3 +405,96 @@ blackbox-exporter:
           method: GET
           follow_redirects: true
           preferred_ip_protocol: ip4
+
+# ── Trivy Operator subchart ───────────────────────────────────────────────────
+# Continuous container image vulnerability scanning. ClientServer mode with
+# shared trivy-server StatefulSet on a Longhorn PVC.
+trivy-operator:
+  enabled: false
+  targetNamespaces: ""
+  excludeNamespaces: "kube-system,kube-public,kube-node-lease,cattle-system,cattle-webhook-system,cattle-fleet-system,cattle-fleet-local-system,cattle-provisioning-capi-system,cattle-monitoring-system,cattle-logging-system,cattle-alerting-system,cattle-dashboards,cattle-impersonation-system,fleet-local,fleet-default,rancher-operator-system,traefik-system,cert-manager,longhorn-system,external-secrets,glerp-monitoring"
+  operator:
+    builtInTrivyServer: true
+    scanJobTimeout: "5m"
+    scanJobsConcurrentLimit: 1
+    vulnerabilityScannerEnabled: true
+    configAuditScannerEnabled: false
+    rbacAssessmentScannerEnabled: false
+    exposedSecretScannerEnabled: false
+    complianceScannerEnabled: false
+    infraAssessmentScannerEnabled: false
+  trivy:
+    mode: ClientServer
+    storageClassName: ""
+    storageSize: "4Gi"
+    skipJavaDBUpdate: false
+    ignoreUnfixed: true
+    severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+    slow: true
+    priorityClassName: "glerp-scan-low"
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+    server:
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+  serviceMonitor:
+    enabled: true
+  trivyOperator:
+    scanJobPodPriorityClassName: "glerp-scan-low"
+    scanJobAnnotations: ""
+    scanJobNodeSelector: {}
+    scanJobTolerations: []
+    scanJobCustomVolumes:
+      - name: ghcr-docker-config
+        secret:
+          secretName: ghcr-pull-secret
+          optional: true
+          items:
+            - key: .dockerconfigjson
+              path: config.json
+    scanJobCustomVolumesMount:
+      - name: ghcr-docker-config
+        mountPath: /etc/trivy-registry
+        readOnly: true
+    scanJobAdditionalEnvVars:
+      - name: DOCKER_CONFIG
+        value: /etc/trivy-registry
+
+# ── Prometheus Pushgateway subchart ──────────────────────────────────────────
+# Receives metrics pushes from kube-bench and ZAP scan jobs.
+prometheus-pushgateway:
+  replicaCount: 1
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+  serviceMonitor:
+    enabled: true
+    namespace: ""
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "32Mi"
+    limits:
+      cpu: "100m"
+      memory: "64Mi"
