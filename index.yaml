@@ -16,6 +16,56 @@ entries:
   glerp-monitoring:
   - apiVersion: v2
     appVersion: "2026.06"
+    created: "2026-05-30T02:16:19.475709511Z"
+    dependencies:
+    - alias: blackbox-exporter
+      condition: blackbox-exporter.enabled
+      name: prometheus-blackbox-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 9.4.0
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - condition: prometheus-pushgateway.enabled
+      name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
+      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
+      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
+      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
+      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
+      their Kubernetes Service. '
+    digest: 4760ee893a7e0217c5ac7dfe9b2caf6645b3e439839d51559c5528f10bf0bffb
+    home: https://github.com/green-llama/k8-glerp-monitoring
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
+    keywords:
+    - monitoring
+    - uptime
+    - sla
+    - storage
+    - longhorn
+    - minio
+    - directpv
+    - security
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - glerp
+    - erpnext
+    maintainers:
+    - email: ops@greenllama.tech
+      name: Green Llama Technologies
+    name: glerp-monitoring
+    sources:
+    - https://github.com/green-llama/k8-glerp-monitoring
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.0.3/glerp-monitoring-2.0.3.tgz
+    version: 2.0.3
+  - apiVersion: v2
+    appVersion: "2026.06"
     created: "2026-05-30T00:12:10.142362595Z"
     dependencies:
     - alias: blackbox-exporter
@@ -411,4 +461,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.2/k8-glerp-ai-intake-0.3.2.tgz
     version: 0.3.2
-generated: "2026-05-30T00:12:10.266079553Z"
+generated: "2026-05-30T02:16:19.654274569Z"
