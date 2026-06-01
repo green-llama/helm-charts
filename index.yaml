@@ -3,9 +3,8 @@ entries:
   glerp-documenso:
   - apiVersion: v2
     appVersion: v1.8.1
-    created: "2026-05-18T22:35:18.164650273Z"
-    description: A Helm chart for Documenso — green-llama infrastructure edition (Traefik
-      IngressRoute + external-dns)
+    created: '2026-05-18T22:35:18.164650273Z'
+    description: "A Helm chart for Documenso \u2014 green-llama infrastructure edition (Traefik IngressRoute + external-dns)"
     digest: f1b86b558d8e769f950bb8822f212a48e6d999436e0591acee0e94897f461ae0
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-documenso.svg
     name: glerp-documenso
@@ -16,7 +15,7 @@ entries:
   glerp-monitoring:
   - apiVersion: v2
     appVersion: 2.1.14
-    created: "2026-06-01T02:52:16.206361571Z"
+    created: '2026-06-01T02:52:16.206361571Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -31,12 +30,7 @@ entries:
       name: prometheus-pushgateway
       repository: https://prometheus-community.github.io/helm-charts
       version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
+    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV, node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS, OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager routing, and nine Grafana dashboards. New sites auto-discovered by labeling their Kubernetes Service. '
     digest: 2858d8c41b2554628e1391d1617e1482bd509752f49b42f73f926b617fe4eb66
     home: https://github.com/green-llama/k8-glerp-monitoring
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
@@ -66,7 +60,7 @@ entries:
     version: 2.1.14
   - apiVersion: v2
     appVersion: 2.1.13
-    created: "2026-06-01T02:15:06.396916932Z"
+    created: '2026-06-01T02:15:06.396916932Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -81,12 +75,7 @@ entries:
       name: prometheus-pushgateway
       repository: https://prometheus-community.github.io/helm-charts
       version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
+    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV, node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS, OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager routing, and nine Grafana dashboards. New sites auto-discovered by labeling their Kubernetes Service. '
     digest: 99e93617063bdd5c7a00a7a39ecceb5c813825b27952a4ab45fec15a7a338950
     home: https://github.com/green-llama/k8-glerp-monitoring
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
@@ -116,7 +105,7 @@ entries:
     version: 2.1.13
   - apiVersion: v2
     appVersion: 2.1.12
-    created: "2026-05-30T19:06:01.125557419Z"
+    created: '2026-05-30T19:06:01.125557419Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -131,12 +120,7 @@ entries:
       name: prometheus-pushgateway
       repository: https://prometheus-community.github.io/helm-charts
       version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
+    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV, node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS, OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager routing, and nine Grafana dashboards. New sites auto-discovered by labeling their Kubernetes Service. '
     digest: 104fbf4ae9f4fd23d724e2112ef59e4a66edfb71349649920ce01ee03e90802c
     home: https://github.com/green-llama/k8-glerp-monitoring
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
@@ -164,928 +148,10 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.12/glerp-monitoring-2.1.12.tgz
     version: 2.1.12
-  - apiVersion: v2
-    appVersion: 2.1.11
-    created: "2026-05-30T18:09:32.164492867Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 626ebc02ffe9e047f3348d3cb83a7f6127ad151bc0b68025dcd171847291fb12
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.11/glerp-monitoring-2.1.11.tgz
-    version: 2.1.11
-  - apiVersion: v2
-    appVersion: 2.1.10
-    created: "2026-05-30T17:44:13.85473264Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 4d1f23bd828f5eb69ac2d9fbb63df4d806a0030abf609117b856ea83050d9de5
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.10/glerp-monitoring-2.1.10.tgz
-    version: 2.1.10
-  - apiVersion: v2
-    appVersion: 2.1.9
-    created: "2026-05-30T17:36:09.102537242Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: ba0e593223365899030c7cfb8ea0c20f1cd9b2b7016edef88a6b147b238288f4
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.9/glerp-monitoring-2.1.9.tgz
-    version: 2.1.9
-  - apiVersion: v2
-    appVersion: 2.1.8
-    created: "2026-05-30T17:06:29.140258308Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 2cc03def5ae931e00437d2604ea286e1b1ee0b80dab94f8af934204fadbf0528
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.8/glerp-monitoring-2.1.8.tgz
-    version: 2.1.8
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T16:38:26.647653422Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 4fface80eae6372667b65e7c11e8ce8f57da3bc7183c67723e5639a8322df372
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.7/glerp-monitoring-2.1.7.tgz
-    version: 2.1.7
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T16:12:56.174756168Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 1bf488bf02d8723a420a0eb21215d9193a96012833ae0ef1123f262f85a1db68
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.6/glerp-monitoring-2.1.6.tgz
-    version: 2.1.6
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T12:34:34.43745054Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: eba5766b2a09e81df534f72e20b3f33c415327a604e086e71802df6985deb4d7
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.5/glerp-monitoring-2.1.5.tgz
-    version: 2.1.5
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T11:51:36.837855446Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: e8781fe3ad8d11aa82e3990c803a7a4af0b4d0f69bed20684307ca14b300e15e
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.4/glerp-monitoring-2.1.4.tgz
-    version: 2.1.4
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T04:10:40.913934903Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 86ba16a0d9468ecce1cab8f4987e3863c36c53dd465608f8ae17fe72fd785c31
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.3/glerp-monitoring-2.1.3.tgz
-    version: 2.1.3
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T03:44:37.381570073Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 4cda2cc2311a3015f4e3eb9c073b3bb0de2e4ad5039756c057056c2eb6def479
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.2/glerp-monitoring-2.1.2.tgz
-    version: 2.1.2
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T03:35:12.845559725Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: e818b140459e1b1e409b52de467180d8d42a0e9592a61eb9e18c6902ca1fdddf
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.1/glerp-monitoring-2.1.1.tgz
-    version: 2.1.1
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T03:20:13.160007459Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 10c5eea119ae562c86f48a651f8d71a71c4590b716f688167f0cd4d303fb8a80
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.0/glerp-monitoring-2.1.0.tgz
-    version: 2.1.0
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T02:52:13.450054595Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 36e8b46b65793f22dd54a23e58414ca440ace94804b72fa9beec75310b36ef4e
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.0.4/glerp-monitoring-2.0.4.tgz
-    version: 2.0.4
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T02:16:19.475709511Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 4760ee893a7e0217c5ac7dfe9b2caf6645b3e439839d51559c5528f10bf0bffb
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.0.3/glerp-monitoring-2.0.3.tgz
-    version: 2.0.3
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-30T00:12:10.142362595Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: be3e8f2d956f7dcb44b4bc6d5d153711fa1388e16d990d4d72bc2656550d1c46
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.0.2/glerp-monitoring-2.0.2.tgz
-    version: 2.0.2
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-29T23:47:54.335191048Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 9a051361d63b39dd66dcb4a3439bd06d2af0a77db96cc4bf99a84cbc642a2a11
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.0.1/glerp-monitoring-2.0.1.tgz
-    version: 2.0.1
-  - apiVersion: v2
-    appVersion: "2026.06"
-    created: "2026-05-29T11:54:16.605773106Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: ff6c4f6d2555d97cba02b28fdddc350e1c39e1afeb589a59cf54cd48dcf75323
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.0.0/glerp-monitoring-2.0.0.tgz
-    version: 2.0.0
-  - apiVersion: v2
-    appVersion: 1.0.0
-    created: "2026-05-21T23:50:40.969778494Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    description: 'Uptime monitoring for GLerp (ERPNext v16) sites and ISP connectivity.
-      Includes Prometheus Blackbox Exporter, VictoriaMetrics long-term storage (90d),
-      alert rules, AlertManager email/Telegram/Slack routing, maintenance window admin,
-      and four Grafana dashboards (Uptime Overview, SLA Compliance, Internet Connectivity,
-      Customer SLA Report). New sites are discovered automatically by labeling their
-      Kubernetes Service. '
-    digest: c1c132fbf990de7a3e099d24aa389f161e644872fdadebcdbdf06a40049c4537
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-1.0.1/glerp-monitoring-1.0.1.tgz
-    version: 1.0.1
-  - apiVersion: v2
-    appVersion: 1.0.0
-    created: "2026-05-18T18:38:31.050433032Z"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    description: 'Uptime monitoring for GLerp (ERPNext v16) sites and ISP connectivity.
-      Includes Prometheus Blackbox Exporter, VictoriaMetrics long-term storage (90d),
-      alert rules, AlertManager email/Telegram/Slack routing, maintenance window admin,
-      and four Grafana dashboards (Uptime Overview, SLA Compliance, Internet Connectivity,
-      Customer SLA Report). New sites are discovered automatically by labeling their
-      Kubernetes Service. '
-    digest: 8d22a5a5affa9955d6b9f6e2ce0cb313bf09e25bf3471258b384032e455a528a
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-1.0.0/glerp-monitoring-1.0.0.tgz
-    version: 1.0.0
   glerp-sec-audit:
   - apiVersion: v2
-    appVersion: "2026.05"
-    created: "2026-05-27T20:29:35.33212174Z"
+    appVersion: '2026.05'
+    created: '2026-05-27T20:29:35.33212174Z'
     dependencies:
     - condition: trivy-operator.enabled
       name: trivy-operator
@@ -1094,9 +160,7 @@ entries:
     - name: prometheus-pushgateway
       repository: https://prometheus-community.github.io/helm-charts
       version: 2.14.0
-    description: Automated security compliance auditing for GLerp RKE2 clusters —
-      Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly
-      web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
+    description: "Automated security compliance auditing for GLerp RKE2 clusters \u2014 Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports."
     digest: 223dc0d2eead4ab37a44da80d0745cc697326defd4ebd8baac1559e771943b1b
     home: https://github.com/green-llama/k8-glerp-security
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
@@ -1119,8 +183,8 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-1.0.4/glerp-sec-audit-1.0.4.tgz
     version: 1.0.4
   - apiVersion: v2
-    appVersion: "2026.05"
-    created: "2026-05-23T22:58:08.778925857Z"
+    appVersion: '2026.05'
+    created: '2026-05-23T22:58:08.778925857Z'
     dependencies:
     - condition: trivy-operator.enabled
       name: trivy-operator
@@ -1129,9 +193,7 @@ entries:
     - name: prometheus-pushgateway
       repository: https://prometheus-community.github.io/helm-charts
       version: 2.14.0
-    description: Automated security compliance auditing for GLerp RKE2 clusters —
-      Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly
-      web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
+    description: "Automated security compliance auditing for GLerp RKE2 clusters \u2014 Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports."
     digest: 79f132e87ebd431a8e982aee26942cf251c96acce7ff588e9702cced1b2c8e8f
     home: https://github.com/green-llama/k8-glerp-security
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
@@ -1154,8 +216,8 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-1.0.3/glerp-sec-audit-1.0.3.tgz
     version: 1.0.3
   - apiVersion: v2
-    appVersion: "2026.05"
-    created: "2026-05-23T22:21:15.993515961Z"
+    appVersion: '2026.05'
+    created: '2026-05-23T22:21:15.993515961Z'
     dependencies:
     - condition: trivy-operator.enabled
       name: trivy-operator
@@ -1164,9 +226,7 @@ entries:
     - name: prometheus-pushgateway
       repository: https://prometheus-community.github.io/helm-charts
       version: 2.14.0
-    description: Automated security compliance auditing for GLerp RKE2 clusters —
-      Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly
-      web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
+    description: "Automated security compliance auditing for GLerp RKE2 clusters \u2014 Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports."
     digest: 71c15bd5d1a800d926d34e22b3a942378f2b97a1b1fba2c5a73c85151e3846f8
     home: https://github.com/green-llama/k8-glerp-security
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
@@ -1191,12 +251,8 @@ entries:
   glerp-storage-monitor:
   - apiVersion: v2
     appVersion: 0.1.0
-    created: "2026-05-27T20:30:15.367796067Z"
-    description: 'Storage utilization monitoring for GLerp RKE2 clusters. Covers Longhorn
-      block storage, MinIO object storage (via MinIO Operator), DirectPV drives, and
-      node filesystems. Includes per-customer quota tracking, fleet-wide capacity
-      planning, and 90-day historical trend analysis via a self-contained VictoriaMetrics
-      instance. '
+    created: '2026-05-27T20:30:15.367796067Z'
+    description: 'Storage utilization monitoring for GLerp RKE2 clusters. Covers Longhorn block storage, MinIO object storage (via MinIO Operator), DirectPV drives, and node filesystems. Includes per-customer quota tracking, fleet-wide capacity planning, and 90-day historical trend analysis via a self-contained VictoriaMetrics instance. '
     digest: a6102aefea7a4a088e14c2e0f76a4bb6226c5e28aa8e4ca33e622c713c007347
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-storage-monitor.svg
     keywords:
@@ -1219,8 +275,8 @@ entries:
   k8-glerp-ai-intake:
   - apiVersion: v2
     appVersion: 0.3.1
-    created: "2026-04-22T17:27:24.33800416Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-04-22T17:27:24.33800416Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP interface"
     digest: 4469a34731bbafa44dbb635917ddba042f438a76bab1e77eef492a42ec2cd530
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1241,8 +297,8 @@ entries:
     version: 0.3.3
   - apiVersion: v2
     appVersion: 0.3.0
-    created: "2026-04-22T03:30:18.806430986Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-04-22T03:30:18.806430986Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP interface"
     digest: b35a393688a84512df3b5bb2e3cc4d063e5a3c404d2991d80943f9dae361bee9
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1261,4 +317,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.2/k8-glerp-ai-intake-0.3.2.tgz
     version: 0.3.2
-generated: "2026-06-01T02:52:16.334742913Z"
+generated: '2026-06-01T02:52:16.334742913Z'
