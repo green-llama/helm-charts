@@ -3,7 +3,7 @@
 
 image:
   repository: ghcr.io/green-llama/k8-glerp-ai-intake
-  tag: "0.3.6"
+  tag: "0.3.7"
   pullPolicy: Always
 
 imagePullSecrets:
