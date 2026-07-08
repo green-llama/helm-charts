@@ -350,6 +350,28 @@ entries:
     version: 0.1.0
   k8-glerp-ai-intake:
   - apiVersion: v2
+    appVersion: 0.3.7
+    created: "2026-07-08T04:53:59.934190207Z"
+    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    digest: 33739673744bb96fc55b62eccd0a2007ed3e2c63018c9f6a00fbcb8bbc1cffcb
+    home: https://github.com/green-llama/k8-glerp-ai-intake
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
+    keywords:
+    - glerp
+    - erpnext
+    - ai
+    - mcp
+    - document-intelligence
+    maintainers:
+    - name: green-llama
+    name: k8-glerp-ai-intake
+    sources:
+    - https://github.com/green-llama/k8-glerp-ai-intake
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.9/k8-glerp-ai-intake-0.3.9.tgz
+    version: 0.3.9
+  - apiVersion: v2
     appVersion: 0.3.6
     created: "2026-07-08T04:25:00.355202886Z"
     description: GLerp AI Intake — document intelligence microservice with MCP interface
@@ -503,4 +525,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.2/k8-glerp-ai-intake-0.3.2.tgz
     version: 0.3.2
-generated: "2026-07-08T04:25:00.355244934Z"
+generated: "2026-07-08T04:53:59.93422921Z"
