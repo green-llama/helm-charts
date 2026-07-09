@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background: GLerp dark forest green -->
+  <rect width="512" height="512" rx="72" fill="#00534c"/>
+
+  <!-- Stylised "G" ring: the GLerp core platform -->
+  <path d="M256 104
+           a152 152 0 1 0 152 152
+           h-118
+           v52
+           h64
+           a98 98 0 1 1 -28 -108"
+        fill="none" stroke="white" stroke-width="34"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Teal accent block: the custom-app layer built on top -->
+  <rect x="300" y="196" width="120" height="52" rx="12" fill="#27b093"/>
+
+  <!-- GL badge -->
+  <circle cx="414" cy="414" r="54" fill="white"/>
+  <text x="414" y="430" text-anchor="middle"
+        font-family="Inter, 'Inter Display', Arial, sans-serif"
+        font-weight="700" font-size="34" fill="#00534c">GL</text>
+</svg>
