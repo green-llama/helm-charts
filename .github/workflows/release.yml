@@ -42,9 +42,25 @@ jobs:
 
       - name: Update chart dependencies
         run: |
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-          helm repo add aquasecurity https://aquasecurity.github.io/helm-charts/
-          helm repo update
+          set -euo pipefail
+          # Generic: discover every http(s) dependency repo declared across all charts and
+          # add it once. OCI dependencies (oci://...) need no `helm repo add` and resolve
+          # natively at `helm dependency update`. Charts with no dependencies are a no-op.
+          # This lets new charts (e.g. glerp: bitnami + dragonfly-OCI) publish without
+          # editing this workflow.
+          mapfile -t repos < <(
+            for f in charts/*/Chart.yaml; do
+              # emit each http(s) dependency repository URL
+              awk '/^  repository:/ {gsub(/"/,"",$2); if ($2 ~ /^https?:\/\//) print $2}' "$f"
+            done | sort -u
+          )
+          for url in "${repos[@]:-}"; do
+            [ -z "$url" ] && continue
+            # deterministic, collision-free local repo alias from the URL host+path hash
+            name="dep-$(printf '%s' "$url" | sha1sum | cut -c1-10)"
+            helm repo add "$name" "$url" || true
+          done
+          helm repo update || true
           for dir in charts/*/; do
             if [ -f "${dir}/Chart.yaml" ]; then
               helm dependency update "${dir}"
