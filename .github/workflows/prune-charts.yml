@@ -1,0 +1,156 @@
+name: Prune old chart versions
+
+# Keeps only the newest N versions (default 10) of EACH chart in the catalog, so Rancher
+# doesn't show an ever-growing version list. For every version beyond the newest N of a
+# chart it deletes: the GitHub Release, its git tag, and its entry in gh-pages/index.yaml.
+#
+# chart-releaser stores each chart version as a GitHub Release named "<chart>-X.Y.Z" whose
+# asset is the .tgz; index.yaml (on gh-pages) points at those assets. So pruning = delete
+# the Release + tag, then rebuild index.yaml so the pruned versions disappear from Rancher.
+#
+# Runs automatically AFTER "Release Charts" succeeds, and can be run manually.
+
+on:
+  workflow_run:
+    workflows: ["Release Charts"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: "How many newest versions to keep per chart"
+        required: false
+        default: "10"
+
+concurrency:
+  group: pages          # share the gh-pages lock with Release Charts; never run concurrently
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prune:
+    # On the workflow_run trigger, only proceed if the release actually succeeded.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # delete Releases/tags and push the rebuilt index.yaml to gh-pages
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Prune to newest N per chart
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP: ${{ github.event.inputs.keep || '10' }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, subprocess, urllib.request, urllib.error
+
+          REPO = os.environ["REPO"]
+          KEEP = int(os.environ["KEEP"])
+          TOKEN = os.environ["GH_TOKEN"]
+          API = f"https://api.github.com/repos/{REPO}"
+
+          def api(method, path, data=None):
+              url = path if path.startswith("http") else API + path
+              req = urllib.request.Request(url, method=method, headers={
+                  "Authorization": f"Bearer {TOKEN}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28"})
+              if data is not None:
+                  req.data = json.dumps(data).encode(); req.add_header("Content-Type","application/json")
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      b = r.read(); return r.status, (json.loads(b) if b else {})
+              except urllib.error.HTTPError as e:
+                  return e.code, {"error": e.read().decode()[:200]}
+
+          # 1) Gather all releases (paginated), group by chart name.
+          releases = []
+          page = 1
+          while True:
+              st, batch = api("GET", f"/releases?per_page=100&page={page}")
+              if st != 200 or not batch: break
+              releases.extend(batch); page += 1
+
+          TAG_RE = re.compile(r"^(?P<chart>.+)-(?P<v>\d+\.\d+\.\d+)$")
+          charts = {}
+          for r in releases:
+              m = TAG_RE.match(r["tag_name"])
+              if not m: continue
+              charts.setdefault(m["chart"], []).append(
+                  (tuple(int(x) for x in m["v"].split(".")), r["tag_name"], r["id"]))
+
+          # 2) For each chart, keep newest KEEP by semver; delete the rest (release + tag).
+          pruned_tags = []
+          for chart, vers in charts.items():
+              vers.sort(reverse=True)  # newest first
+              keep, drop = vers[:KEEP], vers[KEEP:]
+              print(f"{chart}: {len(vers)} versions, keeping {len(keep)}, deleting {len(drop)}")
+              for _, tag, rid in drop:
+                  st, _ = api("DELETE", f"/releases/{rid}")
+                  print(f"  delete release {tag}: {st}")
+                  st2, _ = api("DELETE", f"/git/refs/tags/{tag}")
+                  print(f"  delete tag     {tag}: {st2}")
+                  pruned_tags.append(tag)
+
+          with open("pruned_tags.txt", "w") as f:
+              f.write("\n".join(pruned_tags))
+          print(f"TOTAL PRUNED: {len(pruned_tags)}")
+          PY
+
+      - name: Rebuild index.yaml without pruned versions
+        run: |
+          set -euo pipefail
+          # index.yaml lives on gh-pages (checked out here). Remove the entries whose tarball
+          # URL points at a now-deleted release download, then commit.
+          if [ ! -s pruned_tags.txt ]; then
+            echo "Nothing pruned; index.yaml unchanged."; exit 0
+          fi
+          python3 - <<'PY'
+          import yaml
+          pruned = set(l.strip() for l in open("pruned_tags.txt") if l.strip())
+          with open("index.yaml") as f:
+              idx = yaml.safe_load(f)
+
+          removed = 0
+          for chart, entries in list(idx.get("entries", {}).items()):
+              kept = []
+              for e in entries:
+                  # A pruned version's download URL contains ".../download/<chart>-<ver>/..."
+                  urls = " ".join(e.get("urls", []))
+                  tag = f"{chart}-{e.get('version','')}"
+                  if tag in pruned or f"/download/{tag}/" in urls:
+                      removed += 1
+                  else:
+                      kept.append(e)
+              if kept:
+                  idx["entries"][chart] = kept
+              else:
+                  del idx["entries"][chart]
+
+          with open("index.yaml", "w") as f:
+              yaml.safe_dump(idx, f, default_flow_style=False, sort_keys=False)
+          print(f"Removed {removed} index.yaml entries.")
+          PY
+
+      - name: Commit index.yaml
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- index.yaml; then
+            echo "index.yaml unchanged."; exit 0
+          fi
+          git add index.yaml
+          git commit -m "chore(charts): prune old versions from index.yaml"
+          git push origin gh-pages
