@@ -5,10 +5,29 @@
 siteName: ""
 domain: ""
 
+# ── Cache / queue backend ─────────────────────────────────────────────────────
+# DEFAULT: Valkey (official open-source Redis fork). Frappe 16 uses RESP3 client-side
+# cache invalidation (CLIENT TRACKING), which Valkey/Redis support fully and DragonflyDB
+# does not — so Valkey gives correct, fast behaviour with NO patch dependency and avoids
+# the paywalled bitnami Redis chart. Enable exactly ONE cache backend and ONE queue backend.
+#   - Valkey (default): valkey-cache/valkey-queue enabled
+#   - DragonflyDB: set valkey-* off + dragonfly-* on (needs the redis_wrapper patch; slower
+#     migrations because client tracking is disabled — see patches/README.md)
+#   - external: set externalRedis.cache/queue and disable all in-chart backends
+valkey-cache:
+  enabled: true
+  image:
+    repository: valkey/valkey
+    tag: "7.2"
+valkey-queue:
+  enabled: true
+  image:
+    repository: valkey/valkey
+    tag: "7.2"
 dragonfly-cache:
-  enabled: true
+  enabled: false
 dragonfly-queue:
-  enabled: true
+  enabled: false
   storage:
     enabled: false
     size: 8Gi
@@ -321,7 +340,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.13
+  tag: 1.0.14
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
@@ -674,6 +693,8 @@ worker:
           {{- end }}
           {{- if .Values.externalRedis.cache }}
           wait-for-it $(echo {{ .Values.externalRedis.cache }} | sed 's,redis://,,') -t 1;
+          {{- else if (index .Values "valkey-cache").enabled }}
+          wait-for-it {{ .Release.Name }}-valkey-cache:6379 -t 1;
           {{- else if (index .Values "dragonfly-cache").enabled }}
           wait-for-it {{ .Release.Name }}-dragonfly-cache:6379 -t 1;
           {{- else if (index .Values "redis-cache").enabled }}
@@ -681,6 +702,8 @@ worker:
           {{- end }}
           {{- if .Values.externalRedis.queue }}
           wait-for-it $(echo {{ .Values.externalRedis.queue }} | sed 's,redis://,,') -t 1;
+          {{- else if (index .Values "valkey-queue").enabled }}
+          wait-for-it {{ .Release.Name }}-valkey-queue:6379 -t 1;
           {{- else if (index .Values "dragonfly-queue").enabled }}
           wait-for-it {{ .Release.Name }}-dragonfly-queue:6379 -t 1;
           {{- else if (index .Values "redis-queue").enabled }}

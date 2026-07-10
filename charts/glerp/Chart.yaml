@@ -14,8 +14,8 @@ keywords:
 type: application
 # version (chart) and appVersion (== image tag) are managed automatically by
 # glerp-image/.github/workflows/build.yml on each release. Do not hand-edit.
-version: 1.0.39
-appVersion: "1.0.13"
+version: 1.0.40
+appVersion: "1.0.14"
 dependencies:
 - name: mariadb
   condition: mariadb.enabled,mariadb-subchart.enabled
@@ -47,3 +47,13 @@ dependencies:
   alias: dragonfly-queue
   version: "v1.34.2"
   repository: "oci://ghcr.io/dragonflydb/dragonfly/helm"
+- name: valkey
+  condition: valkey-cache.enabled
+  alias: valkey-cache
+  version: "0.9.3"
+  repository: "https://valkey-io.github.io/valkey-helm"
+- name: valkey
+  condition: valkey-queue.enabled
+  alias: valkey-queue
+  version: "0.9.3"
+  repository: "https://valkey-io.github.io/valkey-helm"

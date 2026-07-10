@@ -13,12 +13,15 @@
 siteName: glerp-ci.dev.greenllama.tech
 domain: dev.greenllama.tech
 
-# --- Cache/queue: DragonflyDB (this is what exercises the redis_wrapper patch) -------
+# --- Cache/queue: Valkey (default; full RESP3 client tracking, no patch needed) ------
+valkey-cache:
+  enabled: true
+valkey-queue:
+  enabled: true
 dragonfly-cache:
-  enabled: true
+  enabled: false
 dragonfly-queue:
-  enabled: true
-# not using external or bitnami redis in the test
+  enabled: false
 redis-cache:
   enabled: false
 redis-queue:
