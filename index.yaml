@@ -1,5 +1,57 @@
 apiVersion: v1
 entries:
+  glerp:
+  - apiVersion: v2
+    appVersion: 1.0.8
+    created: "2026-07-10T11:28:10.578371695Z"
+    dependencies:
+    - alias: mariadb-subchart
+      condition: mariadb.enabled,mariadb-subchart.enabled
+      name: mariadb
+      repository: https://charts.bitnami.com/bitnami
+      version: 11.5.7
+    - alias: postgresql-subchart
+      condition: postgresql.enabled,postgresql-subchart.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 12.1.6
+    - alias: redis-cache
+      condition: redis-cache.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 17.15.2
+    - alias: redis-queue
+      condition: redis-queue.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 17.15.2
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    description: GLerp — ERPNext v16 + Green Llama custom apps
+    digest: 0ca5715fc3bd83b284a685aab99c5dd3c5896cbf10526f0aa8330e1d863d231c
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.34/glerp-1.0.34.tgz
+    version: 1.0.34
   glerp-documenso:
   - apiVersion: v2
     appVersion: v1.8.1
@@ -525,4 +577,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.2/k8-glerp-ai-intake-0.3.2.tgz
     version: 0.3.2
-generated: "2026-07-08T04:53:59.93422921Z"
+generated: "2026-07-10T11:28:10.744423604Z"
