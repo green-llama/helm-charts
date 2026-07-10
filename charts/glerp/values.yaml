@@ -1,3 +1,10 @@
+# ── GLerp site identity ───────────────────────────────────────────────────────
+# The Frappe site this release deploys/manages. Used by the create-site / migrate jobs.
+# Set per install, e.g. --set siteName=acme.dev.greenllama.tech
+# (jobs.createSite.siteName overrides this if set.)
+siteName: ""
+domain: ""
+
 dragonfly-cache:
   enabled: true
 dragonfly-queue:
@@ -314,7 +321,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.11
+  tag: 1.0.12
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
@@ -357,29 +364,16 @@ jobs:
     enabled: true
     forceCreate: false
     migrateAfterAppSync: true
-    installApps:
-      - erpnext
-      - frappe_theme
-      - erpnext_email_parser
-      - hrms
-      - glerp_audience
-      - newsletter
-      - blog
-      - eps
-      - offsite_backups
-      - posawesome
-      - payments
-      - webshop
-      - dfp_external_storage   #RJB: added these custom apps from here on
-      - glerp_branding
-      - glerp_bigbulk_import
-      - glerp_webtools
-      - glerp_payment_gateways #RJB: update Feb12, replaces glerp_braintree_webhooks
-      - glerp_ai_intake #RJB: added to list of custom apps on Mar13
-      - glerp_twilio_integration #RJB: added to list of custom apps Apr7
+    # installApps: leave EMPTY to install ALL apps baked into the image (read from the
+    # bench's sites/apps.txt at runtime) — the site always matches the image, nothing to
+    # maintain here. Set an explicit list only to install a curated subset on a site.
+    installApps: []
     nodeSelector: {}
     resources: {}
-    siteName: "{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"    #RJB: need to update this with customer name variable and domain
+    # Site name for this deployment. Set per install, e.g.
+    #   --set jobs.createSite.siteName=acme.dev.greenllama.tech
+    # If left empty, it falls back to the chart-level .Values.siteName (see top of values).
+    siteName: ""
     tolerations: []
     upgradeAppsOnExistingSite: true
   custom:
@@ -409,7 +403,9 @@ jobs:
     enabled: false
     nodeSelector: {}
     resources: {}
-    siteName: erp.cluster.local
+    # Empty -> falls back to chart-level .Values.siteName. Set migrate.enabled=true on a
+    # `helm upgrade` to run `bench migrate` (maintenance-mode on/off) for the site.
+    siteName: ""
     skipFailing: false
     tolerations: []
   volumePermissions:

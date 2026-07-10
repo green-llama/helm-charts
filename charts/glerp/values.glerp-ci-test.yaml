@@ -1,0 +1,75 @@
+# Test values for deploying GLerp into the isolated `glerp-ci` namespace on the dev cluster.
+# Goal: validate the site-lifecycle automation (create-site -> install ALL image apps ->
+# migrate) AND the DragonflyDB RESP3 patch — self-contained, no Vault/ESO/cert-manager.
+#
+# Deploy:
+#   helm upgrade --install glerp green-llama/glerp \
+#     -n glerp-ci -f values.glerp-ci-test.yaml \
+#     --set siteName=glerp-ci.dev.greenllama.tech
+#
+# (image.tag comes from the published chart; override with --set image.tag=1.0.9 if needed.)
+
+# --- Site identity -----------------------------------------------------------------
+siteName: glerp-ci.dev.greenllama.tech
+domain: dev.greenllama.tech
+
+# --- Cache/queue: DragonflyDB (this is what exercises the redis_wrapper patch) -------
+dragonfly-cache:
+  enabled: true
+dragonfly-queue:
+  enabled: true
+# not using external or bitnami redis in the test
+redis-cache:
+  enabled: false
+redis-queue:
+  enabled: false
+
+# --- Database: bundled bitnami MariaDB subchart (self-contained) --------------------
+# Use ONLY mariadb-subchart. The chart also ships a hand-rolled `mariadb-sts` path whose
+# default existingSecret uses the legacy {{helmVar_*}} placeholder — disable it here so the
+# create-site job reads the root password from the subchart's own secret.
+# NOTE: the mariadb-subchart dependency condition is "mariadb.enabled,mariadb-subchart.enabled"
+# — Helm uses the FIRST existing path as the gate, so mariadb.enabled MUST be true to enable
+# the bundled subchart. mariadb-sts is the separate hand-rolled path; keep it off.
+mariadb:
+  enabled: true
+mariadb-sts:
+  enabled: false
+mariadb-subchart:
+  enabled: true
+  auth:
+    rootPassword: "changeit-ci"          # test-only; not a real secret
+    username: "erpnext"
+    password: "changeit-ci"
+postgresql:
+  enabled: false
+postgresql-sts:
+  enabled: false
+postgresql-subchart:
+  enabled: false
+
+# --- Site lifecycle: create the site + install ALL image apps + migrate --------------
+jobs:
+  createSite:
+    enabled: true
+    dbType: mariadb
+    adminPassword: "admin-ci"            # test-only
+    installApps: []                       # [] => install every app baked into the image
+    migrateAfterAppSync: true
+    upgradeAppsOnExistingSite: true
+  configure:
+    enabled: true
+
+# --- Disable production tenant plumbing not present in the test namespace ------------
+# extraObjects defines Traefik IngressRoute + cert-manager Certificate + ESO/Vault MinIO
+# secrets — none of which exist in glerp-ci. Turn them off for the isolated test.
+extraObjects: []
+
+ingress:
+  enabled: false
+
+# --- Pull secret (create `ghcr-cred` in glerp-ci) -----------------------------------
+imagePullSecrets:
+  - name: ghcr-cred
+
+# Keep resource asks modest for a dev test.

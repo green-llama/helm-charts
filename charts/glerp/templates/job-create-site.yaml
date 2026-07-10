@@ -36,6 +36,16 @@ spec:
               set -e
               mkdir -p sites
               [[ -f sites/common_site_config.json ]] || echo "{}" > sites/common_site_config.json
+              # The sites/ PVC shadows the image's built-in sites/apps.txt; seed it so bench
+              # can enumerate the apps baked into the image. Prefer the unmounted stash
+              # (image-apps.txt); fall back to deriving the list from apps/ (frappe first).
+              if [[ ! -f sites/apps.txt ]]; then
+                if [[ -f /home/frappe/frappe-bench/image-apps.txt ]]; then
+                  cp /home/frappe/frappe-bench/image-apps.txt sites/apps.txt
+                else
+                  { echo frappe; ls apps | grep -vx frappe; } > sites/apps.txt
+                fi
+              fi
               python - <<'PY'
               import json, os, pathlib
               p = pathlib.Path("sites/common_site_config.json")
@@ -134,12 +144,22 @@ spec:
             fi
 
             {{- if .Values.jobs.createSite.installApps }}
+            # Explicit curated list from values.
             apps=(
               {{- range .Values.jobs.createSite.installApps }}
               "{{ . }}"
               {{- end }}
             )
+            {{- else }}
+            # Default: install ALL apps baked into the image. The authoritative list of apps
+            # present in the bench is apps.txt (written at image build time). This keeps the
+            # site in lockstep with the image contents — no separate list to maintain, and it
+            # can never drift from apps.json. frappe is the framework and is always present.
+            # sites/apps.txt is guaranteed to exist here (seeded by the init container).
+            mapfile -t apps < <(grep -v '^frappe$' sites/apps.txt)
+            {{- end }}
             for app in "${apps[@]}"; do
+                [ -z "${app}" ] && continue
                 if grep -Fxq "${app}" /tmp/installed_apps.txt; then
                     echo "App already installed: ${app}";
                 else
@@ -148,7 +168,6 @@ spec:
                     echo "${app}" >> /tmp/installed_apps.txt;
                 fi
             done
-            {{- end }}
 
             {{- if .Values.jobs.createSite.migrateAfterAppSync }}
             echo "Running migrate after app sync";
@@ -192,7 +211,7 @@ spec:
             rm -f currentsite.txt /tmp/installed_apps.txt
         env:
           - name: "SITE_NAME"
-            value: "{{ .Values.jobs.createSite.siteName }}"
+            value: {{ required "A site name is required: set jobs.createSite.siteName or siteName" (.Values.jobs.createSite.siteName | default .Values.siteName) | quote }}
           - name: "DB_TYPE"
             value: {{ .Values.jobs.createSite.dbType }}
           - name: DB_HOST

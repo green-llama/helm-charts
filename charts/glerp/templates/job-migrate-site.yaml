@@ -32,7 +32,7 @@ spec:
             bench --site $(SITE_NAME) set-maintenance-mode off;
         env:
           - name: "SITE_NAME"
-            value: "{{ .Values.jobs.migrate.siteName }}"
+            value: {{ required "A site name is required: set jobs.migrate.siteName or siteName" (.Values.jobs.migrate.siteName | default .Values.siteName) | quote }}
         resources:
           {{- toYaml .Values.jobs.migrate.resources | nindent 10 }}
         securityContext:
