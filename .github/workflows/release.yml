@@ -50,8 +50,9 @@ jobs:
           # editing this workflow.
           mapfile -t repos < <(
             for f in charts/*/Chart.yaml; do
-              # emit each http(s) dependency repository URL
-              awk '/^  repository:/ {gsub(/"/,"",$2); if ($2 ~ /^https?:\/\//) print $2}' "$f"
+              # emit each http(s) dependency repository URL (any indentation depth —
+              # charts use either "  - name" (2-space) or "  repository" list styles)
+              awk '/^[[:space:]]*repository:[[:space:]]/ {gsub(/"/,"",$2); if ($2 ~ /^https?:\/\//) print $2}' "$f"
             done | sort -u
           )
           for url in "${repos[@]:-}"; do
