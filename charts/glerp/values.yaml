@@ -1,0 +1,752 @@
+dragonfly-cache:
+  enabled: true
+dragonfly-queue:
+  enabled: true
+  storage:
+    enabled: false
+    size: 8Gi
+externalRedis:
+  cache: ''
+  queue: ''
+extraObjects:
+  - apiVersion: traefik.io/v1alpha1
+    kind: IngressRoute
+    metadata:
+      annotations: #RJB: add following two annotations to dynamically create FQDN in cloudflare
+        # 1. The record name you want in Cloudflare
+        external-dns.alpha.kubernetes.io/hostname: "{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"
+        # 2. The 'Peculiar' anchor it should point to
+        external-dns.alpha.kubernetes.io/target: "pec.greenllama.tech"
+        kubernetes.io/ingress.class: traefik
+      name: "{{helmVar_TENANT_NAMESPACE}}"
+      namespace: traefik-system
+    spec:
+      entryPoints:
+        - websecure
+      routes:
+        - kind: Rule
+          match: Host(`{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}`) && PathPrefix(`/`)
+          services:
+            - name: glerp
+              namespace: "{{helmVar_TENANT_NAMESPACE}}"
+              port: 8080
+              scheme: http
+      tls:
+        secretName: letsencrypt-greenllama-tech-tls
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      finalizers:
+        - externalsecrets.external-secrets.io/externalsecret-cleanup
+      name: "apps-ca-trust"
+      namespace: "{{helmVar_TENANT_NAMESPACE}}"
+    spec:
+      data:
+        - remoteRef:
+            conversionStrategy: Default
+            decodingStrategy: None
+            key: root-ca-secret
+            metadataPolicy: None
+            property: tls.crt
+          secretKey: root_ca
+        - remoteRef:
+            conversionStrategy: Default
+            decodingStrategy: None
+            key: apps-int-ca-secret
+            metadataPolicy: None
+            property: tls.crt
+          secretKey: intermediate_ca
+      refreshInterval: 1h0m0s
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: kubernetes-token-auth
+      target:
+        creationPolicy: Owner
+        deletionPolicy: Retain
+        name: apps-ca-trust
+        template:
+          data:
+            ca.crt: |
+              {{ .root_ca }}
+              {{ .intermediate_ca }}
+            intermediate.crt: |
+              {{ .intermediate_ca }}
+            root.crt: |
+              {{ .root_ca }}
+          engineVersion: v2
+          mergePolicy: Replace
+          metadata: {}
+          type: Opaque
+  - apiVersion: cert-manager.io/v1
+    kind: Certificate
+    metadata:
+      name: "{{helmVar_TENANT_NAMESPACE}}-leaf-cert"
+      namespace: "{{helmVar_TENANT_NAMESPACE}}"
+    spec:
+      dnsNames:
+        - "*.{{helmVar_TENANT_NAMESPACE}}.svc"
+        - "*.{{helmVar_TENANT_NAMESPACE}}.svc.cluster.local"
+        - "*.{{helmVar_DOMAIN}}"
+      duration: 2160h
+      ipAddresses:
+        - 127.0.0.1
+        - "::1"
+      issuerRef:
+        group: cert-manager.io
+        kind: ClusterIssuer
+        name: apps-general-signer
+      renewBefore: 360h
+      secretName: "{{helmVar_TENANT_NAMESPACE}}-leaf-cert"
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: "{{helmVar_TENANT_NAMESPACE}}-minio-creds"
+      namespace: "{{helmVar_TENANT_NAMESPACE}}"
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: vault-backend
+      target:
+        name: "{{helmVar_TENANT_NAMESPACE}}-minio-creds"
+        creationPolicy: Owner
+        template:
+          engineVersion: v2
+          data:
+            accesskey: "{{ .accesskey }}"
+            secretkey: "{{ .secretkey }}"
+            config.env: |
+              export MINIO_ROOT_USER="{{ .accesskey }}"
+              export MINIO_ROOT_PASSWORD="{{ .secretkey }}"
+      data:
+        - secretKey: accesskey
+          remoteRef:
+            key: "secret/data/{{helmVar_TENANT_NAMESPACE}}/minio-creds"
+            property: accesskey
+        - secretKey: secretkey
+          remoteRef:
+            key: "secret/data/{{helmVar_TENANT_NAMESPACE}}/minio-creds"
+            property: secretkey
+  - apiVersion: traefik.io/v1alpha1
+    kind: IngressRoute
+    metadata:
+      name: "minio-{{helmVar_TENANT_NAMESPACE}}"
+      namespace: "{{helmVar_TENANT_NAMESPACE}}"
+      annotations:
+        external-dns.alpha.kubernetes.io/hostname: "{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"
+        external-dns.alpha.kubernetes.io/target: "pec.greenllama.tech"
+        kubernetes.io/ingress.class: traefik
+    spec:
+      entryPoints:
+        - websecure
+      tls:
+        secretName: letsencrypt-greenllama-tech-tls
+      routes:
+        - match: Host(`minio-{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}`) && PathPrefix(`/`)
+          kind: Rule
+          services:
+            - name: minio
+              port: 80
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: "{{helmVar_TENANT_NAMESPACE}}-mariadb-root"
+      namespace: "{{helmVar_TENANT_NAMESPACE}}"
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: vault-backend
+      target:
+        name: "{{helmVar_TENANT_NAMESPACE}}-mariadb-root"
+        creationPolicy: Owner
+        deletionPolicy: Retain
+        template:
+          engineVersion: v2
+          mergePolicy: Replace
+          data:
+            mariadb-root-password: '{{ index . "mariadb-root-password" }}'
+      data:
+        - secretKey: mariadb-root-password
+          remoteRef:
+            key: "secret/data/{{helmVar_TENANT_NAMESPACE}}/{{helmVar_TENANT_NAMESPACE}}-mariadb-root"
+            property: mariadb-root-password
+            conversionStrategy: Default
+            decodingStrategy: None
+            metadataPolicy: None
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: ghcr-cred
+      namespace: "{{helmVar_TENANT_NAMESPACE}}"
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: vault-backend
+      target:
+        name: ghcr-cred
+        template:
+          type: kubernetes.io/dockerconfigjson
+          data:
+            .dockerconfigjson: "{{ .config }}"
+      data:
+        - secretKey: config
+          remoteRef:
+            key: secret/data/github/ghcr-cred
+            property: config
+  - apiVersion: velero.io/v1
+    kind: Schedule
+    metadata:
+      name: "{{helmVar_TENANT_NAMESPACE}}-daily"
+      namespace: velero
+    spec:
+      schedule: "0 2 * * *"
+      template:
+        includedNamespaces:
+          - "{{helmVar_TENANT_NAMESPACE}}"
+        includedClusterResources: true
+        storageLocation: idrive-e2
+        ttl: 720h0m0s
+        defaultVolumesToFsBackup: true
+  - apiVersion: minio.min.io/v2
+    kind: Tenant
+    metadata:
+      name: "{{helmVar_TENANT_NAMESPACE}}-minio-tenant"
+      namespace: "{{helmVar_TENANT_NAMESPACE}}"
+    spec:
+      buckets:
+        - name: "{{helmVar_TENANT_NAMESPACE}}"
+          objectLock: false
+          region: us-east-1
+      mountPath: /export
+      configuration:
+        name: "{{helmVar_TENANT_NAMESPACE}}-minio-creds"
+      env:
+        - name: MINIO_SERVER_URL
+          value: "https://minio-{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"
+        - name: MINIO_BROWSER_REDIRECT_URL
+          value: "https://minio-{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"
+        - name: MINIO_KMS_VAULT_ENABLE
+          value: "on"
+        - name: MINIO_KMS_VAULT_ENDPOINT
+          value: "http://vault-active.vault-system.svc.cluster.local:8200"
+        - name: MINIO_KMS_VAULT_AUTH_TYPE
+          value: "jwt"
+        - name: MINIO_KMS_VAULT_ROLE
+          value: "{{helmVar_TENANT_NAMESPACE}}-role"
+        - name: MINIO_KMS_VAULT_KEY_NAME
+          value: "minio-key"
+        - name: MINIO_KMS_VAULT_JWT_PATH
+          value: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+      pools:
+        - name: pool-0
+          servers: 2
+          volumesPerServer: 2
+          volumeClaimTemplate:
+            metadata:
+              name: data
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: directpv-min-io
+              resources:
+                requests:
+                  storage: 512Mi
+          containerSecurityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+          securityContext:
+            fsGroup: 1000
+        - name: pool-1
+          servers: 2
+          volumesPerServer: 2
+          volumeClaimTemplate:
+            metadata:
+              name: data
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: directpv-min-io
+              resources:
+                requests:
+                  storage: 512Mi
+          containerSecurityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+          securityContext:
+            fsGroup: 1000
+      poolsMetadata:
+        annotations:
+          sidecar.istio.io/inject: "true"
+          traffic.sidecar.istio.io/includeInboundPorts: "10443"
+          traffic.sidecar.istio.io/includeOutboundPorts: "8200"
+          traffic.sidecar.istio.io/excludeInboundPorts: "9000, 9090"
+          traffic.sidecar.istio.io/excludeOutboundPorts: "9000, 9090"
+      requestAutoCert: false
+      prometheusOperator: false
+      features:
+        bucketDNS: false
+        enableSFTP: false
+      podManagementPolicy: Parallel
+      subPath: /data
+      serviceAccountName: "{{helmVar_TENANT_NAMESPACE}}-sa"
+fullnameOverride: ''
+httproute:
+  annotations: {}
+  enabled: false
+  hostnames:
+    - erp.example.com
+  name: ''
+  parentRefs:
+    - gatewayName: public-gateway
+      gatewayNamespace: networking
+      gatewaySectionName: http
+  rules:
+    - matches:
+        - path: /
+          pathType: PathPrefix
+image:
+  pullPolicy: Always
+  repository: ghcr.io/green-llama/glerp-image
+  # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
+  tag: 1.0.8
+imagePullSecrets:
+  - name: ghcr-cred
+ingress:
+  annotations: {}
+  enabled: false    #RJB: Set to false, we use ingressRoutes
+  hosts:
+    - host: erp.cluster.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+jobs:
+  backup:
+    affinity: {}
+    backoffLimit: 0
+    enabled: false
+    nodeSelector: {}
+    resources: {}
+    siteName: erp.cluster.local
+    tolerations: []
+    withFiles: true
+  configure:
+    affinity: {}
+    args: []
+    backoffLimit: 0
+    command: []
+    enabled: true
+    envVars: []
+    fixVolume: true
+    nodeSelector: {}
+    resources: {}
+    tolerations: []
+  createSite:
+    adminExistingSecret: ''
+    adminExistingSecretKey: password
+    adminPassword: changeit
+    affinity: {}
+    backoffLimit: 0
+    dbType: mariadb
+    enabled: true
+    forceCreate: false
+    migrateAfterAppSync: true
+    installApps:
+      - erpnext
+      - frappe_theme
+      - erpnext_email_parser
+      - hrms
+      - glerp_audience
+      - newsletter
+      - blog
+      - eps
+      - offsite_backups
+      - posawesome
+      - payments
+      - webshop
+      - dfp_external_storage   #RJB: added these custom apps from here on
+      - glerp_branding
+      - glerp_bigbulk_import
+      - glerp_webtools
+      - glerp_payment_gateways #RJB: update Feb12, replaces glerp_braintree_webhooks
+      - glerp_ai_intake #RJB: added to list of custom apps on Mar13
+      - glerp_twilio_integration #RJB: added to list of custom apps Apr7
+    nodeSelector: {}
+    resources: {}
+    siteName: "{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"    #RJB: need to update this with customer name variable and domain
+    tolerations: []
+    upgradeAppsOnExistingSite: true
+  custom:
+    affinity: {}
+    backoffLimit: 0
+    containers: []
+    enabled: false
+    initContainers: []
+    jobName: ''
+    labels: {}
+    nodeSelector: {}
+    restartPolicy: Never
+    tolerations: []
+    volumes: []
+  dropSite:
+    affinity: {}
+    backoffLimit: 0
+    enabled: false
+    forced: false
+    nodeSelector: {}
+    resources: {}
+    siteName: erp.cluster.local
+    tolerations: []
+  migrate:
+    affinity: {}
+    backoffLimit: 0
+    enabled: false
+    nodeSelector: {}
+    resources: {}
+    siteName: erp.cluster.local
+    skipFailing: false
+    tolerations: []
+  volumePermissions:
+    affinity: {}
+    backoffLimit: 0
+    enabled: false
+    nodeSelector: {}
+    resources: {}
+    tolerations: []
+mariadb:
+  enabled: false
+mariadb-sts:
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+    repository: mariadb
+    tag: '10.6'
+  myCnf: |
+    [mysqld]
+    # Character Set - Required for GLerp compatibility
+    skip-character-set-client-handshake
+    skip-innodb-read-only-compressed
+    character-set-server=utf8mb4
+    collation-server=utf8mb4_unicode_ci
+
+    # Memory Architecture: Focused on RAM-Residency
+    # 2GB allows 160k+ items & 1 year of GL entries to live in memory
+    innodb_buffer_pool_size = 2G
+    innodb_buffer_pool_instances = 2
+
+    # Transaction Log: High-volume write optimization
+    innodb_log_file_size = 512M
+    innodb_flush_log_at_trx_commit = 2
+
+    # Connection Management: Prevents "Connection Exhaustion" errors
+    max_connections = 100
+    tmp_table_size = 64M
+    max_heap_table_size = 64M
+  persistence:
+    size: 8Gi
+    storageClass: longhorn-crypto-mariadb-rwo
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+#  rootPassword: changeit  # Used only when existingSecret.name is not set
+  existingSecret:  #RJB update Feb23: use a K8 secret instead of hard coding in chart. existingSecret takes precedence over rootPassword.
+    name: "{{helmVar_TENANT_NAMESPACE}}-mariadb-root"
+    key: "mariadb-root-password"
+mariadb-subchart:
+  enabled: false
+  image:
+    repository: bitnamilegacy/mariadb
+    tag: 10.6.17-debian-11-r10
+nameOverride: ''
+nginx:
+  affinity: {}
+  autoscaling:
+    enabled: false
+    maxReplicas: 3
+    minReplicas: 1
+    targetCPU: 75
+    targetMemory: 75
+  defaultTopologySpread:
+    maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: DoNotSchedule
+  envVars: []
+  environment:    #RJB: Must use uppercase variables here as follows.  Set upload size to 500 Meg limit
+    # Increase this from 120 to 600 (10 minutes) to survive the setup wizard
+    PROXY_READ_TIMEOUT: '600'  #RJB: update Feb12
+    # Also increase these to prevent the client from dropping during slow POST requests
+    PROXY_CONNECT_TIMEOUT: '600' #RJB: update Feb12
+    PROXY_SEND_TIMEOUT: '600'  #RJB: update Feb12
+    CLIENT_MAX_BODY_SIZE: 500m
+    FRAPPE_SITE_NAME_HEADER: $host
+    UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+    UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+    UPSTREAM_REAL_IP_RECURSIVE: 'off'
+  initContainers: []
+  livenessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    tcpSocket:
+      port: 8080
+  nodeSelector: {}
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    tcpSocket:
+      port: 8080
+  replicaCount: 1
+  resources: {}
+  service:
+    port: 8080
+    type: ClusterIP
+  sidecars: []
+  tolerations: []
+persistence:
+  logs:
+    accessModes:
+      - ReadWriteMany
+    enabled: false
+    size: 8Gi
+  worker:
+    accessModes:
+      - ReadWriteMany
+    enabled: true
+    size: 8Gi   #RJB: can set this to low (2Gi); using minio for object storage
+    storageClass: longhorn-crypto-rwm
+podSecurityContext:
+  supplementalGroups:
+    - 1000
+postgresql:
+  enabled: false
+postgresql-sts:
+  enabled: false
+  image:
+    pullPolicy: IfNotPresent
+    repository: postgres
+    tag: '15'
+  persistence:
+    size: 8Gi
+  postgresPassword: changeit
+  postgresUser: postgres
+  resources: {}
+postgresql-subchart:
+  enabled: false
+  image:
+    repository: bitnamilegacy/postgresql
+    tag: '14'
+redis-cache:
+  enabled: false
+  image:
+    repository: bitnamilegacy/redis
+    tag: '7.0'
+redis-queue:
+  enabled: false
+  image:
+    repository: bitnamilegacy/redis
+    tag: '7.0'
+securityContext:
+  capabilities:
+    add:
+      - CAP_CHOWN
+serviceAccount:
+  create: true
+rbac:
+  secretReader:
+    enabled: true
+    name: secret-reader
+    bindingName: secret-reader-binding
+socketio:
+  affinity: {}
+  autoscaling:
+    enabled: false
+    maxReplicas: 3
+    minReplicas: 1
+    targetCPU: 75
+    targetMemory: 75
+  envVars: []
+  initContainers: []
+  livenessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    tcpSocket:
+      port: 9000
+  nodeSelector: {}
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    tcpSocket:
+      port: 9000
+  replicaCount: 1
+  resources: {}
+  service:
+    port: 9000
+    type: ClusterIP
+  sidecars: []
+  tolerations: []
+worker:
+  default:
+    affinity: {}
+    autoscaling:
+      enabled: false
+      maxReplicas: 3
+      minReplicas: 1
+      targetCPU: 75
+      targetMemory: 75
+    envVars: []
+    initContainers: []
+    livenessProbe:
+      override: false
+      probe: {}
+    nodeSelector: {}
+    readinessProbe:
+      override: false
+      probe: {}
+    replicaCount: 1
+    resources: {}
+    sidecars: []
+    tolerations: []
+  defaultTopologySpread:
+    maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: DoNotSchedule
+  gunicorn:
+    affinity: {}
+    args: []
+    autoscaling:
+      enabled: false
+      maxReplicas: 3
+      minReplicas: 1
+      targetCPU: 75
+      targetMemory: 75
+    envVars: []
+    initContainers: []
+    livenessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      tcpSocket:
+        port: 8000
+    nodeSelector: {}
+    readinessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      tcpSocket:
+        port: 8000
+    replicaCount: 1
+    resources: {}
+    service:
+      port: 8000
+      type: ClusterIP
+    sidecars: []
+    tolerations: []
+  healthProbe: |
+    exec:
+      command:
+        - bash
+        - -c
+        - |-
+          echo "Pinging backing services";
+          {{- if (index .Values "mariadb-sts").enabled }}
+          wait-for-it {{ include "erpnext.fullname" . }}-mariadb-sts:3306 -t 1;
+          {{- else if (index .Values "postgresql-sts").enabled }}
+          wait-for-it {{ include "erpnext.fullname" . }}-postgresql-sts:5432 -t 1;
+          {{- else if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
+          (
+            wait-for-it {{ .Release.Name }}-mariadb-subchart:3306 -t 0 || \
+            wait-for-it {{ .Release.Name }}-mariadb:3306 -t 0 || \
+            wait-for-it {{ .Release.Name }}-mariadb-subchart-primary:3306 -t 0 || \
+            wait-for-it {{ .Release.Name }}-mariadb-primary:3306 -t 1
+          )
+          {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
+          (
+            wait-for-it {{ .Release.Name }}-postgresql-subchart:5432 -t 0 || \
+            wait-for-it {{ .Release.Name }}-postgresql:5432 -t 1
+          )
+          {{- else if or .Values.postgresql.enabled (index .Values "postgresql-subchart").enabled }}
+          wait-for-it {{ .Release.Name }}-postgresql-subchart:5432 -t 1;
+          {{- else if .Values.dbHost }}
+          wait-for-it {{ .Values.dbHost }}:{{ .Values.dbPort }} -t 1;
+          {{- end }}
+          {{- if .Values.externalRedis.cache }}
+          wait-for-it $(echo {{ .Values.externalRedis.cache }} | sed 's,redis://,,') -t 1;
+          {{- else if (index .Values "dragonfly-cache").enabled }}
+          wait-for-it {{ .Release.Name }}-dragonfly-cache:6379 -t 1;
+          {{- else if (index .Values "redis-cache").enabled }}
+          wait-for-it {{ .Release.Name }}-redis-cache-master:6379 -t 1;
+          {{- end }}
+          {{- if .Values.externalRedis.queue }}
+          wait-for-it $(echo {{ .Values.externalRedis.queue }} | sed 's,redis://,,') -t 1;
+          {{- else if (index .Values "dragonfly-queue").enabled }}
+          wait-for-it {{ .Release.Name }}-dragonfly-queue:6379 -t 1;
+          {{- else if (index .Values "redis-queue").enabled }}
+          wait-for-it {{ .Release.Name }}-redis-queue-master:6379 -t 1;
+          {{- end }}
+    initialDelaySeconds: 15
+    periodSeconds: 5
+    timeoutSeconds: 5
+  long:
+    affinity: {}
+    autoscaling:
+      enabled: false
+      maxReplicas: 3
+      minReplicas: 1
+      targetCPU: 75
+      targetMemory: 75
+    envVars: []
+    initContainers: []
+    livenessProbe:
+      override: false
+      probe: {}
+    nodeSelector: {}
+    readinessProbe:
+      override: false
+      probe: {}
+    replicaCount: 1
+    resources: {}
+    sidecars: []
+    tolerations: []
+  scheduler:
+    affinity: {}
+    envVars: []
+    initContainers: []
+    livenessProbe:
+      override: false
+      probe: {}
+    nodeSelector: {}
+    readinessProbe:
+      override: false
+      probe: {}
+    replicaCount: 1
+    resources: {}
+    sidecars: []
+    tolerations: []
+  short:
+    affinity: {}
+    autoscaling:
+      enabled: false
+      maxReplicas: 3
+      minReplicas: 1
+      targetCPU: 75
+      targetMemory: 75
+    envVars: []
+    initContainers: []
+    livenessProbe:
+      override: false
+      probe: {}
+    nodeSelector: {}
+    readinessProbe:
+      override: false
+      probe: {}
+    replicaCount: 1
+    resources: {}
+    sidecars: []
+    tolerations: []

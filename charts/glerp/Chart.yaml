@@ -1,0 +1,49 @@
+apiVersion: v2
+name: glerp
+description: GLerp — ERPNext v16 + Green Llama custom apps
+icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+home: https://github.com/green-llama/glerp-image
+sources:
+  - https://github.com/green-llama/glerp-image
+maintainers:
+  - name: green-llama
+keywords:
+  - glerp
+  - erpnext
+  - frappe
+type: application
+# version (chart) and appVersion (== image tag) are managed automatically by
+# glerp-image/.github/workflows/build.yml on each release. Do not hand-edit.
+version: 1.0.34
+appVersion: "1.0.8"
+dependencies:
+- name: mariadb
+  condition: mariadb.enabled,mariadb-subchart.enabled
+  alias: mariadb-subchart
+  version: "11.5.7"
+  repository: "https://charts.bitnami.com/bitnami"
+- name: postgresql
+  condition: postgresql.enabled,postgresql-subchart.enabled
+  alias: postgresql-subchart
+  version: "12.1.6"
+  repository: "https://charts.bitnami.com/bitnami"
+- name: redis
+  condition: redis-cache.enabled
+  alias: redis-cache
+  version: "17.15.2"
+  repository: "https://charts.bitnami.com/bitnami"
+- name: redis
+  condition: redis-queue.enabled
+  alias: redis-queue
+  version: "17.15.2"
+  repository: "https://charts.bitnami.com/bitnami"
+- name: dragonfly
+  condition: dragonfly-cache.enabled
+  alias: dragonfly-cache
+  version: "v1.34.2"
+  repository: "oci://ghcr.io/dragonflydb/dragonfly/helm"
+- name: dragonfly
+  condition: dragonfly-queue.enabled
+  alias: dragonfly-queue
+  version: "v1.34.2"
+  repository: "oci://ghcr.io/dragonflydb/dragonfly/helm"
