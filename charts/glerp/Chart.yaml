@@ -14,8 +14,8 @@ keywords:
 type: application
 # version (chart) and appVersion (== image tag) are managed automatically by
 # glerp-image/.github/workflows/build.yml on each release. Do not hand-edit.
-version: 1.0.42
-appVersion: "1.0.16"
+version: 1.0.43
+appVersion: "1.0.17"
 dependencies:
 - name: mariadb
   condition: mariadb.enabled,mariadb-subchart.enabled
