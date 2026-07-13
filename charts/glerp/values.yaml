@@ -46,6 +46,10 @@ tenant:
     caStore: kubernetes-token-auth      # ClusterSecretStore for the CA trust bundle
     ghcrVaultKey: secret/data/github/ghcr-cred
   vault:
+    # KV v2 mount for per-tenant secrets. ExternalSecrets read <mountPath>/data/<ns>/...
+    # (raw KV v2 API path); PushSecrets write <mountPath>/<ns>/... (ESO adds data/). Both
+    # resolve to the same secret. Matches the working glerpSiteInstallTemplate convention.
+    mountPath: secret
     pushSecrets:
       enabled: true               # ESO Password Generator + PushSecret create the random
                                   # mariadb-root/minio creds and push them INTO Vault
@@ -71,6 +75,11 @@ tenant:
     ttl: 720h0m0s
   monitoringProbe:
     enabled: true                 # Service labeled for glerp-monitoring uptime probing
+    # Public URL the uptime probe hits. Precedence: publicUrl (full override) >
+    # https://<ns>.<domain>[:externalPort]. Dev cluster is reached on :10443 (NATed to :443),
+    # so set externalPort: 10443 there; leave empty (standard 443) for production.
+    publicUrl: ""
+  externalPort: ""                # e.g. 10443 for the dev cluster; empty = standard https (443)
   dfp:
     # After site create+migrate, auto-configure a DFP External Storage doc pointing at the
     # per-tenant MinIO bucket so file attachments are stored in MinIO. Idempotent (upsert by
@@ -134,7 +143,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.21
+  tag: 1.0.22
 imagePullSecrets:
   - name: ghcr-cred
 ingress:

@@ -8,7 +8,7 @@ metadata:
     {{- include "erpnext.labels" . | nindent 4 }}
     glerp-monitoring: "enabled"
   annotations:
-    glerp-monitoring/public-url: {{ printf "https://%s" (include "glerp.tenantFqdn" .) | quote }}
+    glerp-monitoring/public-url: {{ include "glerp.tenantPublicUrl" . | quote }}
 spec:
   type: ClusterIP
   ports:

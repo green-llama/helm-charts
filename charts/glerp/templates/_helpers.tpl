@@ -121,6 +121,22 @@ Tenant FQDN = <namespace>.<domain>
 {{- end -}}
 
 {{/*
+Public URL for the tenant. Precedence:
+  1. tenant.monitoringProbe.publicUrl (full override)
+  2. https://<fqdn>[:externalPort]
+*/}}
+{{- define "glerp.tenantPublicUrl" -}}
+{{- $mp := .Values.tenant.monitoringProbe | default dict -}}
+{{- if (get $mp "publicUrl") -}}
+{{- get $mp "publicUrl" -}}
+{{- else if .Values.tenant.externalPort -}}
+{{- printf "https://%s:%v" (include "glerp.tenantFqdn" .) .Values.tenant.externalPort -}}
+{{- else -}}
+{{- printf "https://%s" (include "glerp.tenantFqdn" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Resolve mariadb-sts root password secret name. Precedence:
   1. explicit mariadb-sts.existingSecret.name
   2. tenant mode (no explicit name): the Vault-synced "<namespace>-mariadb-root" secret

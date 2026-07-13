@@ -1,6 +1,7 @@
 {{- if and .Values.tenant.enabled .Values.tenant.vault.pushSecrets.enabled }}
 {{- $ns := .Release.Namespace -}}
 {{- $store := .Values.tenant.vault.pushSecrets.store | default "vault-backend" -}}
+{{- $mount := .Values.tenant.vault.mountPath | default "secret" -}}
 {{- /*
   Declaratively seed the per-tenant Vault secrets that the tenant ExternalSecrets read back,
   replacing the manual `openssl rand` + `vault kv put` steps.
@@ -47,7 +48,7 @@ spec:
     - match:
         secretKey: password
       remoteRef:
-        remoteKey: {{ $ns }}/{{ $ns }}-mariadb-root
+        remoteKey: {{ $mount }}/{{ $ns }}/{{ $ns }}-mariadb-root
         property: mariadb-root-password
 {{- if .Values.tenant.minio.enabled }}
 ---
@@ -96,7 +97,7 @@ spec:
     - match:
         secretKey: password
       remoteRef:
-        remoteKey: {{ $ns }}/minio-creds
+        remoteKey: {{ $mount }}/{{ $ns }}/minio-creds
         property: accesskey
 ---
 apiVersion: external-secrets.io/v1alpha1
@@ -120,7 +121,7 @@ spec:
     - match:
         secretKey: password
       remoteRef:
-        remoteKey: {{ $ns }}/minio-creds
+        remoteKey: {{ $mount }}/{{ $ns }}/minio-creds
         property: secretkey
 {{- end }}
 {{- end }}
