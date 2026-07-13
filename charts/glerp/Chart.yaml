@@ -14,8 +14,8 @@ keywords:
 type: application
 # version (chart) and appVersion (== image tag) are managed automatically by
 # glerp-image/.github/workflows/build.yml on each release. Do not hand-edit.
-version: 1.0.44
-appVersion: "1.0.18"
+version: 1.0.45
+appVersion: "1.0.19"
 # DB is a hand-rolled StatefulSet (templates/statefulset-mariadb.yaml, official mariadb image)
 # — no bitnami dependency. Cache/queue use Valkey (default) or Dragonfly. The bitnami
 # mariadb/postgresql/redis subcharts were removed (Broadcom moved their images behind a paywall).

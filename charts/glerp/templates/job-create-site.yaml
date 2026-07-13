@@ -177,6 +177,50 @@ spec:
             echo "Running migrate after app sync";
             bench --site "${SITE_NAME}" migrate;
             {{- end }}
+
+            {{- if and .Values.tenant.enabled .Values.tenant.dfp.enabled }}
+            # ── Auto-configure DFP External Storage -> per-tenant MinIO bucket ──────────
+            # Idempotent upsert (keyed by title). Only runs if dfp_external_storage is
+            # installed and MinIO creds are present. Attachments/files land in MinIO.
+            if grep -Fxq "dfp_external_storage" /tmp/installed_apps.txt && [ -n "${MINIO_ACCESS_KEY:-}" ]; then
+              echo "Configuring DFP External Storage -> MinIO";
+              export DFP_TITLE={{ printf "minio-%s-attachments" .Release.Namespace | quote }}
+              export DFP_ENDPOINT={{ printf "minio.%s.svc.cluster.local:80" .Release.Namespace | quote }}
+              export DFP_BUCKET={{ .Release.Namespace | quote }}
+              # Write the upsert script to /tmp at column 0 (strip the YAML indent), pipe into
+              # `bench console` (runs arbitrary Python in the site context).
+              cat > /tmp/dfp_configure.py <<'PYEOF'
+            import os, frappe
+            title = os.environ["DFP_TITLE"]
+            existing = frappe.db.get_value("DFP External Storage", {"title": title}, "name")
+            doc = frappe.get_doc("DFP External Storage", existing) if existing else frappe.new_doc("DFP External Storage")
+            doc.title = title
+            doc.enabled = 1
+            doc.type = "S3 Compatible"
+            doc.endpoint = os.environ["DFP_ENDPOINT"]
+            doc.secure = 0
+            doc.bucket_name = os.environ["DFP_BUCKET"]
+            doc.region = "auto"
+            doc.access_key = os.environ["MINIO_ACCESS_KEY"]
+            doc.secret_key = os.environ["MINIO_SECRET_KEY"]
+            doc.presigned_urls = 0
+            doc.set("folders", [])
+            for f in ("Home/Attachments", "Home"):
+                doc.append("folders", {"folder": f})
+            doc.set("doctypes_ignored", [])
+            for dt in ("Data Import", "Prepared Report"):
+                doc.append("doctypes_ignored", {"doctype_to_ignore": dt})
+            doc.save()
+            frappe.db.commit()
+            print("DFP External Storage configured:", doc.name)
+            PYEOF
+              sed -i 's/^            //' /tmp/dfp_configure.py
+              bench --site "${SITE_NAME}" console < /tmp/dfp_configure.py || echo "DFP config step failed (non-fatal)";
+              rm -f /tmp/dfp_configure.py;
+            else
+              echo "DFP config skipped (dfp app not installed or MINIO creds not provided).";
+            fi
+            {{- end }}
             {{- else }}
 
             bench_output=$(bench new-site ${SITE_NAME} \
@@ -216,6 +260,21 @@ spec:
         env:
           - name: "SITE_NAME"
             value: {{ required "A site name is required: set jobs.createSite.siteName or siteName" (.Values.jobs.createSite.siteName | default .Values.siteName) | quote }}
+          {{- if and .Values.tenant.enabled .Values.tenant.dfp.enabled }}
+          # MinIO creds for DFP auto-config (optional: absent secret -> DFP step is skipped).
+          - name: MINIO_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ printf "%s-minio-creds" .Release.Namespace | quote }}
+                key: accesskey
+                optional: true
+          - name: MINIO_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ printf "%s-minio-creds" .Release.Namespace | quote }}
+                key: secretkey
+                optional: true
+          {{- end }}
           - name: "DB_TYPE"
             value: {{ .Values.jobs.createSite.dbType }}
           - name: DB_HOST
