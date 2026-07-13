@@ -155,12 +155,18 @@ spec:
               {{- end }}
             )
             {{- else }}
-            # Default: install ALL apps baked into the image. The authoritative list of apps
-            # present in the bench is apps.txt (written at image build time). This keeps the
-            # site in lockstep with the image contents — no separate list to maintain, and it
-            # can never drift from apps.json. frappe is the framework and is always present.
-            # sites/apps.txt is guaranteed to exist here (seeded by the init container).
-            mapfile -t apps < <(grep -v '^frappe$' sites/apps.txt)
+            # Default: install ALL apps baked into the IMAGE. Source of truth is the image's
+            # own app list (image-apps.txt stash, or the apps/ dir) — NOT the site's
+            # sites/apps.txt, which on an upgrade is stale (won't contain apps added in a newer
+            # image, e.g. dfp_external_storage). This keeps the site in lockstep with the image
+            # on every upgrade. frappe is the framework and is always present.
+            if [ -f /home/frappe/frappe-bench/image-apps.txt ]; then
+              mapfile -t apps < <(grep -v '^frappe$' /home/frappe/frappe-bench/image-apps.txt)
+            else
+              mapfile -t apps < <(ls apps | grep -vx frappe)
+            fi
+            # keep the site's apps.txt in sync with the image list (runtime pods read it)
+            { echo frappe; printf '%s\n' "${apps[@]}"; } > sites/apps.txt
             {{- end }}
             for app in "${apps[@]}"; do
                 [ -z "${app}" ] && continue
