@@ -2,6 +2,47 @@ apiVersion: v1
 entries:
   glerp:
   - apiVersion: v2
+    appVersion: 1.0.19
+    created: "2026-07-13T20:34:49.676378285Z"
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: GLerp — ERPNext v16 + Green Llama custom apps
+    digest: 5a2b5abfc2d397aea169499010f310a4b3bfd01f83b9d58d1afae8cc132eeb64
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.45/glerp-1.0.45.tgz
+    version: 1.0.45
+  - apiVersion: v2
     appVersion: 1.0.18
     created: "2026-07-13T12:10:30.262088166Z"
     dependencies:
@@ -1066,4 +1107,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.2/k8-glerp-ai-intake-0.3.2.tgz
     version: 0.3.2
-generated: "2026-07-13T12:10:30.534304682Z"
+generated: "2026-07-13T20:34:49.923737628Z"
