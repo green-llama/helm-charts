@@ -11,7 +11,7 @@ Gated by `tenant.enabled` and per-object sub-toggles (all default ON except the 
 | Object | Template | Toggle |
 |---|---|---|
 | ServiceAccount `<ns>-sa` + `secret-reader` Role/RoleBinding | `serviceaccount.yaml`, `rbac-secret-reader.yaml` | `serviceAccount.create`, `rbac.secretReader.enabled` |
-| Traefik IngressRoute → glerp (`<ns>.<domain>`) | `tenant/ingressroute-app.yaml` | `tenant.ingressRoute.enabled` |
+| Traefik IngressRoute → glerp (`<ns>.<domain>`, in `traefik-system`) | `tenant/ingressroute-app.yaml` | `tenant.ingressRoute.enabled` |
 | Traefik IngressRoute → MinIO console | `tenant/ingressroute-minio.yaml` | `tenant.minio.enabled` |
 | cert-manager Certificate (leaf) | `tenant/certificate.yaml` | `tenant.certificate.enabled` |
 | ESO ExternalSecrets: ca-trust, mariadb-root, minio-creds, ghcr-cred | `tenant/externalsecrets.yaml` | `tenant.externalSecrets.enabled` |
@@ -24,6 +24,61 @@ Gated by `tenant.enabled` and per-object sub-toggles (all default ON except the 
 minio access/secret keys in-cluster and `PushSecret` writes them INTO Vault
 (`updatePolicy: IfNotExist` — generated once, never overwritten on re-install/upgrade). The
 ExternalSecrets then sync them back. **No more manual `openssl rand` in the vault pod.**
+
+## Routing & TLS (IngressRoute)
+
+The app IngressRoute is created in **`traefik-system`** (matching the established pattern) and
+serves `https://<ns>.<domain>` using the cluster-wide wildcard TLS secret. Because it lives in
+`traefik-system`, **install/upgrade must be run by an admin** (Rancher, or a cluster-admin
+kubeconfig) — a namespace-scoped account cannot create it there.
+
+Configurable under `tenant.ingressRoute`:
+
+| Value | Default | Purpose |
+|---|---|---|
+| `enabled` | `true` | create the app IngressRoute |
+| `traefikNamespace` | `traefik-system` | namespace the IngressRoute is created in |
+| `entryPoints` | `[websecure]` | Traefik entrypoints |
+| `tls.enabled` | `true` | serve TLS |
+| `tls.secretName` | `""` → `tenant.tlsSecretName` (`letsencrypt-greenllama-tech-tls`) | per-route TLS secret override |
+| `tls.options` | `{}` | merged verbatim into `spec.tls` (e.g. `certResolver`, `domains`) |
+| `middlewares` | `[]` | Traefik middlewares (`[{name, namespace}]`) |
+| `pathPrefix` | `/` | route `PathPrefix` |
+| `matchExtra` | `""` | extra match appended with `&&` (e.g. `Headers(...)`) |
+| `annotations` | `{}` | extra annotations on the IngressRoute |
+
+The TLS secret is referenced by name only, so the wildcard `letsencrypt-greenllama-tech-tls`
+must be present in `traefik-system` (it is cluster-wide/replicated in prod).
+
+## File attachments → MinIO (DFP External Storage, automated)
+
+`dfp_external_storage` is bundled in the image, and the create-site job (after migrate)
+**auto-configures a `DFP External Storage` doc** so file attachments are stored in the
+per-tenant MinIO bucket instead of the local volume. It is **idempotent** (upsert keyed by
+title `minio-<ns>-attachments`) and runs on every install/upgrade.
+
+Toggle: `tenant.dfp.enabled` (default **true**). It is skipped automatically if the
+`dfp_external_storage` app or the `<ns>-minio-creds` secret is absent.
+
+The generated doc uses (`<ns>` = release namespace):
+
+| Field | Value |
+|---|---|
+| Title | `minio-<ns>-attachments` |
+| Write enabled | ✓ |
+| Type | S3 Compatible |
+| host:port (endpoint) | `minio.<ns>.svc.cluster.local:80` |
+| Secure | ✗ |
+| Bucket name | `<ns>` |
+| Region | `auto` |
+| Access / Secret Key | from the `<ns>-minio-creds` secret (Vault-synced in prod) |
+| Folder(s) | `Home/Attachments`, `Home` |
+| Use presigned urls | ✗ |
+| Doctypes ignored | `Data Import`, `Prepared Report` |
+
+Because it's idempotent, editing the doc in the UI is safe until the next upgrade, which
+re-asserts these values. To customise per-tenant, either disable `tenant.dfp.enabled` and
+configure DFP by hand, or adjust the values in `templates/job-create-site.yaml`.
 
 ## External prerequisites (NOT done by the chart)
 
