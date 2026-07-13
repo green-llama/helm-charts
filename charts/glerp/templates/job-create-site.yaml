@@ -63,11 +63,7 @@ spec:
               echo "Database is reachable."
           env:
             - name: "DB_HOST"
-              {{- if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
-              value: {{ .Release.Name }}-mariadb-subchart
-              {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
-              value: {{ .Release.Name }}-postgresql-subchart
-              {{- else if (get .Values "mariadb-sts").enabled }}
+              {{- if (get .Values "mariadb-sts").enabled }}
               value: {{ include "erpnext.fullname" . }}-mariadb-sts
               {{- else if (get .Values "postgresql-sts").enabled }}
               value: {{ include "erpnext.fullname" . }}-postgresql-sts
@@ -75,9 +71,9 @@ spec:
               value: "{{ .Values.dbHost }}"
               {{- end }}
             - name: "DB_PORT"
-              {{- if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
+              {{- if (get .Values "mariadb-sts").enabled }}
               value: "3306"
-              {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
+              {{- else if (get .Values "postgresql-sts").enabled }}
               value: "5432"
               {{- else if .Values.dbPort }}
               value: {{ .Values.dbPort | quote }}
@@ -93,8 +89,6 @@ spec:
               value: redis://{{ .Release.Name }}-valkey-cache:6379
               {{- else if (get .Values "dragonfly-cache").enabled }}
               value: redis://{{ .Release.Name }}-dragonfly-cache:6379
-              {{- else if (get .Values "redis-cache").enabled }}
-              value: redis://{{ .Release.Name }}-redis-cache-master:6379
               {{- else }}
               value: ""
               {{- end }}
@@ -105,8 +99,6 @@ spec:
               value: redis://{{ .Release.Name }}-valkey-queue:6379
               {{- else if (get .Values "dragonfly-queue").enabled }}
               value: redis://{{ .Release.Name }}-dragonfly-queue:6379
-              {{- else if (get .Values "redis-queue").enabled }}
-              value: redis://{{ .Release.Name }}-redis-queue-master:6379
               {{- else }}
               value: ""
               {{- end }}
@@ -128,8 +120,16 @@ spec:
             {{- if .Values.jobs.createSite.upgradeAppsOnExistingSite }}
             set -euo pipefail;
 
+            # UPGRADE-SAFE / IDEMPOTENT: if the site already exists we NEVER recreate it —
+            # we only sync new apps + migrate below, preserving all existing customer data.
+            # `forceCreate` (--force, which DROPS the database) is honored ONLY when the site
+            # is absent; on an existing site it is explicitly refused, so a stray
+            # forceCreate=true on an upgrade can't destroy data.
             if bench --site "${SITE_NAME}" list-apps > /tmp/installed_apps.txt 2>/dev/null; then
-                echo "Site ${SITE_NAME} already exists, skipping new-site";
+                echo "Site ${SITE_NAME} already exists — upgrade mode: skipping new-site (data retained)";
+                {{- if .Values.jobs.createSite.forceCreate }}
+                echo "NOTE: jobs.createSite.forceCreate=true is IGNORED because the site exists (refusing to drop existing data).";
+                {{- end }}
             else
                 echo "Site ${SITE_NAME} not found, creating site";
                 bench new-site ${SITE_NAME} \
@@ -219,11 +219,7 @@ spec:
           - name: "DB_TYPE"
             value: {{ .Values.jobs.createSite.dbType }}
           - name: DB_HOST
-            {{- if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
-            value: {{ .Release.Name }}-mariadb-subchart
-            {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
-            value: {{ .Release.Name }}-postgresql-subchart
-            {{- else if (get .Values "mariadb-sts").enabled }}
+            {{- if (get .Values "mariadb-sts").enabled }}
             value: {{ include "erpnext.fullname" . }}-mariadb-sts
             {{- else if (get .Values "postgresql-sts").enabled }}
             value: {{ include "erpnext.fullname" . }}-postgresql-sts
@@ -231,9 +227,9 @@ spec:
             value: "{{ .Values.dbHost }}"
             {{- end }}
           - name: "DB_PORT"
-            {{- if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
+            {{- if (get .Values "mariadb-sts").enabled }}
             value: "3306"
-            {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
+            {{- else if (get .Values "postgresql-sts").enabled }}
             value: "5432"
             {{- else if .Values.dbPort }}
             value: {{ .Values.dbPort | quote }}
@@ -243,11 +239,9 @@ spec:
             value: "5432"
             {{- end }}
           - name: "DB_ROOT_USER"
-            {{- if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
+            {{- if (get .Values "mariadb-sts").enabled }}
             value: "root"
-            {{- else if (get .Values "mariadb-sts").enabled }}
-            value: "root"
-            {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
+            {{- else if (get .Values "postgresql-sts").enabled }}
             value: "postgres"
             {{- else }}
             value: "{{ .Values.dbRootUser }}"
@@ -263,16 +257,6 @@ spec:
               secretKeyRef:
                 key: postgresql-password
                 name: {{ template "erpnext.fullname" . }}
-            {{- else if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Release.Name }}-mariadb-subchart
-                key: mariadb-root-password
-            {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Release.Name }}-postgresql-subchart
-                key: postgres-password
             {{- else if .Values.dbExistingSecret }}
             valueFrom:
               secretKeyRef:

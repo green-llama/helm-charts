@@ -38,11 +38,7 @@ spec:
           - name: "SITE_NAME"
             value: "{{ .Values.jobs.dropSite.siteName }}"
           - name: DB_HOST
-            {{- if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
-            value: {{ .Release.Name }}-mariadb-subchart
-            {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
-            value: {{ .Release.Name }}-postgresql-subchart
-            {{- else if (get .Values "mariadb-sts").enabled }}
+            {{- if (get .Values "mariadb-sts").enabled }}
             value: {{ include "erpnext.fullname" . }}-mariadb-sts
             {{- else if (get .Values "postgresql-sts").enabled }}
             value: {{ include "erpnext.fullname" . }}-postgresql-sts
@@ -50,11 +46,9 @@ spec:
             value: "{{ .Values.dbHost }}"
             {{- end }}
           - name: "DB_ROOT_USER"
-            {{- if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
+            {{- if (get .Values "mariadb-sts").enabled }}
             value: "root"
-            {{- else if (get .Values "mariadb-sts").enabled }}
-            value: "root"
-            {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
+            {{- else if (get .Values "postgresql-sts").enabled }}
             value: "postgres"
             {{- else }}
             value: "{{ .Values.dbRootUser }}"
@@ -70,16 +64,6 @@ spec:
               secretKeyRef:
                 key: postgres-password
                 name: {{ template "erpnext.fullname" . }}
-            {{- else if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Release.Name }}-mariadb-subchart
-                key: mariadb-root-password
-            {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Release.Name }}-postgresql-subchart
-                key: postgres-password
             {{- else if .Values.dbExistingSecret }}
             valueFrom:
               secretKeyRef:

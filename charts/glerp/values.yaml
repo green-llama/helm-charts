@@ -5,6 +5,76 @@
 siteName: ""
 domain: ""
 
+# ── Tenant infrastructure ─────────────────────────────────────────────────────
+# When tenant.enabled=true, the chart also manages the per-tenant objects that were
+# previously applied by hand (see docs/glerpSiteInstallTemplate). All use the RELEASE
+# NAMESPACE as the tenant name and .Values.tenant.domain (falls back to .Values.domain).
+# Set tenant.enabled=false for isolated/dev installs (glerp-ci) that lack Vault/cert-manager/MinIO.
+#
+# PREREQUISITE (still external, per plan): the Vault policy + k8s-auth role for
+# "<namespace>-app-role" must exist (created in CI or by the documented one-time script).
+tenant:
+  enabled: false
+  domain: ""                      # e.g. dev.greenllama.tech (defaults to .Values.domain)
+  externalDnsTarget: ""           # e.g. pec.greenllama.tech (for external-dns annotations)
+  tlsSecretName: letsencrypt-greenllama-tech-tls
+  serviceAccount:
+    enabled: true                 # <ns>-sa + secret-reader Role/RoleBinding
+  ingressRoute:
+    enabled: true                 # Traefik IngressRoute -> glerp:8080 at <ns>.<domain>
+    traefikNamespace: traefik-system
+    entryPoints:                  # list of Traefik entrypoints
+      - websecure
+    # TLS for the route. secretName empty -> falls back to tenant.tlsSecretName
+    # (default letsencrypt-greenllama-tech-tls). Set tls.enabled=false for no TLS.
+    tls:
+      enabled: true
+      secretName: ""             # per-route override; else tenant.tlsSecretName
+      options: {}                # merged verbatim into spec.tls (e.g. certResolver, domains)
+    middlewares: []              # e.g. [{ name: my-mw, namespace: traefik-system }]
+    pathPrefix: /                # match PathPrefix
+    matchExtra: ""              # extra Traefik match appended with && (e.g. Headers(...))
+    annotations: {}             # extra annotations merged onto the IngressRoute
+  certificate:
+    enabled: true                 # cert-manager leaf cert for the namespace
+    clusterIssuer: apps-general-signer
+    duration: 2160h
+    renewBefore: 360h
+  externalSecrets:
+    enabled: true                 # ESO ExternalSecrets read from Vault
+    vaultStore: vault-backend           # ClusterSecretStore for tenant kv secrets
+    caStore: kubernetes-token-auth      # ClusterSecretStore for the CA trust bundle
+    ghcrVaultKey: secret/data/github/ghcr-cred
+  vault:
+    pushSecrets:
+      enabled: true               # ESO Password Generator + PushSecret create the random
+                                  # mariadb-root/minio creds and push them INTO Vault
+      store: vault-backend
+  minio:
+    enabled: true                 # per-tenant MinIO Tenant + its IngressRoute
+    # USER (usable) file space is ~half of raw after erasure-coding parity.
+    # Default target: ~12Gi usable => ~24Gi raw = pools*servers*volumesPerServer*volumeSize.
+    #   2 * 2 * 2 * 3Gi = 24Gi raw  ≈  12Gi usable.
+    pools: 2
+    servers: 2
+    volumesPerServer: 2
+    volumeSize: 3Gi
+    storageClass: directpv-min-io
+    vaultKmsRole: ""              # defaults to "<ns>-role"
+    vaultKmsKeyName: minio-key
+    vaultAddr: http://vault-active.vault-system.svc.cluster.local:8200
+  velero:
+    enabled: true                 # daily namespace backup
+    namespace: velero
+    schedule: "0 2 * * *"
+    storageLocation: idrive-e2
+    ttl: 720h0m0s
+  monitoringProbe:
+    enabled: true                 # Service labeled for glerp-monitoring uptime probing
+  zapScanLabel:
+    enabled: false                # glerp.io/private-registry — ONLY the one ZAP-scanned
+                                  # site per cluster (backuptest in dev, greenllama in prod)
+
 # ── Cache / queue backend ─────────────────────────────────────────────────────
 # DEFAULT: Valkey (official open-source Redis fork). Frappe 16 uses RESP3 client-side
 # cache invalidation (CLIENT TRACKING), which Valkey/Redis support fully and DragonflyDB
@@ -34,293 +104,11 @@ dragonfly-queue:
 externalRedis:
   cache: ''
   queue: ''
-extraObjects:
-  - apiVersion: traefik.io/v1alpha1
-    kind: IngressRoute
-    metadata:
-      annotations: #RJB: add following two annotations to dynamically create FQDN in cloudflare
-        # 1. The record name you want in Cloudflare
-        external-dns.alpha.kubernetes.io/hostname: "{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"
-        # 2. The 'Peculiar' anchor it should point to
-        external-dns.alpha.kubernetes.io/target: "pec.greenllama.tech"
-        kubernetes.io/ingress.class: traefik
-      name: "{{helmVar_TENANT_NAMESPACE}}"
-      namespace: traefik-system
-    spec:
-      entryPoints:
-        - websecure
-      routes:
-        - kind: Rule
-          match: Host(`{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}`) && PathPrefix(`/`)
-          services:
-            - name: glerp
-              namespace: "{{helmVar_TENANT_NAMESPACE}}"
-              port: 8080
-              scheme: http
-      tls:
-        secretName: letsencrypt-greenllama-tech-tls
-  - apiVersion: external-secrets.io/v1
-    kind: ExternalSecret
-    metadata:
-      finalizers:
-        - externalsecrets.external-secrets.io/externalsecret-cleanup
-      name: "apps-ca-trust"
-      namespace: "{{helmVar_TENANT_NAMESPACE}}"
-    spec:
-      data:
-        - remoteRef:
-            conversionStrategy: Default
-            decodingStrategy: None
-            key: root-ca-secret
-            metadataPolicy: None
-            property: tls.crt
-          secretKey: root_ca
-        - remoteRef:
-            conversionStrategy: Default
-            decodingStrategy: None
-            key: apps-int-ca-secret
-            metadataPolicy: None
-            property: tls.crt
-          secretKey: intermediate_ca
-      refreshInterval: 1h0m0s
-      secretStoreRef:
-        kind: ClusterSecretStore
-        name: kubernetes-token-auth
-      target:
-        creationPolicy: Owner
-        deletionPolicy: Retain
-        name: apps-ca-trust
-        template:
-          data:
-            ca.crt: |
-              {{ .root_ca }}
-              {{ .intermediate_ca }}
-            intermediate.crt: |
-              {{ .intermediate_ca }}
-            root.crt: |
-              {{ .root_ca }}
-          engineVersion: v2
-          mergePolicy: Replace
-          metadata: {}
-          type: Opaque
-  - apiVersion: cert-manager.io/v1
-    kind: Certificate
-    metadata:
-      name: "{{helmVar_TENANT_NAMESPACE}}-leaf-cert"
-      namespace: "{{helmVar_TENANT_NAMESPACE}}"
-    spec:
-      dnsNames:
-        - "*.{{helmVar_TENANT_NAMESPACE}}.svc"
-        - "*.{{helmVar_TENANT_NAMESPACE}}.svc.cluster.local"
-        - "*.{{helmVar_DOMAIN}}"
-      duration: 2160h
-      ipAddresses:
-        - 127.0.0.1
-        - "::1"
-      issuerRef:
-        group: cert-manager.io
-        kind: ClusterIssuer
-        name: apps-general-signer
-      renewBefore: 360h
-      secretName: "{{helmVar_TENANT_NAMESPACE}}-leaf-cert"
-  - apiVersion: external-secrets.io/v1
-    kind: ExternalSecret
-    metadata:
-      name: "{{helmVar_TENANT_NAMESPACE}}-minio-creds"
-      namespace: "{{helmVar_TENANT_NAMESPACE}}"
-    spec:
-      refreshInterval: 1h
-      secretStoreRef:
-        kind: ClusterSecretStore
-        name: vault-backend
-      target:
-        name: "{{helmVar_TENANT_NAMESPACE}}-minio-creds"
-        creationPolicy: Owner
-        template:
-          engineVersion: v2
-          data:
-            accesskey: "{{ .accesskey }}"
-            secretkey: "{{ .secretkey }}"
-            config.env: |
-              export MINIO_ROOT_USER="{{ .accesskey }}"
-              export MINIO_ROOT_PASSWORD="{{ .secretkey }}"
-      data:
-        - secretKey: accesskey
-          remoteRef:
-            key: "secret/data/{{helmVar_TENANT_NAMESPACE}}/minio-creds"
-            property: accesskey
-        - secretKey: secretkey
-          remoteRef:
-            key: "secret/data/{{helmVar_TENANT_NAMESPACE}}/minio-creds"
-            property: secretkey
-  - apiVersion: traefik.io/v1alpha1
-    kind: IngressRoute
-    metadata:
-      name: "minio-{{helmVar_TENANT_NAMESPACE}}"
-      namespace: "{{helmVar_TENANT_NAMESPACE}}"
-      annotations:
-        external-dns.alpha.kubernetes.io/hostname: "{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"
-        external-dns.alpha.kubernetes.io/target: "pec.greenllama.tech"
-        kubernetes.io/ingress.class: traefik
-    spec:
-      entryPoints:
-        - websecure
-      tls:
-        secretName: letsencrypt-greenllama-tech-tls
-      routes:
-        - match: Host(`minio-{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}`) && PathPrefix(`/`)
-          kind: Rule
-          services:
-            - name: minio
-              port: 80
-  - apiVersion: external-secrets.io/v1
-    kind: ExternalSecret
-    metadata:
-      name: "{{helmVar_TENANT_NAMESPACE}}-mariadb-root"
-      namespace: "{{helmVar_TENANT_NAMESPACE}}"
-    spec:
-      refreshInterval: 1h
-      secretStoreRef:
-        kind: ClusterSecretStore
-        name: vault-backend
-      target:
-        name: "{{helmVar_TENANT_NAMESPACE}}-mariadb-root"
-        creationPolicy: Owner
-        deletionPolicy: Retain
-        template:
-          engineVersion: v2
-          mergePolicy: Replace
-          data:
-            mariadb-root-password: '{{ index . "mariadb-root-password" }}'
-      data:
-        - secretKey: mariadb-root-password
-          remoteRef:
-            key: "secret/data/{{helmVar_TENANT_NAMESPACE}}/{{helmVar_TENANT_NAMESPACE}}-mariadb-root"
-            property: mariadb-root-password
-            conversionStrategy: Default
-            decodingStrategy: None
-            metadataPolicy: None
-  - apiVersion: external-secrets.io/v1
-    kind: ExternalSecret
-    metadata:
-      name: ghcr-cred
-      namespace: "{{helmVar_TENANT_NAMESPACE}}"
-    spec:
-      refreshInterval: 1h
-      secretStoreRef:
-        kind: ClusterSecretStore
-        name: vault-backend
-      target:
-        name: ghcr-cred
-        template:
-          type: kubernetes.io/dockerconfigjson
-          data:
-            .dockerconfigjson: "{{ .config }}"
-      data:
-        - secretKey: config
-          remoteRef:
-            key: secret/data/github/ghcr-cred
-            property: config
-  - apiVersion: velero.io/v1
-    kind: Schedule
-    metadata:
-      name: "{{helmVar_TENANT_NAMESPACE}}-daily"
-      namespace: velero
-    spec:
-      schedule: "0 2 * * *"
-      template:
-        includedNamespaces:
-          - "{{helmVar_TENANT_NAMESPACE}}"
-        includedClusterResources: true
-        storageLocation: idrive-e2
-        ttl: 720h0m0s
-        defaultVolumesToFsBackup: true
-  - apiVersion: minio.min.io/v2
-    kind: Tenant
-    metadata:
-      name: "{{helmVar_TENANT_NAMESPACE}}-minio-tenant"
-      namespace: "{{helmVar_TENANT_NAMESPACE}}"
-    spec:
-      buckets:
-        - name: "{{helmVar_TENANT_NAMESPACE}}"
-          objectLock: false
-          region: us-east-1
-      mountPath: /export
-      configuration:
-        name: "{{helmVar_TENANT_NAMESPACE}}-minio-creds"
-      env:
-        - name: MINIO_SERVER_URL
-          value: "https://minio-{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"
-        - name: MINIO_BROWSER_REDIRECT_URL
-          value: "https://minio-{{helmVar_TENANT_NAMESPACE}}.{{helmVar_DOMAIN}}"
-        - name: MINIO_KMS_VAULT_ENABLE
-          value: "on"
-        - name: MINIO_KMS_VAULT_ENDPOINT
-          value: "http://vault-active.vault-system.svc.cluster.local:8200"
-        - name: MINIO_KMS_VAULT_AUTH_TYPE
-          value: "jwt"
-        - name: MINIO_KMS_VAULT_ROLE
-          value: "{{helmVar_TENANT_NAMESPACE}}-role"
-        - name: MINIO_KMS_VAULT_KEY_NAME
-          value: "minio-key"
-        - name: MINIO_KMS_VAULT_JWT_PATH
-          value: "/var/run/secrets/kubernetes.io/serviceaccount/token"
-      pools:
-        - name: pool-0
-          servers: 2
-          volumesPerServer: 2
-          volumeClaimTemplate:
-            metadata:
-              name: data
-            spec:
-              accessModes:
-                - ReadWriteOnce
-              storageClassName: directpv-min-io
-              resources:
-                requests:
-                  storage: 512Mi
-          containerSecurityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-          securityContext:
-            fsGroup: 1000
-        - name: pool-1
-          servers: 2
-          volumesPerServer: 2
-          volumeClaimTemplate:
-            metadata:
-              name: data
-            spec:
-              accessModes:
-                - ReadWriteOnce
-              storageClassName: directpv-min-io
-              resources:
-                requests:
-                  storage: 512Mi
-          containerSecurityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-          securityContext:
-            fsGroup: 1000
-      poolsMetadata:
-        annotations:
-          sidecar.istio.io/inject: "true"
-          traffic.sidecar.istio.io/includeInboundPorts: "10443"
-          traffic.sidecar.istio.io/includeOutboundPorts: "8200"
-          traffic.sidecar.istio.io/excludeInboundPorts: "9000, 9090"
-          traffic.sidecar.istio.io/excludeOutboundPorts: "9000, 9090"
-      requestAutoCert: false
-      prometheusOperator: false
-      features:
-        bucketDNS: false
-        enableSFTP: false
-      podManagementPolicy: Parallel
-      subPath: /data
-      serviceAccountName: "{{helmVar_TENANT_NAMESPACE}}-sa"
+# One-off passthrough objects. Rendered through `tpl` (extra-objects.yaml), so entries may
+# use real Helm expressions like {{ .Release.Namespace }} / {{ .Values.tenant.domain }}.
+# The standard tenant objects are now native templates under templates/tenant/ (tenant.enabled).
+extraObjects: []
+
 fullnameOverride: ''
 httproute:
   annotations: {}
@@ -340,7 +128,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.17
+  tag: 1.0.18
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
@@ -464,7 +252,7 @@ mariadb-sts:
     tmp_table_size = 64M
     max_heap_table_size = 64M
   persistence:
-    size: 8Gi
+    size: 10Gi                        # database volume (Longhorn encrypted)
     storageClass: longhorn-crypto-mariadb-rwo
   resources:
     limits:
@@ -473,15 +261,14 @@ mariadb-sts:
     requests:
       cpu: 500m
       memory: 1Gi
-#  rootPassword: changeit  # Used only when existingSecret.name is not set
-  existingSecret:  #RJB update Feb23: use a K8 secret instead of hard coding in chart. existingSecret takes precedence over rootPassword.
-    name: "{{helmVar_TENANT_NAMESPACE}}-mariadb-root"
+  # rootPassword / generateRootSecret: chart-managed root secret (dev/test path).
+  # existingSecret: point at an externally-managed secret (e.g. the Vault-synced
+  # "<namespace>-mariadb-root"). When tenant.enabled=true and name is empty, the helper
+  # defaults to "<namespace>-mariadb-root" automatically (matches the tenant ExternalSecret).
+  generateRootSecret: false
+  existingSecret:
+    name: ""
     key: "mariadb-root-password"
-mariadb-subchart:
-  enabled: false
-  image:
-    repository: bitnamilegacy/mariadb
-    tag: 10.6.17-debian-11-r10
 nameOverride: ''
 nginx:
   affinity: {}
@@ -536,7 +323,9 @@ persistence:
     accessModes:
       - ReadWriteMany
     enabled: true
-    size: 8Gi   #RJB: can set this to low (2Gi); using minio for object storage
+    # Shared config/sites volume mounted to all pods (bench config, not user files —
+    # user files go to MinIO). 2Gi is plenty. Longhorn encrypted RWX.
+    size: 2Gi
     storageClass: longhorn-crypto-rwm
 podSecurityContext:
   supplementalGroups:
@@ -554,21 +343,6 @@ postgresql-sts:
   postgresPassword: changeit
   postgresUser: postgres
   resources: {}
-postgresql-subchart:
-  enabled: false
-  image:
-    repository: bitnamilegacy/postgresql
-    tag: '14'
-redis-cache:
-  enabled: false
-  image:
-    repository: bitnamilegacy/redis
-    tag: '7.0'
-redis-queue:
-  enabled: false
-  image:
-    repository: bitnamilegacy/redis
-    tag: '7.0'
 securityContext:
   capabilities:
     add:
@@ -674,20 +448,6 @@ worker:
           wait-for-it {{ include "erpnext.fullname" . }}-mariadb-sts:3306 -t 1;
           {{- else if (index .Values "postgresql-sts").enabled }}
           wait-for-it {{ include "erpnext.fullname" . }}-postgresql-sts:5432 -t 1;
-          {{- else if or .Values.mariadb.enabled (get .Values "mariadb-subchart").enabled }}
-          (
-            wait-for-it {{ .Release.Name }}-mariadb-subchart:3306 -t 0 || \
-            wait-for-it {{ .Release.Name }}-mariadb:3306 -t 0 || \
-            wait-for-it {{ .Release.Name }}-mariadb-subchart-primary:3306 -t 0 || \
-            wait-for-it {{ .Release.Name }}-mariadb-primary:3306 -t 1
-          )
-          {{- else if or .Values.postgresql.enabled (get .Values "postgresql-subchart").enabled }}
-          (
-            wait-for-it {{ .Release.Name }}-postgresql-subchart:5432 -t 0 || \
-            wait-for-it {{ .Release.Name }}-postgresql:5432 -t 1
-          )
-          {{- else if or .Values.postgresql.enabled (index .Values "postgresql-subchart").enabled }}
-          wait-for-it {{ .Release.Name }}-postgresql-subchart:5432 -t 1;
           {{- else if .Values.dbHost }}
           wait-for-it {{ .Values.dbHost }}:{{ .Values.dbPort }} -t 1;
           {{- end }}
@@ -697,8 +457,6 @@ worker:
           wait-for-it {{ .Release.Name }}-valkey-cache:6379 -t 1;
           {{- else if (index .Values "dragonfly-cache").enabled }}
           wait-for-it {{ .Release.Name }}-dragonfly-cache:6379 -t 1;
-          {{- else if (index .Values "redis-cache").enabled }}
-          wait-for-it {{ .Release.Name }}-redis-cache-master:6379 -t 1;
           {{- end }}
           {{- if .Values.externalRedis.queue }}
           wait-for-it $(echo {{ .Values.externalRedis.queue }} | sed 's,redis://,,') -t 1;
@@ -706,8 +464,6 @@ worker:
           wait-for-it {{ .Release.Name }}-valkey-queue:6379 -t 1;
           {{- else if (index .Values "dragonfly-queue").enabled }}
           wait-for-it {{ .Release.Name }}-dragonfly-queue:6379 -t 1;
-          {{- else if (index .Values "redis-queue").enabled }}
-          wait-for-it {{ .Release.Name }}-redis-queue-master:6379 -t 1;
           {{- end }}
     initialDelaySeconds: 15
     periodSeconds: 5

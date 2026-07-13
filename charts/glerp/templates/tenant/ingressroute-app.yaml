@@ -1,0 +1,48 @@
+{{- if and .Values.tenant.enabled .Values.tenant.ingressRoute.enabled }}
+{{- $t := .Values.tenant -}}
+{{- $ir := $t.ingressRoute -}}
+{{- $tls := $ir.tls | default dict -}}
+{{- $tlsSecret := (get $tls "secretName") | default $t.tlsSecretName -}}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ .Release.Namespace }}
+  namespace: {{ $ir.traefikNamespace | default "traefik-system" }}
+  labels:
+    {{- include "erpnext.labels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    {{- if $t.externalDnsTarget }}
+    external-dns.alpha.kubernetes.io/hostname: {{ include "glerp.tenantFqdn" . | quote }}
+    external-dns.alpha.kubernetes.io/target: {{ $t.externalDnsTarget | quote }}
+    {{- end }}
+    {{- with $ir.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  entryPoints:
+    {{- if $ir.entryPoints }}
+    {{- toYaml $ir.entryPoints | nindent 4 }}
+    {{- else }}
+    - {{ $ir.entryPoint | default "websecure" }}
+    {{- end }}
+  routes:
+    - kind: Rule
+      match: Host(`{{ include "glerp.tenantFqdn" . }}`) && PathPrefix(`{{ $ir.pathPrefix | default "/" }}`){{ if $ir.matchExtra }} && {{ $ir.matchExtra }}{{ end }}
+      services:
+        - name: {{ include "erpnext.fullname" . }}
+          namespace: {{ .Release.Namespace }}
+          port: {{ .Values.nginx.service.port | default 8080 }}
+          scheme: http
+      {{- with $ir.middlewares }}
+      middlewares:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if (ne (get $tls "enabled") false) }}
+  tls:
+    secretName: {{ $tlsSecret | quote }}
+    {{- with (get $tls "options") }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}

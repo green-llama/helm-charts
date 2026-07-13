@@ -1,0 +1,19 @@
+{{- if and .Values.tenant.enabled .Values.tenant.velero.enabled }}
+{{- $v := .Values.tenant.velero -}}
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: {{ .Release.Namespace }}-daily
+  namespace: {{ $v.namespace | default "velero" }}
+  labels:
+    {{- include "erpnext.labels" . | nindent 4 }}
+spec:
+  schedule: {{ $v.schedule | default "0 2 * * *" | quote }}
+  template:
+    includedNamespaces:
+      - {{ .Release.Namespace }}
+    includedClusterResources: true
+    storageLocation: {{ $v.storageLocation | default "idrive-e2" }}
+    ttl: {{ $v.ttl | default "720h0m0s" }}
+    defaultVolumesToFsBackup: true
+{{- end }}

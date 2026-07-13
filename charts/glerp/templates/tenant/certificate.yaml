@@ -1,0 +1,25 @@
+{{- if and .Values.tenant.enabled .Values.tenant.certificate.enabled }}
+{{- $c := .Values.tenant.certificate -}}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Namespace }}-leaf-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "erpnext.labels" . | nindent 4 }}
+spec:
+  secretName: {{ .Release.Namespace }}-leaf-cert
+  duration: {{ $c.duration | default "2160h" }}
+  renewBefore: {{ $c.renewBefore | default "360h" }}
+  dnsNames:
+    - "*.{{ .Release.Namespace }}.svc"
+    - "*.{{ .Release.Namespace }}.svc.cluster.local"
+    - "*.{{ include "glerp.tenantDomain" . }}"
+  ipAddresses:
+    - 127.0.0.1
+    - "::1"
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: {{ $c.clusterIssuer | default "apps-general-signer" }}
+{{- end }}

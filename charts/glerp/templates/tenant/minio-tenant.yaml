@@ -1,0 +1,76 @@
+{{- if and .Values.tenant.enabled .Values.tenant.minio.enabled }}
+{{- $m := .Values.tenant.minio -}}
+{{- $ns := .Release.Namespace -}}
+apiVersion: minio.min.io/v2
+kind: Tenant
+metadata:
+  name: {{ $ns }}-minio-tenant
+  namespace: {{ $ns }}
+  labels:
+    {{- include "erpnext.labels" . | nindent 4 }}
+spec:
+  configuration:
+    name: {{ $ns }}-minio-creds
+  buckets:
+    - name: {{ $ns }}
+      objectLock: false
+      region: us-east-1
+  mountPath: /export
+  subPath: /data
+  serviceAccountName: {{ include "erpnext.serviceAccountName" . }}
+  requestAutoCert: false
+  prometheusOperator: false
+  podManagementPolicy: Parallel
+  features:
+    bucketDNS: false
+    enableSFTP: false
+  env:
+    - name: MINIO_PROMETHEUS_AUTH_TYPE
+      value: public
+    - name: MINIO_SERVER_URL
+      value: {{ printf "https://minio-%s" (include "glerp.tenantFqdn" .) | quote }}
+    - name: MINIO_BROWSER_REDIRECT_URL
+      value: {{ printf "https://minio-%s" (include "glerp.tenantFqdn" .) | quote }}
+    - name: MINIO_KMS_VAULT_ENABLE
+      value: "on"
+    - name: MINIO_KMS_VAULT_ENDPOINT
+      value: {{ $m.vaultAddr | default "http://vault-active.vault-system.svc.cluster.local:8200" | quote }}
+    - name: MINIO_KMS_VAULT_AUTH_TYPE
+      value: "jwt"
+    - name: MINIO_KMS_VAULT_ROLE
+      value: {{ $m.vaultKmsRole | default (printf "%s-role" $ns) | quote }}
+    - name: MINIO_KMS_VAULT_KEY_NAME
+      value: {{ $m.vaultKmsKeyName | default "minio-key" | quote }}
+    - name: MINIO_KMS_VAULT_JWT_PATH
+      value: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  poolsMetadata:
+    annotations:
+      sidecar.istio.io/inject: "true"
+      traffic.sidecar.istio.io/includeInboundPorts: "10443"
+      traffic.sidecar.istio.io/includeOutboundPorts: "8200"
+      traffic.sidecar.istio.io/excludeInboundPorts: "9000, 9090"
+      traffic.sidecar.istio.io/excludeOutboundPorts: "9000, 9090"
+  pools:
+    {{- range $i := until (int ($m.pools | default 2)) }}
+    - name: pool-{{ $i }}
+      servers: {{ $m.servers | default 2 }}
+      volumesPerServer: {{ $m.volumesPerServer | default 2 }}
+      volumeClaimTemplate:
+        metadata:
+          name: data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: {{ $m.storageClass | default "directpv-min-io" }}
+          resources:
+            requests:
+              storage: {{ $m.volumeSize | default "3Gi" }}
+      securityContext:
+        fsGroup: 1000
+      containerSecurityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+    {{- end }}
+{{- end }}

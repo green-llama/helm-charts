@@ -99,14 +99,43 @@ Gets the redis cache host name
 {{- end -}}
 
 {{/*
-Resolve mariadb-sts root password secret name.
-`mariadb-sts.existingSecret.name` takes precedence over chart-managed secret.
+Tenant name = the release namespace (one tenant per namespace).
+*/}}
+{{- define "glerp.tenant" -}}
+{{- .Release.Namespace -}}
+{{- end -}}
+
+{{/*
+Tenant domain: tenant.domain, else top-level domain. Required when tenant.enabled.
+*/}}
+{{- define "glerp.tenantDomain" -}}
+{{- $d := .Values.tenant.domain | default .Values.domain -}}
+{{- required "tenant.enabled requires tenant.domain (or .Values.domain)" $d -}}
+{{- end -}}
+
+{{/*
+Tenant FQDN = <namespace>.<domain>
+*/}}
+{{- define "glerp.tenantFqdn" -}}
+{{- printf "%s.%s" .Release.Namespace (include "glerp.tenantDomain" .) -}}
+{{- end -}}
+
+{{/*
+Resolve mariadb-sts root password secret name. Precedence:
+  1. explicit mariadb-sts.existingSecret.name
+  2. tenant mode (no explicit name): the Vault-synced "<namespace>-mariadb-root" secret
+  3. chart-managed generated secret: "<fullname>"
 */}}
 {{- define "glerp.mariadbRootSecretName" -}}
 {{- $m := (index .Values "mariadb-sts") | default dict -}}
 {{- $existing := (get $m "existingSecret") | default dict -}}
 {{- if (get $existing "name") -}}
 {{- get $existing "name" -}}
+{{- else if (get $m "generateRootSecret") -}}
+{{- /* chart-generated secret (dev/test) always lives at <fullname> */ -}}
+{{- include "erpnext.fullname" . -}}
+{{- else if and .Values.tenant .Values.tenant.enabled -}}
+{{- printf "%s-mariadb-root" .Release.Namespace -}}
 {{- else -}}
 {{- include "erpnext.fullname" . -}}
 {{- end -}}

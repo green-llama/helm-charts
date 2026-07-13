@@ -1,0 +1,29 @@
+{{- if and .Values.tenant.enabled .Values.tenant.minio.enabled }}
+{{- $t := .Values.tenant -}}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: minio-{{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "erpnext.labels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    {{- if $t.externalDnsTarget }}
+    external-dns.alpha.kubernetes.io/hostname: {{ include "glerp.tenantFqdn" . | quote }}
+    external-dns.alpha.kubernetes.io/target: {{ $t.externalDnsTarget | quote }}
+    {{- end }}
+spec:
+  entryPoints:
+    - {{ $t.ingressRoute.entryPoint | default "websecure" }}
+  tls:
+    secretName: {{ $t.tlsSecretName | quote }}
+  routes:
+    - kind: Rule
+      match: Host(`minio-{{ include "glerp.tenantFqdn" . }}`) && PathPrefix(`/`)
+      services:
+        # "minio" is the hard-coded Service the MinIO Tenant operator creates; the
+        # namespace scopes it per tenant.
+        - name: minio
+          port: 80
+{{- end }}

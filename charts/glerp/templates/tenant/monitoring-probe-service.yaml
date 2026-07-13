@@ -1,0 +1,21 @@
+{{- if and .Values.tenant.enabled .Values.tenant.monitoringProbe.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: glerp-monitoring-probe
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "erpnext.labels" . | nindent 4 }}
+    glerp-monitoring: "enabled"
+  annotations:
+    glerp-monitoring/public-url: {{ printf "https://%s" (include "glerp.tenantFqdn" .) | quote }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.nginx.service.port | default 8080 }}
+      targetPort: {{ .Values.nginx.service.port | default 8080 }}
+  selector:
+    app.kubernetes.io/name: {{ include "erpnext.name" . }}-nginx
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

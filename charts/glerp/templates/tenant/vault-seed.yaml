@@ -1,0 +1,126 @@
+{{- if and .Values.tenant.enabled .Values.tenant.vault.pushSecrets.enabled }}
+{{- $ns := .Release.Namespace -}}
+{{- $store := .Values.tenant.vault.pushSecrets.store | default "vault-backend" -}}
+{{- /*
+  Declaratively seed the per-tenant Vault secrets that the tenant ExternalSecrets read back,
+  replacing the manual `openssl rand` + `vault kv put` steps.
+
+  A PushSecret can pull its value straight from an ESO `Password` generator (selector.generatorRef)
+  and write it INTO Vault at the path the tenant ExternalSecret consumes.
+
+  updatePolicy: IfNotExist  -> the value is generated ONCE and never overwritten on
+  re-install/upgrade, protecting existing DB/MinIO credentials (idempotent + data-safe).
+
+  Distinct random values need distinct generators (a single generator yields one value),
+  so mariadb-root / minio-accesskey / minio-secretkey each get their own Password generator.
+*/ -}}
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: {{ $ns }}-gen-mariadb
+  namespace: {{ $ns }}
+spec:
+  length: 20
+  digits: 6
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: {{ $ns }}-mariadb-root-push
+  namespace: {{ $ns }}
+spec:
+  refreshInterval: 1h
+  updatePolicy: IfNotExist
+  deletionPolicy: None
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: {{ $store }}
+  selector:
+    generatorRef:
+      apiVersion: generators.external-secrets.io/v1alpha1
+      kind: Password
+      name: {{ $ns }}-gen-mariadb
+  data:
+    - match:
+        secretKey: password
+      remoteRef:
+        remoteKey: {{ $ns }}/{{ $ns }}-mariadb-root
+        property: mariadb-root-password
+{{- if .Values.tenant.minio.enabled }}
+---
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: {{ $ns }}-gen-minio-access
+  namespace: {{ $ns }}
+spec:
+  length: 20
+  digits: 6
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: {{ $ns }}-gen-minio-secret
+  namespace: {{ $ns }}
+spec:
+  length: 40
+  digits: 10
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: {{ $ns }}-minio-access-push
+  namespace: {{ $ns }}
+spec:
+  refreshInterval: 1h
+  updatePolicy: IfNotExist
+  deletionPolicy: None
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: {{ $store }}
+  selector:
+    generatorRef:
+      apiVersion: generators.external-secrets.io/v1alpha1
+      kind: Password
+      name: {{ $ns }}-gen-minio-access
+  data:
+    - match:
+        secretKey: password
+      remoteRef:
+        remoteKey: {{ $ns }}/minio-creds
+        property: accesskey
+---
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: {{ $ns }}-minio-secret-push
+  namespace: {{ $ns }}
+spec:
+  refreshInterval: 1h
+  updatePolicy: IfNotExist
+  deletionPolicy: None
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: {{ $store }}
+  selector:
+    generatorRef:
+      apiVersion: generators.external-secrets.io/v1alpha1
+      kind: Password
+      name: {{ $ns }}-gen-minio-secret
+  data:
+    - match:
+        secretKey: password
+      remoteRef:
+        remoteKey: {{ $ns }}/minio-creds
+        property: secretkey
+{{- end }}
+{{- end }}
