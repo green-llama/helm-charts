@@ -1,6 +1,34 @@
-# Frappe / ERPNext
+# GLerp (Frappe / ERPNext + Green Llama custom apps)
 
-[Frappe](https://frappe.io)/[ERPNext](https://erpnext.com) Free and Open Source Enterprise Resource Planning (ERP).
+> ## ⚠️ Cluster prerequisites (read before installing a tenant)
+>
+> When installing with `tenant.enabled=true` (a full production tenant), these cluster-level
+> resources **must already exist** — the chart consumes them, it does not create them. See
+> **[TENANT.md](TENANT.md)** for the exact one-time setup commands.
+>
+> **REQUIRED for automated secret creation** — the chart uses ESO `Password` generators +
+> `PushSecret`s to generate the MariaDB/MinIO credentials and push them into Vault. This needs
+> a **write-capable** ESO store, because the default `vault-backend` store
+> (`eso-universal-reader`) is **read-only** and cannot write:
+> - a `vault-pushwriter` **ClusterSecretStore** backed by a Vault role/policy with
+>   `create/read/update` on `secret/{data,metadata}/*` (one-time per cluster — see TENANT.md §3).
+>   The chart's PushSecrets default to this store (`tenant.vault.pushSecrets.store`).
+>
+> Also required (already present in prod): ESO + `vault-backend` / `kubernetes-token-auth`
+> stores, cert-manager (`apps-general-signer`), Traefik, MinIO operator + DirectPV, Velero +
+> `idrive-e2`, the `letsencrypt-…-tls` wildcard secret, and the per-tenant Vault policy/role.
+>
+> For an isolated dev install without these (e.g. `glerp-ci`), set `tenant.enabled=false`.
+
+## GLerp notes
+
+- Cache/queue default to **Valkey**; DB is a hand-rolled `mariadb-sts` (official image).
+- Tenant objects (IngressRoute, cert, ESO secrets, MinIO, Velero, DFP auto-config) are gated
+  by `tenant.enabled`. Full guide: **[TENANT.md](TENANT.md)**.
+
+---
+
+*(The generic Frappe/ERPNext chart notes below are inherited from upstream frappe/helm.)*
 
 ## TL;DR;
 
