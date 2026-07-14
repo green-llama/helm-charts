@@ -1,3 +1,81 @@
 apiVersion: v1
-entries: {}
-generated: '2026-07-14T00:13:31.680587865Z'
+entries:
+  glerp:
+  - apiVersion: v2
+    appVersion: 1.0.24
+    created: "2026-07-14T03:41:55.69992973Z"
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: GLerp — ERPNext v16 + Green Llama custom apps
+    digest: 0e022907daf9cd67af65a200b76ff7de7ae54c4e0c7a14b8b7010e862153e91c
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.50/glerp-1.0.50.tgz
+    version: 1.0.50
+  glerp-sec-audit:
+  - apiVersion: v2
+    appVersion: "2026.05"
+    created: "2026-07-14T03:41:55.936706674Z"
+    dependencies:
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: Automated security compliance auditing for GLerp RKE2 clusters —
+      Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly
+      web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports.
+    digest: dec0d3742aa3873c578ad6aaa834c9e67af383457b50b16043a584e83003cb05
+    home: https://github.com/green-llama/k8-glerp-security
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
+    keywords:
+    - security
+    - cis
+    - soc2
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - vulnerability-scanning
+    maintainers:
+    - email: rjbloesser@greenllama.tech
+      name: greenllama
+    name: glerp-sec-audit
+    sources:
+    - https://github.com/green-llama/k8-glerp-security
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-1.0.4/glerp-sec-audit-1.0.4.tgz
+    version: 1.0.4
+generated: "2026-07-14T03:41:55.936716583Z"
