@@ -53,7 +53,10 @@ tenant:
     pushSecrets:
       enabled: true               # ESO Password Generator + PushSecret create the random
                                   # mariadb-root/minio creds and push them INTO Vault
-      store: vault-backend
+      # WRITE store — must auth as a Vault identity with create/read/update on
+      # secret/{data,metadata}/*. The default read store (vault-backend / eso-universal-reader)
+      # is READ-ONLY and cannot push. Use a dedicated write store (see TENANT.md setup).
+      store: vault-pushwriter
   minio:
     enabled: true                 # per-tenant MinIO Tenant + its IngressRoute
     # USER (usable) file space is ~half of raw after erasure-coding parity.
@@ -143,7 +146,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.22
+  tag: 1.0.23
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
