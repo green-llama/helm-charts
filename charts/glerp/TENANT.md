@@ -204,6 +204,13 @@ release bumps `image.tag`) is safe on a running tenant:
   It installs only apps not yet present, then runs `bench migrate`. **All customer data is
   retained.**
 
+> **Timeout on cold nodes:** the `pre-upgrade` hook Job (and the create-site Job) must pull
+> the ~850 MB glerp image before running. On a node that hasn't pulled the new tag yet this
+> can take several minutes and **exceed Helm's default `--timeout`, failing the upgrade** even
+> though the hook succeeds. Use a generous timeout on first-pull upgrades
+> (`helm upgrade ... --timeout 15m`, or set the equivalent in Rancher), and/or pre-pull the
+> image to the nodes. A retry once the image is cached completes quickly.
+
 ## ZAP scan label (opt-in, ONE site per cluster)
 
 The `glerp.io/private-registry: "true"` namespace label (for the security ZAP scan) is only
