@@ -1,3 +1,963 @@
 apiVersion: v1
-entries: {}
-generated: '2026-07-15T02:01:46.468585617Z'
+entries:
+  glerp:
+  - apiVersion: v2
+    appVersion: 1.0.26
+    created: '2026-07-14T22:30:08.403888116-05:00'
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: e2ae4845d551c8dbead4de1090b52e5f811c8b720ebd3916d607e7466508f341
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.52/glerp-1.0.52.tgz
+    version: 1.0.52
+  - apiVersion: v2
+    appVersion: 1.0.25
+    created: '2026-07-14T22:30:08.396851892-05:00'
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: b21d2f10bf51d0f370be915a43eea72686586f533eec2d94238f5cdee75a8801
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.51/glerp-1.0.51.tgz
+    version: 1.0.51
+  - apiVersion: v2
+    appVersion: 1.0.24
+    created: '2026-07-14T22:30:08.388782202-05:00'
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: 0e022907daf9cd67af65a200b76ff7de7ae54c4e0c7a14b8b7010e862153e91c
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.50/glerp-1.0.50.tgz
+    version: 1.0.50
+  - apiVersion: v2
+    appVersion: 1.0.23
+    created: '2026-07-14T22:30:08.382549478-05:00'
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: 9bc61d6a9790e13f91317df224900bcc6a49ba29fcc25ec9ed38e95b97cd124b
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.49/glerp-1.0.49.tgz
+    version: 1.0.49
+  - apiVersion: v2
+    appVersion: 1.0.22
+    created: '2026-07-14T22:30:08.374889773-05:00'
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: 28a1f716a58385252fbddbf27c0459cc9f2011dd2e317cf88a8446c521dc5473
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.48/glerp-1.0.48.tgz
+    version: 1.0.48
+  - apiVersion: v2
+    appVersion: 1.0.21
+    created: '2026-07-14T22:30:08.366076305-05:00'
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: cbc0e5d071836647b6d14b03c3fccab4f83b9744cb583924ad1577466443101a
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.47/glerp-1.0.47.tgz
+    version: 1.0.47
+  - apiVersion: v2
+    appVersion: 1.0.20
+    created: '2026-07-14T22:30:08.353704151-05:00'
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: 46ad5b124cad4cafb0f8c2e8e1566c555d99a5c18e4d049945ac6701045d098c
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.46/glerp-1.0.46.tgz
+    version: 1.0.46
+  - apiVersion: v2
+    appVersion: 1.0.19
+    created: '2026-07-14T22:30:08.340949818-05:00'
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: 5a2b5abfc2d397aea169499010f310a4b3bfd01f83b9d58d1afae8cc132eeb64
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.45/glerp-1.0.45.tgz
+    version: 1.0.45
+  - apiVersion: v2
+    appVersion: 1.0.18
+    created: '2026-07-14T22:30:08.328585406-05:00'
+    dependencies:
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: 98f52583b4c8332648a27a8ede8c859ff21fb80aa1329d49341f5d54db3470d3
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.44/glerp-1.0.44.tgz
+    version: 1.0.44
+  - apiVersion: v2
+    appVersion: 1.0.17
+    created: '2026-07-14T22:30:08.314239656-05:00'
+    dependencies:
+    - alias: mariadb-subchart
+      condition: mariadb.enabled,mariadb-subchart.enabled
+      name: mariadb
+      repository: https://charts.bitnami.com/bitnami
+      version: 11.5.7
+    - alias: postgresql-subchart
+      condition: postgresql.enabled,postgresql-subchart.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 12.1.6
+    - alias: redis-cache
+      condition: redis-cache.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 17.15.2
+    - alias: redis-queue
+      condition: redis-queue.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 17.15.2
+    - alias: dragonfly-cache
+      condition: dragonfly-cache.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: dragonfly-queue
+      condition: dragonfly-queue.enabled
+      name: dragonfly
+      repository: oci://ghcr.io/dragonflydb/dragonfly/helm
+      version: v1.34.2
+    - alias: valkey-cache
+      condition: valkey-cache.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    - alias: valkey-queue
+      condition: valkey-queue.enabled
+      name: valkey
+      repository: https://valkey-io.github.io/valkey-helm
+      version: 0.9.3
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
+    digest: fa6659f95209aa01cdc9fe91519b3d97b3615adf5333c49046424967cdd65d9a
+    home: https://github.com/green-llama/glerp-image
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
+    keywords:
+    - glerp
+    - erpnext
+    - frappe
+    maintainers:
+    - name: green-llama
+    name: glerp
+    sources:
+    - https://github.com/green-llama/glerp-image
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-1.0.43/glerp-1.0.43.tgz
+    version: 1.0.43
+  glerp-documenso:
+  - apiVersion: v2
+    appVersion: v1.8.1
+    created: '2026-07-14T22:30:08.404969861-05:00'
+    description: "A Helm chart for Documenso \u2014 green-llama infrastructure edition\
+      \ (Traefik IngressRoute + external-dns)"
+    digest: f1b86b558d8e769f950bb8822f212a48e6d999436e0591acee0e94897f461ae0
+    icon: https://www.documenso.com/favicon.ico
+    name: glerp-documenso
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-documenso-1.1.0/glerp-documenso-1.1.0.tgz
+    version: 1.1.0
+  glerp-monitoring:
+  - apiVersion: v2
+    appVersion: 2.1.15
+    created: '2026-07-14T22:30:08.461999977-05:00'
+    dependencies:
+    - alias: blackbox-exporter
+      condition: blackbox-exporter.enabled
+      name: prometheus-blackbox-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 9.4.0
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - condition: prometheus-pushgateway.enabled
+      name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
+      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
+      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
+      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
+      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
+      their Kubernetes Service. '
+    digest: c611fd665ec00ee0e391232056f323a6798d195e69b9b2499b594dbb5bf579fd
+    home: https://github.com/green-llama/k8-glerp-monitoring
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
+    keywords:
+    - monitoring
+    - uptime
+    - sla
+    - storage
+    - longhorn
+    - minio
+    - directpv
+    - security
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - glerp
+    - erpnext
+    maintainers:
+    - email: ops@greenllama.tech
+      name: Green Llama Technologies
+    name: glerp-monitoring
+    sources:
+    - https://github.com/green-llama/k8-glerp-monitoring
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.15/glerp-monitoring-2.1.15.tgz
+    version: 2.1.15
+  - apiVersion: v2
+    appVersion: 2.1.14
+    created: '2026-07-14T22:30:08.446860979-05:00'
+    dependencies:
+    - alias: blackbox-exporter
+      condition: blackbox-exporter.enabled
+      name: prometheus-blackbox-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 9.4.0
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - condition: prometheus-pushgateway.enabled
+      name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
+      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
+      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
+      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
+      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
+      their Kubernetes Service. '
+    digest: 2858d8c41b2554628e1391d1617e1482bd509752f49b42f73f926b617fe4eb66
+    home: https://github.com/green-llama/k8-glerp-monitoring
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
+    keywords:
+    - monitoring
+    - uptime
+    - sla
+    - storage
+    - longhorn
+    - minio
+    - directpv
+    - security
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - glerp
+    - erpnext
+    maintainers:
+    - email: ops@greenllama.tech
+      name: Green Llama Technologies
+    name: glerp-monitoring
+    sources:
+    - https://github.com/green-llama/k8-glerp-monitoring
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.14/glerp-monitoring-2.1.14.tgz
+    version: 2.1.14
+  - apiVersion: v2
+    appVersion: 2.1.13
+    created: '2026-07-14T22:30:08.432691763-05:00'
+    dependencies:
+    - alias: blackbox-exporter
+      condition: blackbox-exporter.enabled
+      name: prometheus-blackbox-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 9.4.0
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - condition: prometheus-pushgateway.enabled
+      name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
+      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
+      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
+      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
+      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
+      their Kubernetes Service. '
+    digest: 99e93617063bdd5c7a00a7a39ecceb5c813825b27952a4ab45fec15a7a338950
+    home: https://github.com/green-llama/k8-glerp-monitoring
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
+    keywords:
+    - monitoring
+    - uptime
+    - sla
+    - storage
+    - longhorn
+    - minio
+    - directpv
+    - security
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - glerp
+    - erpnext
+    maintainers:
+    - email: ops@greenllama.tech
+      name: Green Llama Technologies
+    name: glerp-monitoring
+    sources:
+    - https://github.com/green-llama/k8-glerp-monitoring
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.13/glerp-monitoring-2.1.13.tgz
+    version: 2.1.13
+  - apiVersion: v2
+    appVersion: 2.1.12
+    created: '2026-07-14T22:30:08.419290226-05:00'
+    dependencies:
+    - alias: blackbox-exporter
+      condition: blackbox-exporter.enabled
+      name: prometheus-blackbox-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 9.4.0
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - condition: prometheus-pushgateway.enabled
+      name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
+      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
+      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
+      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
+      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
+      their Kubernetes Service. '
+    digest: 104fbf4ae9f4fd23d724e2112ef59e4a66edfb71349649920ce01ee03e90802c
+    home: https://github.com/green-llama/k8-glerp-monitoring
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
+    keywords:
+    - monitoring
+    - uptime
+    - sla
+    - storage
+    - longhorn
+    - minio
+    - directpv
+    - security
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - glerp
+    - erpnext
+    maintainers:
+    - email: ops@greenllama.tech
+      name: Green Llama Technologies
+    name: glerp-monitoring
+    sources:
+    - https://github.com/green-llama/k8-glerp-monitoring
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.12/glerp-monitoring-2.1.12.tgz
+    version: 2.1.12
+  glerp-sec-audit:
+  - apiVersion: v2
+    appVersion: '2026.05'
+    created: '2026-07-14T22:30:08.490007082-05:00'
+    dependencies:
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: "Automated security compliance auditing for GLerp RKE2 clusters \u2014\
+      \ Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly\
+      \ web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports."
+    digest: 223dc0d2eead4ab37a44da80d0745cc697326defd4ebd8baac1559e771943b1b
+    home: https://github.com/green-llama/k8-glerp-security
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-sec-audit.svg
+    keywords:
+    - security
+    - cis
+    - soc2
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - vulnerability-scanning
+    maintainers:
+    - email: rjbloesser@greenllama.tech
+      name: greenllama
+    name: glerp-sec-audit
+    sources:
+    - https://github.com/green-llama/k8-glerp-security
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-1.0.4/glerp-sec-audit-1.0.4.tgz
+    version: 1.0.4
+  - apiVersion: v2
+    appVersion: '2026.05'
+    created: '2026-07-14T22:30:08.481322073-05:00'
+    dependencies:
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: "Automated security compliance auditing for GLerp RKE2 clusters \u2014\
+      \ Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly\
+      \ web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports."
+    digest: 79f132e87ebd431a8e982aee26942cf251c96acce7ff588e9702cced1b2c8e8f
+    home: https://github.com/green-llama/k8-glerp-security
+    keywords:
+    - security
+    - cis
+    - soc2
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - vulnerability-scanning
+    maintainers:
+    - email: rjbloesser@greenllama.tech
+      name: greenllama
+    name: glerp-sec-audit
+    sources:
+    - https://github.com/green-llama/k8-glerp-security
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-1.0.3/glerp-sec-audit-1.0.3.tgz
+    version: 1.0.3
+  - apiVersion: v2
+    appVersion: '2026.05'
+    created: '2026-07-14T22:30:08.471125043-05:00'
+    dependencies:
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: "Automated security compliance auditing for GLerp RKE2 clusters \u2014\
+      \ Trivy Operator (continuous), kube-bench (weekly CIS K8s), and OWASP ZAP (weekly\
+      \ web app scan). SOC2-ready with Grafana dashboards and exportable HTML reports."
+    digest: 71c15bd5d1a800d926d34e22b3a942378f2b97a1b1fba2c5a73c85151e3846f8
+    home: https://github.com/green-llama/k8-glerp-security
+    keywords:
+    - security
+    - cis
+    - soc2
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - vulnerability-scanning
+    maintainers:
+    - email: rjbloesser@greenllama.tech
+      name: greenllama
+    name: glerp-sec-audit
+    sources:
+    - https://github.com/green-llama/k8-glerp-security
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-sec-audit-1.0.2/glerp-sec-audit-1.0.2.tgz
+    version: 1.0.2
+  glerp-storage-monitor:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: '2026-07-14T22:30:08.491645707-05:00'
+    description: 'Storage utilization monitoring for GLerp RKE2 clusters. Covers Longhorn
+      block storage, MinIO object storage (via MinIO Operator), DirectPV drives, and
+      node filesystems. Includes per-customer quota tracking, fleet-wide capacity
+      planning, and 90-day historical trend analysis via a self-contained VictoriaMetrics
+      instance. '
+    digest: a6102aefea7a4a088e14c2e0f76a4bb6226c5e28aa8e4ca33e622c713c007347
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-storage-monitor.svg
+    keywords:
+    - monitoring
+    - storage
+    - longhorn
+    - minio
+    - directpv
+    - grafana
+    - glerp
+    - erpnext
+    maintainers:
+    - email: ops@greenllama.tech
+      name: Green Llama Technologies
+    name: glerp-storage-monitor
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-storage-monitor-0.1.0/glerp-storage-monitor-0.1.0.tgz
+    version: 0.1.0
+  k8-glerp-ai-intake:
+  - apiVersion: v2
+    appVersion: 0.3.7
+    created: '2026-07-14T22:30:08.49715019-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
+    digest: 33739673744bb96fc55b62eccd0a2007ed3e2c63018c9f6a00fbcb8bbc1cffcb
+    home: https://github.com/green-llama/k8-glerp-ai-intake
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
+    keywords:
+    - glerp
+    - erpnext
+    - ai
+    - mcp
+    - document-intelligence
+    maintainers:
+    - name: green-llama
+    name: k8-glerp-ai-intake
+    sources:
+    - https://github.com/green-llama/k8-glerp-ai-intake
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.9/k8-glerp-ai-intake-0.3.9.tgz
+    version: 0.3.9
+  - apiVersion: v2
+    appVersion: 0.3.6
+    created: '2026-07-14T22:30:08.496450217-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
+    digest: 599f231c7f6f89f2cba8463f715f5093894176c41d5103f1ba1817d7892129cc
+    home: https://github.com/green-llama/k8-glerp-ai-intake
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
+    keywords:
+    - glerp
+    - erpnext
+    - ai
+    - mcp
+    - document-intelligence
+    maintainers:
+    - name: green-llama
+    name: k8-glerp-ai-intake
+    sources:
+    - https://github.com/green-llama/k8-glerp-ai-intake
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.8/k8-glerp-ai-intake-0.3.8.tgz
+    version: 0.3.8
+  - apiVersion: v2
+    appVersion: 0.3.5
+    created: '2026-07-14T22:30:08.495704084-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
+    digest: 7f9d2c791b7f3194fc6f3dca65e59d1c1013c162e4182221e2561ec69126d08b
+    home: https://github.com/green-llama/k8-glerp-ai-intake
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
+    keywords:
+    - glerp
+    - erpnext
+    - ai
+    - mcp
+    - document-intelligence
+    maintainers:
+    - name: green-llama
+    name: k8-glerp-ai-intake
+    sources:
+    - https://github.com/green-llama/k8-glerp-ai-intake
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.7/k8-glerp-ai-intake-0.3.7.tgz
+    version: 0.3.7
+  - apiVersion: v2
+    appVersion: 0.3.4
+    created: '2026-07-14T22:30:08.495030571-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
+    digest: 3b696b3cfd84acdbfd8578503c7cae912af6672f774d7804ee11a031857c7d7e
+    home: https://github.com/green-llama/k8-glerp-ai-intake
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
+    keywords:
+    - glerp
+    - erpnext
+    - ai
+    - mcp
+    - document-intelligence
+    maintainers:
+    - name: green-llama
+    name: k8-glerp-ai-intake
+    sources:
+    - https://github.com/green-llama/k8-glerp-ai-intake
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.6/k8-glerp-ai-intake-0.3.6.tgz
+    version: 0.3.6
+  - apiVersion: v2
+    appVersion: 0.3.3
+    created: '2026-07-14T22:30:08.494339576-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
+    digest: 95ca9210b62b3c70f15d619e33c0935bef0927cb33f2f3823337c84d5ed9809d
+    home: https://github.com/green-llama/k8-glerp-ai-intake
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
+    keywords:
+    - glerp
+    - erpnext
+    - ai
+    - mcp
+    - document-intelligence
+    maintainers:
+    - name: green-llama
+    name: k8-glerp-ai-intake
+    sources:
+    - https://github.com/green-llama/k8-glerp-ai-intake
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.5/k8-glerp-ai-intake-0.3.5.tgz
+    version: 0.3.5
+  - apiVersion: v2
+    appVersion: 0.3.2
+    created: '2026-07-14T22:30:08.493642968-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
+    digest: 9bab25d614301ec3034b74831d6673143d93d12292844a559628005446f14e21
+    home: https://github.com/green-llama/k8-glerp-ai-intake
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
+    keywords:
+    - glerp
+    - erpnext
+    - ai
+    - mcp
+    - document-intelligence
+    maintainers:
+    - name: green-llama
+    name: k8-glerp-ai-intake
+    sources:
+    - https://github.com/green-llama/k8-glerp-ai-intake
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.4/k8-glerp-ai-intake-0.3.4.tgz
+    version: 0.3.4
+  - apiVersion: v2
+    appVersion: 0.3.1
+    created: '2026-07-14T22:30:08.492979053-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
+    digest: 4469a34731bbafa44dbb635917ddba042f438a76bab1e77eef492a42ec2cd530
+    home: https://github.com/green-llama/k8-glerp-ai-intake
+    keywords:
+    - glerp
+    - erpnext
+    - ai
+    - mcp
+    - document-intelligence
+    maintainers:
+    - name: green-llama
+    name: k8-glerp-ai-intake
+    sources:
+    - https://github.com/green-llama/k8-glerp-ai-intake
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.3/k8-glerp-ai-intake-0.3.3.tgz
+    version: 0.3.3
+  - apiVersion: v2
+    appVersion: 0.3.0
+    created: '2026-07-14T22:30:08.492332126-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
+    digest: b35a393688a84512df3b5bb2e3cc4d063e5a3c404d2991d80943f9dae361bee9
+    home: https://github.com/green-llama/k8-glerp-ai-intake
+    keywords:
+    - glerp
+    - erpnext
+    - ai
+    - mcp
+    - document-intelligence
+    maintainers:
+    - name: green-llama
+    name: k8-glerp-ai-intake
+    sources:
+    - https://github.com/green-llama/k8-glerp-ai-intake
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.2/k8-glerp-ai-intake-0.3.2.tgz
+    version: 0.3.2
+generated: '2026-07-14T22:30:08.281879129-05:00'
