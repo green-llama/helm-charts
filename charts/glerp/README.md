@@ -26,6 +26,57 @@
 - Tenant objects (IngressRoute, cert, ESO secrets, MinIO, Velero, DFP auto-config) are gated
   by `tenant.enabled`. Full guide: **[TENANT.md](TENANT.md)**.
 
+## Installing / upgrading GLerp (quick start)
+
+Two settings cover most installs; everything else has working defaults.
+
+**1. Site name — required.** The chart does **not** derive it from the namespace.
+Set the chart-level `siteName` (or `jobs.createSite.siteName`, which wins if both set):
+
+```yaml
+siteName: acme.dev.greenllama.tech
+```
+
+**2. Apps — optional.** By **default the site installs every app baked into the
+image** (ERPNext + all Green Llama custom apps), so it always matches the image.
+To install only a subset, set an explicit list:
+
+```yaml
+jobs:
+  createSite:
+    installApps:
+      - erpnext
+      - glerp_ai_intake
+      - glerp_branding
+```
+
+**Backends (defaults, nothing to set):** in-cluster MariaDB StatefulSet (official
+image) + **Valkey** cache/queue. DragonflyDB is opt-in; the Bitnami Redis/MariaDB
+subcharts were removed (paywalled).
+
+**Install and upgrade are the same command** — the create-site job is idempotent.
+A new namespace creates the site + installs apps + migrates; an existing site is
+**never recreated** — it installs only apps new in the image, runs `bench migrate`,
+and retains all data. To roll a site to a newer version, just select it and Upgrade.
+
+```shell
+helm upgrade --install glerp <chart> \
+  --namespace <your-namespace> \
+  --set siteName=acme.dev.greenllama.tech
+# add --set tenant.enabled=true for a full production tenant (see TENANT.md first)
+```
+
+Watch it converge:
+
+```shell
+kubectl -n <your-namespace> get pods -w
+kubectl -n <your-namespace> logs job/glerp-new-site -f
+```
+
+For the release/pipeline side (how new app versions get into the image), see
+**FRAPPE_CUSTOM_APP_DEVELOPMENT_GUIDE.md** in
+[`green-llama/glerp_development_standards`](https://github.com/green-llama/glerp_development_standards).
+
 ---
 
 *(The generic Frappe/ERPNext chart notes below are inherited from upstream frappe/helm.)*
@@ -92,19 +143,30 @@ Kubernetes Helm Chart for ERPNext and Frappe Framework Apps.
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://charts.bitnami.com/bitnami | mariadb-subchart(mariadb) | 11.5.7 |
-| https://charts.bitnami.com/bitnami | postgresql-subchart(postgresql) | 12.1.6 |
-| https://charts.bitnami.com/bitnami | redis-cache(redis) | 17.15.2 |
-| https://charts.bitnami.com/bitnami | redis-queue(redis) | 17.15.2 |
+| https://valkey-io.github.io/valkey-helm | valkey-cache(valkey) | 0.9.3 |
+| https://valkey-io.github.io/valkey-helm | valkey-queue(valkey) | 0.9.3 |
 | oci://ghcr.io/dragonflydb/dragonfly/helm | dragonfly-cache(dragonfly) | v1.34.2 |
 | oci://ghcr.io/dragonflydb/dragonfly/helm | dragonfly-queue(dragonfly) | v1.34.2 |
 
+> The database is an in-cluster MariaDB StatefulSet built from the official
+> `mariadb` image (template `statefulset-mariadb.yaml`) — it is not a subchart.
+> Cache/queue default to **Valkey**; DragonflyDB is an opt-in alternative. The
+> Bitnami MariaDB/PostgreSQL/Redis subcharts were removed (Broadcom moved those
+> images behind a paywall).
+
 ## Values
+
+> **Cache/queue defaults:** `valkey-cache.enabled` and `valkey-queue.enabled` are
+> `true` (default backend); `dragonfly-cache.enabled` and `dragonfly-queue.enabled`
+> are `false`. Set the Valkey pair off and the Dragonfly pair on to switch, or use
+> `externalRedis.cache`/`externalRedis.queue` for an external backend.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| dragonfly-cache.enabled | bool | `true` |  |
-| dragonfly-queue.enabled | bool | `true` |  |
+| valkey-cache.enabled | bool | `true` | Default cache backend (Valkey). |
+| valkey-queue.enabled | bool | `true` | Default queue backend (Valkey). |
+| dragonfly-cache.enabled | bool | `false` | Opt-in DragonflyDB cache (needs redis_wrapper patch). |
+| dragonfly-queue.enabled | bool | `false` | Opt-in DragonflyDB queue. |
 | dragonfly-queue.storage.enabled | bool | `false` |  |
 | dragonfly-queue.storage.size | string | `"8Gi"` |  |
 | externalRedis.cache | string | `""` |  |
@@ -153,13 +215,13 @@ Kubernetes Helm Chart for ERPNext and Frappe Framework Apps.
 | jobs.createSite.affinity | object | `{}` |  |
 | jobs.createSite.backoffLimit | int | `0` |  |
 | jobs.createSite.dbType | string | `"mariadb"` |  |
-| jobs.createSite.enabled | bool | `false` |  |
-| jobs.createSite.forceCreate | bool | `false` |  |
-| jobs.createSite.installApps[0] | string | `"erpnext"` |  |
+| jobs.createSite.enabled | bool | `true` |  |
+| jobs.createSite.forceCreate | bool | `false` | Refused on an existing site (data-safe); only honored when the site is absent. |
+| jobs.createSite.installApps | list | `[]` | **Empty (default) installs ALL apps baked into the image.** Set an explicit list to install only a curated subset. |
 | jobs.createSite.migrateAfterAppSync | bool | `true` | Run one `bench migrate` after app sync when `jobs.createSite.upgradeAppsOnExistingSite` is enabled. |
 | jobs.createSite.nodeSelector | object | `{}` |  |
 | jobs.createSite.resources | object | `{}` |  |
-| jobs.createSite.siteName | string | `"erp.cluster.local"` |  |
+| jobs.createSite.siteName | string | `""` | **Required.** The Frappe site name (e.g. `acme.dev.greenllama.tech`). NOT derived from the namespace. Falls back to the chart-level `siteName`. |
 | jobs.createSite.tolerations | list | `[]` |  |
 | jobs.createSite.upgradeAppsOnExistingSite | bool | `true` | If true, skip `new-site` for existing sites and install only missing apps from `installApps` during upgrades. |
 | jobs.custom.affinity | object | `{}` |  |

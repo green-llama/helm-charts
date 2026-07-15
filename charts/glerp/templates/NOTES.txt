@@ -1,18 +1,87 @@
-GLerp (ERPNext v16 + Green Llama custom apps) deployed as release "{{ include "erpnext.fullname" . }}".
+GLerp (ERPNext v16 + Green Llama custom apps) — release "{{ include "erpnext.fullname" . }}" in namespace "{{ .Release.Namespace }}".
 
-Database: {{ if (index .Values "mariadb-sts").enabled }}in-cluster MariaDB StatefulSet (official mariadb image){{ else if (index .Values "postgresql-sts").enabled }}in-cluster PostgreSQL StatefulSet{{ else if .Values.dbHost }}external ({{ .Values.dbHost }}:{{ .Values.dbPort }}){{ else }}NOT configured — set mariadb-sts.enabled=true or dbHost{{ end }}.
-Cache/queue: {{ if (index .Values "valkey-cache").enabled }}Valkey{{ else if (index .Values "dragonfly-cache").enabled }}DragonflyDB{{ else if .Values.externalRedis.cache }}external{{ else }}NOT configured{{ end }}.
+────────────────────────────────────────────────────────────────────────
+  THIS DEPLOYMENT
+────────────────────────────────────────────────────────────────────────
+Site name : {{ .Values.jobs.createSite.siteName | default .Values.siteName | default "NOT SET" }}
+Database  : {{ if (index .Values "mariadb-sts").enabled }}in-cluster MariaDB StatefulSet (official mariadb image){{ else if (index .Values "postgresql-sts").enabled }}in-cluster PostgreSQL StatefulSet{{ else if .Values.dbHost }}external ({{ .Values.dbHost }}:{{ .Values.dbPort }}){{ else }}NOT configured — set mariadb-sts.enabled=true or dbHost{{ end }}
+Cache/queue: {{ if (index .Values "valkey-cache").enabled }}Valkey (default — open-source Redis fork, Frappe-16 RESP3 compatible){{ else if (index .Values "dragonfly-cache").enabled }}DragonflyDB (opt-in){{ else if .Values.externalRedis.cache }}external{{ else }}NOT configured{{ end }}
+Apps      : {{ if .Values.jobs.createSite.installApps }}explicit list ({{ len .Values.jobs.createSite.installApps }} app{{ if gt (len .Values.jobs.createSite.installApps) 1 }}s{{ end }}){{ else }}ALL apps baked into the image (default){{ end }}
 
-Site: {{ .Values.jobs.createSite.siteName | default .Values.siteName | default "(set jobs.createSite.siteName or siteName)" }}
+────────────────────────────────────────────────────────────────────────
+  SITE NAME  (required — not auto-derived from the namespace)
+────────────────────────────────────────────────────────────────────────
+Set ONE of these (the jobs.createSite value wins if both are set):
 
-Wait for pods to become Ready. The create-site job provisions the site (idempotent:
-it will NOT recreate an existing site — on upgrade it installs any new apps and runs
-`bench migrate`, preserving existing data).
+    siteName: acme.dev.greenllama.tech            # chart-level (simplest)
+  or
+    jobs:
+      createSite:
+        siteName: acme.dev.greenllama.tech
 
+CLI:  --set siteName=acme.dev.greenllama.tech
+
+────────────────────────────────────────────────────────────────────────
+  WHICH APPS GET INSTALLED
+────────────────────────────────────────────────────────────────────────
+By DEFAULT the site installs EVERY app baked into this image (ERPNext + all
+Green Llama custom apps) — nothing to list, the site always matches the image.
+
+To install only a curated SUBSET, set an explicit list:
+
+    jobs:
+      createSite:
+        installApps:
+          - erpnext
+          - glerp_ai_intake
+          - glerp_branding
+
+(An app and its required_apps must both be present in the image. Leave
+installApps empty unless you have a reason to trim the site.)
+
+────────────────────────────────────────────────────────────────────────
+  CACHE / QUEUE  (Valkey by default — no Redis/Bitnami)
+────────────────────────────────────────────────────────────────────────
+This chart defaults to Valkey for cache AND queue. DragonflyDB is OFF by
+default (opt-in; needs a Frappe redis_wrapper patch). The Bitnami Redis
+subcharts were removed (Broadcom put those images behind a paywall). You do
+not need to configure anything for the default.
+
+────────────────────────────────────────────────────────────────────────
+  INSTALL / UPGRADE  (same command — the create-site job is idempotent)
+────────────────────────────────────────────────────────────────────────
+The create-site job runs on every install AND upgrade:
+  • New namespace   → creates the site, installs the apps, runs migrate.
+  • Existing site   → NEVER recreates it. Installs only apps that are new in
+                      this image, runs `bench migrate`, and RETAINS all data.
+
+So to roll a site to a newer chart/image, just pick the new version and
+Upgrade (Rancher) — or:
+
+  helm upgrade --install {{ .Release.Name }} <chart> \
+    --namespace {{ .Release.Namespace }} \
+    --set siteName={{ .Values.jobs.createSite.siteName | default .Values.siteName | default "acme.dev.greenllama.tech" }}
+
+Watch it converge:
+  kubectl -n {{ .Release.Namespace }} get pods -w
+  kubectl -n {{ .Release.Namespace }} logs job/{{ include "erpnext.fullname" . }}-new-site -f
 {{- if .Values.tenant.enabled }}
 
-Tenant mode is ENABLED — this release also manages the per-tenant infrastructure
-(IngressRoute, cert-manager Certificate, ESO ExternalSecrets, MinIO Tenant, Velero
-schedule). Ensure the prerequisites exist: the Vault policy/role for `{{ .Release.Namespace }}-app-role`
-and the seeded Vault secrets. See the chart's TENANT.md.
+────────────────────────────────────────────────────────────────────────
+  TENANT MODE IS ENABLED
+────────────────────────────────────────────────────────────────────────
+This release also manages the per-tenant infrastructure (Traefik
+IngressRoute, cert-manager Certificate, ESO ExternalSecrets, MinIO Tenant,
+Velero schedule). Prerequisites that must exist FIRST:
+  • Vault policy + k8s-auth role for  {{ .Release.Namespace }}-app-role
+  • The `vault-pushwriter` ClusterSecretStore (one-time cluster prereq)
+See TENANT.md for the exact setup commands.
 {{- end }}
+
+────────────────────────────────────────────────────────────────────────
+  MORE DOCUMENTATION
+────────────────────────────────────────────────────────────────────────
+  • Chart usage & values ....... README.md in this chart
+  • Production tenant setup ..... TENANT.md in this chart
+  • Pipeline / releasing apps ... green-llama/glerp_development_standards
+                                  → FRAPPE_CUSTOM_APP_DEVELOPMENT_GUIDE.md
