@@ -1,0 +1,104 @@
+# Rancher install-form questions for the GLerp chart.
+# Rancher renders these as form boxes on the Install/Upgrade screen; every value is still
+# editable in the raw YAML editor. Goal: near-zero config — the must-set-per-install values
+# are exposed as easy boxes with sensible defaults; everything else stays defaulted.
+#
+# Site identity: leave Sitename blank to use the Green Llama convention <namespace>.<domain>.
+# The namespace is chosen in Rancher's own namespace field (top of the install screen), so the
+# site name, host names, TLS, ingress and the monitoring-probe URL all derive from it + Domain.
+
+questions:
+
+  # ─── Site identity (the two you usually set) ────────────────────────────────
+  - variable: domain
+    label: Domain
+    description: >-
+      Base domain for this install. Combined with the namespace to form the site FQDN,
+      host names, TLS and the monitoring URL. Example: dev.greenllama.tech
+    type: string
+    default: "greenllama.tech"
+    required: true
+    group: "Site"
+
+  - variable: siteName
+    label: Sitename (optional)
+    description: >-
+      Frappe site name. Leave BLANK to use the Green Llama convention <namespace>.<domain>
+      (e.g. namespace glerp-ci + domain dev.greenllama.tech -> glerp-ci.dev.greenllama.tech).
+      Set it only to override with an explicit site name.
+    type: string
+    default: ""
+    required: false
+    group: "Site"
+
+  - variable: tenant.externalPort
+    label: HTTPS / Monitor port
+    description: >-
+      External HTTPS port the site is reached on, used to build the monitoring-probe URL
+      https://<namespace>.<domain>:<port>. Leave BLANK for standard 443 (production). On the
+      dev cluster set 10443 (dev HTTPS is NATed to :443). Review the resulting URL after install.
+    type: string
+    default: ""
+    required: false
+    group: "Site"
+
+  # ─── Tenant infrastructure ──────────────────────────────────────────────────
+  - variable: tenant.enabled
+    label: Enable tenant infrastructure (production)
+    description: >-
+      Also manage per-tenant infra: Traefik IngressRoute, cert-manager Certificate, ESO/Vault
+      secrets, MinIO Tenant, Velero backups, DFP external-storage. Requires cluster prerequisites
+      (see TENANT.md). Leave OFF for isolated/dev installs (e.g. glerp-ci) that lack those systems.
+    type: boolean
+    default: false
+    group: "Tenant"
+
+  - variable: tenant.velero.enabled
+    label: Daily Velero backup
+    description: Schedule a daily namespace backup (only applies when tenant infrastructure is enabled).
+    type: boolean
+    default: true
+    show_if: "tenant.enabled=true"
+    group: "Tenant"
+
+  # ─── Apps ───────────────────────────────────────────────────────────────────
+  # NOTE: jobs.createSite.installApps is intentionally NOT a form box — it is a LIST
+  # (the template ranges over it) and the near-zero-config default (empty = install ALL
+  # apps in the image) is what you almost always want. To install a curated subset, set
+  # jobs.createSite.installApps in the raw YAML / values editor.
+  - variable: jobs.createSite.adminPassword
+    label: Administrator password
+    description: >-
+      Password for the Frappe "Administrator" user on first site creation. Change this from the
+      default. (Ignored if jobs.createSite.adminExistingSecret is set.)
+    type: password
+    default: "changeit"
+    required: true
+    group: "Apps"
+
+  # ─── Backends ───────────────────────────────────────────────────────────────
+  - variable: image.tag
+    label: Image tag (pin)
+    description: >-
+      GLerp image/app version. Managed by the release pipeline; override only to pin a specific
+      version. Leave as-is to track the chart's shipped version.
+    type: string
+    default: ""
+    required: false
+    group: "Backends"
+
+  - variable: mariadb-sts.persistence.size
+    label: Database volume size
+    description: Size of the in-cluster MariaDB PVC (encrypted Longhorn). Cannot be shrunk after install.
+    type: string
+    default: "10Gi"
+    group: "Backends"
+
+  - variable: valkey-cache.enabled
+    label: Use Valkey for cache/queue (recommended)
+    description: >-
+      Valkey is the default cache/queue backend (free, Frappe-16 RESP3 correct). Turn this OFF and
+      enable Dragonfly only if you specifically need it (slower bench migrate; needs a patch).
+    type: boolean
+    default: true
+    group: "Backends"

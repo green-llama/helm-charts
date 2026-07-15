@@ -265,7 +265,7 @@ spec:
             rm -f currentsite.txt /tmp/installed_apps.txt
         env:
           - name: "SITE_NAME"
-            value: {{ required "A site name is required: set jobs.createSite.siteName or siteName" (.Values.jobs.createSite.siteName | default .Values.siteName) | quote }}
+            value: {{ include "glerp.siteName" . | quote }}
           {{- if and .Values.tenant.enabled .Values.tenant.dfp.enabled }}
           # MinIO creds for DFP auto-config (optional: absent secret -> DFP step is skipped).
           - name: MINIO_ACCESS_KEY

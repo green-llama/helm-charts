@@ -1,9 +1,13 @@
 # ── GLerp site identity ───────────────────────────────────────────────────────
-# The Frappe site this release deploys/manages. Used by the create-site / migrate jobs.
-# Set per install, e.g. --set siteName=acme.dev.greenllama.tech
-# (jobs.createSite.siteName overrides this if set.)
+# The Frappe site this release deploys/manages, used by the create-site/migrate jobs
+# and (in tenant mode) for host names, TLS, ingress and the monitoring probe URL.
+#
+# siteName: leave EMPTY to use the Green Llama convention <namespace>.<domain>
+#   (e.g. namespace glerp-ci + domain dev.greenllama.tech -> glerp-ci.dev.greenllama.tech).
+#   Set it to override with an explicit site name. (jobs.createSite.siteName wins over this.)
+# domain: the base domain; combined with the namespace to derive the site FQDN + probe URL.
 siteName: ""
-domain: ""
+domain: greenllama.tech
 
 # ── Tenant infrastructure ─────────────────────────────────────────────────────
 # When tenant.enabled=true, the chart also manages the per-tenant objects that were
@@ -146,7 +150,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.30
+  tag: 1.0.31
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
@@ -165,7 +169,7 @@ jobs:
     enabled: false
     nodeSelector: {}
     resources: {}
-    siteName: erp.cluster.local
+    siteName: ""                    # empty -> derived <namespace>.<domain> (see glerp.siteName)
     tolerations: []
     withFiles: true
   configure:
@@ -220,7 +224,7 @@ jobs:
     forced: false
     nodeSelector: {}
     resources: {}
-    siteName: erp.cluster.local
+    siteName: ""                    # empty -> derived <namespace>.<domain> (see glerp.siteName)
     tolerations: []
   migrate:
     affinity: {}

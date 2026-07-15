@@ -121,6 +121,28 @@ Tenant FQDN = <namespace>.<domain>
 {{- end -}}
 
 {{/*
+Frappe site name for this release. Precedence:
+  1. jobs.createSite.siteName  (explicit per-install override)
+  2. siteName                  (explicit chart-level override)
+  3. <namespace>.<domain>      (Green Llama convention — derived when a domain is set)
+  4. <namespace>               (last resort so a bare dev install still gets a name)
+Never empty, so the create-site job no longer hard-fails on a blank siteName.
+*/}}
+{{- define "glerp.siteName" -}}
+{{- $explicit := .Values.jobs.createSite.siteName | default .Values.siteName -}}
+{{- if $explicit -}}
+{{- $explicit -}}
+{{- else -}}
+{{- $d := .Values.tenant.domain | default .Values.domain -}}
+{{- if $d -}}
+{{- printf "%s.%s" .Release.Namespace $d -}}
+{{- else -}}
+{{- .Release.Namespace -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Public URL for the tenant. Precedence:
   1. tenant.monitoringProbe.publicUrl (full override)
   2. https://<fqdn>[:externalPort]

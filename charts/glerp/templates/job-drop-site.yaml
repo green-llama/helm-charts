@@ -36,7 +36,7 @@ spec:
               {{- if .Values.jobs.dropSite.forced }} --force{{- end }}
         env:
           - name: "SITE_NAME"
-            value: "{{ .Values.jobs.dropSite.siteName }}"
+            value: {{ .Values.jobs.dropSite.siteName | default (include "glerp.siteName" .) | quote }}
           - name: DB_HOST
             {{- if (get .Values "mariadb-sts").enabled }}
             value: {{ include "erpnext.fullname" . }}-mariadb-sts
