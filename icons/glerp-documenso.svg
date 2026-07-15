@@ -1,40 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Background: GLerp dark forest green -->
+  <!-- glerp-documenso: document storage + e-signature. Forest-green tile, white sheet
+       (matching the glerp wordmark pill), teal signature + a "signed/verified" check seal. -->
   <rect width="512" height="512" rx="72" fill="#00534c"/>
 
   <!-- Document STORAGE: two back sheets offset behind the front doc (a managed stack). -->
-  <rect x="176" y="86" width="180" height="236" rx="18"
-        fill="none" stroke="white" stroke-width="12" opacity="0.35"
-        transform="rotate(8 266 204)"/>
-  <rect x="164" y="90" width="184" height="240" rx="18"
-        fill="#00534c" stroke="white" stroke-width="12" opacity="0.6"
-        transform="rotate(3 256 210)"/>
+  <rect x="176" y="96" width="176" height="232" rx="20" fill="#ffffff" opacity="0.30"
+        transform="rotate(7 264 212)"/>
+  <rect x="166" y="100" width="180" height="236" rx="20" fill="#ffffff" opacity="0.55"
+        transform="rotate(3 256 218)"/>
 
-  <!-- Front document body with folded corner (the sheet being signed). -->
-  <path d="M132,96 L286,96 L344,154 L344,392
-           C344,406 332,416 318,416
-           L146,416 C132,416 132,406 132,392 Z"
-        fill="rgba(255,255,255,0.10)"
-        stroke="white" stroke-width="16" stroke-linejoin="round"/>
-  <path d="M286,96 L286,154 L344,154"
-        fill="none" stroke="white" stroke-width="16" stroke-linejoin="round"/>
+  <!-- Front white document with folded corner. -->
+  <path d="M128,104 L278,104 L336,162 L336,392
+           C336,405 326,414 314,414 L150,414 C138,414 128,405 128,392 Z"
+        fill="#ffffff"/>
 
-  <!-- Content lines -->
-  <line x1="164" y1="196" x2="312" y2="196" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.45"/>
-  <line x1="164" y1="228" x2="292" y2="228" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.45"/>
+  <!-- Content lines (faint green). -->
+  <line x1="160" y1="196" x2="300" y2="196" stroke="#00534c" stroke-width="12" stroke-linecap="round" opacity="0.20"/>
+  <line x1="160" y1="230" x2="276" y2="230" stroke="#00534c" stroke-width="12" stroke-linecap="round" opacity="0.20"/>
 
-  <!-- eSIGNATURE: signing line + flourish in teal -->
-  <line x1="156" y1="356" x2="300" y2="356" stroke="#27b093" stroke-width="6" stroke-linecap="round" opacity="0.85"/>
-  <path d="M158,344 Q178,320 200,340 Q222,360 246,330 Q266,308 288,328 Q302,340 314,332"
-        fill="none" stroke="#27b093" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- eSIGNATURE: flourish + signing line in teal. -->
+  <path d="M150,320 Q172,296 196,318 Q220,340 244,310 Q264,290 286,310"
+        fill="none" stroke="#27b093" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="150" y1="352" x2="300" y2="352" stroke="#27b093" stroke-width="7" stroke-linecap="round" opacity="0.6"/>
 
-  <!-- Signing pen nib pointing at the flourish -->
-  <path d="M330,300 L360,270 L372,282 L342,312 L326,316 Z"
-        fill="#27b093" stroke="white" stroke-width="5" stroke-linejoin="round"/>
-
-  <!-- GL badge -->
-  <circle cx="416" cy="416" r="52" fill="white"/>
-  <text x="416" y="432" text-anchor="middle"
-        font-family="Inter, 'Inter Display', Arial, sans-serif"
-        font-weight="700" font-size="32" fill="#00534c">GL</text>
+  <!-- Signed / verified seal. -->
+  <circle cx="360" cy="360" r="56" fill="#27b093" stroke="#ffffff" stroke-width="8"/>
+  <path d="M336,360 L353,378 L386,342" fill="none" stroke="#ffffff" stroke-width="13"
+        stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

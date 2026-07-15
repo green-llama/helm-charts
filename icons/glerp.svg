@@ -1,31 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Background: GLerp dark forest green -->
+  <!-- GLerp brand tile: forest-green square with the GLerp wordmark on a white pill.
+       Wordmark colors per brand: "GL" #00534c (dark forest green), "erp" #27b093 (teal),
+       Inter Display Medium. -->
   <rect width="512" height="512" rx="72" fill="#00534c"/>
 
-  <!-- Comprehensive back-office: three stacked modules/ledgers forming one unified
-       platform (finance, operations, people integrated into a single system). -->
+  <!-- white pill panel -->
+  <rect x="56" y="176" width="400" height="160" rx="40" fill="#ffffff"/>
 
-  <!-- Bottom module (foundation, widest) -->
-  <rect x="112" y="298" width="288" height="72" rx="16"
-        fill="rgba(255,255,255,0.10)" stroke="white" stroke-width="16"/>
-  <line x1="146" y1="334" x2="238" y2="334" stroke="white" stroke-width="14" stroke-linecap="round"/>
-  <circle cx="358" cy="334" r="15" fill="#27b093"/>
-
-  <!-- Middle module -->
-  <rect x="134" y="210" width="244" height="72" rx="16"
-        fill="rgba(255,255,255,0.10)" stroke="white" stroke-width="16"/>
-  <line x1="168" y1="246" x2="260" y2="246" stroke="white" stroke-width="14" stroke-linecap="round"/>
-  <circle cx="336" cy="246" r="15" fill="#27b093"/>
-
-  <!-- Top module (active layer) in teal accent -->
-  <rect x="156" y="122" width="200" height="72" rx="16"
-        fill="#27b093" stroke="white" stroke-width="16"/>
-  <line x1="190" y1="158" x2="282" y2="158" stroke="white" stroke-width="14" stroke-linecap="round"/>
-  <circle cx="318" cy="158" r="15" fill="white"/>
-
-  <!-- GL badge: the platform identity -->
-  <circle cx="416" cy="416" r="52" fill="white"/>
-  <text x="416" y="432" text-anchor="middle"
-        font-family="Inter, 'Inter Display', Arial, sans-serif"
-        font-weight="700" font-size="32" fill="#00534c">GL</text>
+  <!-- GLerp wordmark -->
+  <text x="256" y="258" text-anchor="middle" dominant-baseline="central"
+        font-family="'Inter Display', Inter, Arial, sans-serif" font-weight="500" font-size="112">
+    <tspan fill="#00534c">GL</tspan><tspan fill="#27b093">erp</tspan>
+  </text>
 </svg>
