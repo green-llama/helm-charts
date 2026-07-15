@@ -128,10 +128,11 @@ jobs:
           for chart, entries in list(idx.get("entries", {}).items()):
               kept = []
               for e in entries:
-                  # A pruned version's download URL contains ".../download/<chart>-<ver>/..."
-                  urls = " ".join(e.get("urls", []))
+                  # Remove ONLY versions whose own tag was pruned above. (The earlier
+                  # "/download/<tag>/ in urls" check matched every entry against its own
+                  # URL — always true — which emptied the whole index on any prune.)
                   tag = f"{chart}-{e.get('version','')}"
-                  if tag in pruned or f"/download/{tag}/" in urls:
+                  if tag in pruned:
                       removed += 1
                   else:
                       kept.append(e)
