@@ -9,7 +9,7 @@
   A PushSecret can pull its value straight from an ESO `Password` generator (selector.generatorRef)
   and write it INTO Vault at the path the tenant ExternalSecret consumes.
 
-  updatePolicy: IfNotExist  -> the value is generated ONCE and never overwritten on
+  updatePolicy: IfNotExists -> the value is generated ONCE and never overwritten on
   re-install/upgrade, protecting existing DB/MinIO credentials (idempotent + data-safe).
 
   Distinct random values need distinct generators (a single generator yields one value),
@@ -34,7 +34,7 @@ metadata:
   namespace: {{ $ns }}
 spec:
   refreshInterval: 1h
-  updatePolicy: IfNotExist
+  updatePolicy: IfNotExists
   deletionPolicy: None
   secretStoreRefs:
     - kind: ClusterSecretStore
@@ -47,9 +47,9 @@ spec:
   data:
     - match:
         secretKey: password
-      remoteRef:
-        remoteKey: {{ $mount }}/{{ $ns }}/{{ $ns }}-mariadb-root
-        property: mariadb-root-password
+        remoteRef:
+          remoteKey: {{ $mount }}/{{ $ns }}/{{ $ns }}-mariadb-root
+          property: mariadb-root-password
 {{- if .Values.tenant.minio.enabled }}
 ---
 apiVersion: generators.external-secrets.io/v1alpha1
@@ -83,7 +83,7 @@ metadata:
   namespace: {{ $ns }}
 spec:
   refreshInterval: 1h
-  updatePolicy: IfNotExist
+  updatePolicy: IfNotExists
   deletionPolicy: None
   secretStoreRefs:
     - kind: ClusterSecretStore
@@ -96,9 +96,9 @@ spec:
   data:
     - match:
         secretKey: password
-      remoteRef:
-        remoteKey: {{ $mount }}/{{ $ns }}/minio-creds
-        property: accesskey
+        remoteRef:
+          remoteKey: {{ $mount }}/{{ $ns }}/minio-creds
+          property: accesskey
 ---
 apiVersion: external-secrets.io/v1alpha1
 kind: PushSecret
@@ -107,7 +107,7 @@ metadata:
   namespace: {{ $ns }}
 spec:
   refreshInterval: 1h
-  updatePolicy: IfNotExist
+  updatePolicy: IfNotExists
   deletionPolicy: None
   secretStoreRefs:
     - kind: ClusterSecretStore
@@ -120,8 +120,8 @@ spec:
   data:
     - match:
         secretKey: password
-      remoteRef:
-        remoteKey: {{ $mount }}/{{ $ns }}/minio-creds
-        property: secretkey
+        remoteRef:
+          remoteKey: {{ $mount }}/{{ $ns }}/minio-creds
+          property: secretkey
 {{- end }}
 {{- end }}

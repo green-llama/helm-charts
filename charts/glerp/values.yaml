@@ -10,15 +10,16 @@ siteName: ""
 domain: greenllama.tech
 
 # ── Tenant infrastructure ─────────────────────────────────────────────────────
-# When tenant.enabled=true, the chart also manages the per-tenant objects that were
-# previously applied by hand (see docs/glerpSiteInstallTemplate). All use the RELEASE
-# NAMESPACE as the tenant name and .Values.tenant.domain (falls back to .Values.domain).
-# Set tenant.enabled=false for isolated/dev installs (glerp-ci) that lack Vault/cert-manager/MinIO.
+# Default ON. The chart manages the per-tenant objects (IngressRoute, cert-manager
+# Certificate, ESO/Vault secrets, MinIO Tenant, Velero backups, DFP external-storage) — dev
+# and production share the same architecture. All use the RELEASE NAMESPACE as the tenant name
+# and .Values.tenant.domain (falls back to .Values.domain). Only set tenant.enabled=false for a
+# bare cluster that lacks Vault/cert-manager/MinIO.
 #
 # PREREQUISITE (still external, per plan): the Vault policy + k8s-auth role for
 # "<namespace>-app-role" must exist (created in CI or by the documented one-time script).
 tenant:
-  enabled: false
+  enabled: true
   domain: ""                      # e.g. dev.greenllama.tech (defaults to .Values.domain)
   externalDnsTarget: ""           # e.g. pec.greenllama.tech (for external-dns annotations)
   tlsSecretName: letsencrypt-greenllama-tech-tls
@@ -150,7 +151,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.31
+  tag: 1.0.32
 imagePullSecrets:
   - name: ghcr-cred
 ingress:

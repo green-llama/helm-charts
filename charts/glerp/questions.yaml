@@ -44,18 +44,18 @@ questions:
 
   # ─── Tenant infrastructure ──────────────────────────────────────────────────
   - variable: tenant.enabled
-    label: Enable tenant infrastructure (production)
+    label: Enable tenant infrastructure
     description: >-
-      Also manage per-tenant infra: Traefik IngressRoute, cert-manager Certificate, ESO/Vault
-      secrets, MinIO Tenant, Velero backups, DFP external-storage. Requires cluster prerequisites
-      (see TENANT.md). Leave OFF for isolated/dev installs (e.g. glerp-ci) that lack those systems.
+      Manage the per-tenant infrastructure: Traefik IngressRoute, cert-manager Certificate,
+      ESO/Vault secrets, MinIO Tenant, Velero backups, and DFP external-storage. Requires the
+      cluster prerequisites (see TENANT.md).
     type: boolean
-    default: false
+    default: true
     group: "Tenant"
 
   - variable: tenant.velero.enabled
     label: Daily Velero backup
-    description: Schedule a daily namespace backup (only applies when tenant infrastructure is enabled).
+    description: Schedule a daily namespace backup (applies when tenant infrastructure is enabled).
     type: boolean
     default: true
     show_if: "tenant.enabled=true"
@@ -92,6 +92,28 @@ questions:
     description: Size of the in-cluster MariaDB PVC (encrypted Longhorn). Cannot be shrunk after install.
     type: string
     default: "10Gi"
+    group: "Backends"
+
+  - variable: persistence.worker.size
+    label: Longhorn config space
+    description: >-
+      Size of the shared Longhorn RWX volume that holds bench config/sites (NOT user files —
+      those go to MinIO). 2Gi is plenty for normal installs. Cannot be shrunk after install.
+    type: string
+    default: "2Gi"
+    group: "Backends"
+
+  - variable: tenant.minio.volumeSize
+    label: MinIO user space (per volume)
+    description: >-
+      Per-volume size for the tenant's MinIO object store (user file attachments). Raw capacity is
+      2× the usable "user space" after erasure-coding parity, and MinIO spreads it across
+      pools×servers×volumesPerServer volumes (default 2×2×2 = 8). With the default layout each 1Gi
+      here yields ~4Gi usable — so 3Gi ≈ 12Gi usable user space (≈ 24Gi raw). Only applies when
+      tenant infrastructure is enabled. Cannot be shrunk after install.
+    type: string
+    default: "3Gi"
+    show_if: "tenant.enabled=true"
     group: "Backends"
 
   - variable: valkey-cache.enabled
