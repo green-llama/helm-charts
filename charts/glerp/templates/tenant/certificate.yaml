@@ -11,6 +11,10 @@ spec:
   secretName: {{ .Release.Namespace }}-leaf-cert
   duration: {{ $c.duration | default "2160h" }}
   renewBefore: {{ $c.renewBefore | default "360h" }}
+  privateKey:
+    # Explicit (matches the cert-manager >= v1.18 default) to silence the install-time
+    # "rotationPolicy default changed from Never to Always" warning; rotates the key on renewal.
+    rotationPolicy: Always
   dnsNames:
     - "*.{{ .Release.Namespace }}.svc"
     - "*.{{ .Release.Namespace }}.svc.cluster.local"

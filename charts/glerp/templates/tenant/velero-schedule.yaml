@@ -12,7 +12,7 @@ spec:
   template:
     includedNamespaces:
       - {{ .Release.Namespace }}
-    includedClusterResources: true
+    includeClusterResources: true
     storageLocation: {{ $v.storageLocation | default "idrive-e2" }}
     ttl: {{ $v.ttl | default "720h0m0s" }}
     defaultVolumesToFsBackup: true
