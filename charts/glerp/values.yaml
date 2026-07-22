@@ -151,7 +151,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.37
+  tag: 1.0.38
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
@@ -193,6 +193,12 @@ jobs:
     dbType: mariadb
     enabled: true
     forceCreate: false
+    # If the site DIRECTORY exists but the site does not respond to `bench list-apps`, the
+    # job ABORTS by default (data-safe — it never deletes based on a command failure, which
+    # could be a transient DB/config issue on a real site). Set this true ONLY to deliberately
+    # delete + recreate a site you are certain is incomplete/empty (e.g. an interrupted first
+    # install). DESTRUCTIVE — never enable it on a site that may hold data.
+    recreateIncompleteSite: false
     migrateAfterAppSync: true
     # installApps: leave EMPTY to install ALL apps baked into the image (read from the
     # bench's sites/apps.txt at runtime) — the site always matches the image, nothing to

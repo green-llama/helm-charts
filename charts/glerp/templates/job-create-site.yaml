@@ -120,29 +120,67 @@ spec:
             {{- if .Values.jobs.createSite.upgradeAppsOnExistingSite }}
             set -euo pipefail;
 
-            # UPGRADE-SAFE / IDEMPOTENT: if the site already exists we NEVER recreate it —
-            # we only sync new apps + migrate below, preserving all existing customer data.
-            # `forceCreate` (--force, which DROPS the database) is honored ONLY when the site
-            # is absent; on an existing site it is explicitly refused, so a stray
-            # forceCreate=true on an upgrade can't destroy data.
-            if bench --site "${SITE_NAME}" list-apps > /tmp/installed_apps.txt 2>/dev/null; then
-                echo "Site ${SITE_NAME} already exists — upgrade mode: skipping new-site (data retained)";
+            # UPGRADE-SAFE / IDEMPOTENT. Existence is decided by the SITE DIRECTORY, never by a
+            # command's exit code — so a transient failure (DB briefly unreachable, config hiccup)
+            # can NEVER cause data loss. Three cases:
+            #
+            #   DIR ABSENT                 -> create a fresh site.
+            #   DIR PRESENT + list-apps OK -> real site -> UPGRADE (sync apps + migrate). Never
+            #                                 recreated; all data retained.
+            #   DIR PRESENT + list-apps    -> AMBIGUOUS: could be a real site with a transient
+            #     FAILS                       problem, OR a half-created site from an interrupted
+            #                                 new-site. We do NOT guess and we do NOT delete.
+            #                                 Default: ABORT with guidance (data-safe). Only an
+            #                                 explicit opt-in (recreateIncompleteSite=true) will
+            #                                 delete + recreate — and that must be set deliberately.
+            #
+            # `forceCreate`/`recreateIncompleteSite` (which DROP data) are honored ONLY when the
+            # site is absent or the operator explicitly opts in; a queryable existing site is never
+            # dropped.
+            site_dir="sites/${SITE_NAME}"
+            do_create=0
+            if [ ! -d "${site_dir}" ]; then
+                echo "Site ${SITE_NAME} not found (no site directory) — creating a fresh site.";
+                do_create=1
+            elif bench --site "${SITE_NAME}" list-apps > /tmp/installed_apps.txt 2>/dev/null; then
+                echo "Site ${SITE_NAME} exists and is reachable — upgrade mode: skipping new-site (data retained).";
                 {{- if .Values.jobs.createSite.forceCreate }}
-                echo "NOTE: jobs.createSite.forceCreate=true is IGNORED because the site exists (refusing to drop existing data).";
+                echo "NOTE: jobs.createSite.forceCreate=true is IGNORED because the site exists and is reachable (refusing to drop existing data).";
                 {{- end }}
             else
-                echo "Site ${SITE_NAME} not found, creating site";
+                # Directory present but the site is not queryable. Do NOT assume it is empty.
+                echo "WARNING: ${site_dir} exists but the site did not respond to 'bench list-apps'.";
+                echo "         This can be a TRANSIENT problem (database briefly unreachable, bad";
+                echo "         config) on a REAL site, or a half-created site from an interrupted";
+                echo "         new-site. This job will NOT delete it automatically.";
+                {{- if .Values.jobs.createSite.recreateIncompleteSite }}
+                echo "         jobs.createSite.recreateIncompleteSite=true is set — removing the";
+                echo "         site directory and recreating. (DESTRUCTIVE: only use this when you";
+                echo "         are certain the site holds no data you need.)";
+                rm -rf "${site_dir}";
+                do_create=1
+                {{- else }}
+                echo "         Aborting to protect any existing data. Investigate the site/DB, then";
+                echo "         re-run. If it is genuinely an incomplete/empty site, set";
+                echo "         jobs.createSite.recreateIncompleteSite=true to recreate it.";
+                exit 1
+                {{- end }}
+            fi
+
+            if [ "${do_create}" = "1" ]; then
+                echo "Creating site ${SITE_NAME}";
+                # --mariadb-user-host-login-scope='%' replaces the deprecated --no-mariadb-socket.
+                # --force lets a partial DB from a prior failed create be recreated cleanly; it is
+                # only reached here for an ABSENT dir or an explicit recreateIncompleteSite opt-in.
                 bench new-site ${SITE_NAME} \
-                  --no-mariadb-socket \
+                  --mariadb-user-host-login-scope='%' \
                   --db-type=${DB_TYPE} \
                   --db-host=${DB_HOST} \
                   --db-port=${DB_PORT} \
                   --admin-password=${ADMIN_PASSWORD} \
                   --mariadb-root-username=${DB_ROOT_USER} \
                   --mariadb-root-password=${DB_ROOT_PASSWORD} \
-                {{- if .Values.jobs.createSite.forceCreate }}
                   --force \
-                {{- end }}
                 ;
                 bench --site "${SITE_NAME}" list-apps > /tmp/installed_apps.txt
             fi
@@ -230,7 +268,7 @@ spec:
             {{- else }}
 
             bench_output=$(bench new-site ${SITE_NAME} \
-              --no-mariadb-socket \
+              --mariadb-user-host-login-scope='%' \
               --db-type=${DB_TYPE} \
               --db-host=${DB_HOST} \
               --db-port=${DB_PORT} \
