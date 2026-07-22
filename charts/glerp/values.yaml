@@ -151,7 +151,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.38
+  tag: 1.0.39
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
