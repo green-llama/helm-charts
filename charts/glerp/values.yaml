@@ -132,6 +132,11 @@ externalRedis:
 # The standard tenant objects are now native templates under templates/tenant/ (tenant.enabled).
 extraObjects: []
 
+# Number of old ReplicaSets each Deployment keeps for rollback. Bounding this lets stale
+# images (from prior upgrades) self-clean after a few rollouts. Applies to every GLerp
+# Deployment (gunicorn, nginx, scheduler, socketio, workers).
+revisionHistoryLimit: 3
+
 fullnameOverride: ''
 httproute:
   annotations: {}
@@ -151,7 +156,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.39
+  tag: 1.0.40
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
@@ -164,6 +169,12 @@ ingress:
           pathType: ImplementationSpecific
   tls: []
 jobs:
+  # Seconds a FINISHED (Complete or Failed) provisioning Job lingers before Kubernetes
+  # auto-deletes it (and its pod). revisionHistoryLimit only governs ReplicaSets, not Jobs,
+  # so completed Jobs need this TTL to self-clean (e.g. the old glerp-new-site entries).
+  # Default 1h keeps logs available briefly for debugging, then cleans up. Set "" / null to
+  # disable auto-deletion.
+  ttlSecondsAfterFinished: 3600
   backup:
     affinity: {}
     backoffLimit: 0

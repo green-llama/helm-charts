@@ -124,3 +124,23 @@ questions:
     type: boolean
     default: true
     group: "Backends"
+
+  # ─── Maintenance / cleanup ──────────────────────────────────────────────────
+  - variable: revisionHistoryLimit
+    label: Deployment revision history
+    description: >-
+      How many old ReplicaSets each Deployment keeps for rollback. Lower values let stale images
+      from prior upgrades self-clean after a few rollouts. 3 is a sensible default.
+    type: int
+    default: 3
+    group: "Maintenance"
+
+  - variable: jobs.ttlSecondsAfterFinished
+    label: Finished-job cleanup (seconds)
+    description: >-
+      Seconds a completed site-provisioning Job (and its pod) lingers before Kubernetes
+      auto-deletes it. Keeps logs available briefly for debugging, then cleans up so old
+      new-site/migrate Jobs don't accumulate. Default 3600 (1h). Leave blank to keep Jobs forever.
+    type: int
+    default: 3600
+    group: "Maintenance"

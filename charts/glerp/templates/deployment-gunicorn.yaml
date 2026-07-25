@@ -5,6 +5,7 @@ metadata:
   labels:
     {{- include "erpnext.labels" . | nindent 4 }}
 spec:
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit | default 3 }}
   {{- if not .Values.worker.gunicorn.autoscaling.enabled }}
   replicas: {{ .Values.worker.gunicorn.replicaCount }}
   {{- end }}

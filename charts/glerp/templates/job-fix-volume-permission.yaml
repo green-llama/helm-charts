@@ -11,6 +11,9 @@ metadata:
     {{- include "erpnext.labels" . | nindent 4 }}
 spec:
   backoffLimit: {{ .Values.jobs.volumePermissions.backoffLimit }}
+  {{- with .Values.jobs.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
   template:
     spec:
     {{- with .Values.imagePullSecrets }}

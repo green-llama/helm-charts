@@ -17,6 +17,9 @@ metadata:
 {{- end }}
 spec:
   backoffLimit: {{ .Values.jobs.createSite.backoffLimit }}
+  {{- with .Values.jobs.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
   template:
     spec:
       {{- with .Values.imagePullSecrets }}
