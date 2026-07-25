@@ -439,6 +439,60 @@ entries:
   glerp-monitoring:
   - annotations:
       artifacthub.io/changes: |
+        - kind: added
+          description: "CVE table info panel now explains why upgraded-away images linger (retained 0-replica ReplicaSets) and how to clear them (revisionHistoryLimit / kubectl delete rs)"
+    apiVersion: v2
+    appVersion: 2.1.18
+    created: "2026-07-25T19:07:17.049024094Z"
+    dependencies:
+    - alias: blackbox-exporter
+      condition: blackbox-exporter.enabled
+      name: prometheus-blackbox-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 9.4.0
+    - condition: trivy-operator.enabled
+      name: trivy-operator
+      repository: https://aquasecurity.github.io/helm-charts/
+      version: 0.32.1
+    - condition: prometheus-pushgateway.enabled
+      name: prometheus-pushgateway
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 2.14.0
+    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
+      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
+      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
+      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
+      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
+      their Kubernetes Service. '
+    digest: 39247a51144885f5099bb7d8d10aae205f93c91a7b878c43cd3de15a21ad2044
+    home: https://github.com/green-llama/k8-glerp-monitoring
+    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
+    keywords:
+    - monitoring
+    - uptime
+    - sla
+    - storage
+    - longhorn
+    - minio
+    - directpv
+    - security
+    - trivy
+    - kube-bench
+    - owasp-zap
+    - glerp
+    - erpnext
+    maintainers:
+    - email: ops@greenllama.tech
+      name: Green Llama Technologies
+    name: glerp-monitoring
+    sources:
+    - https://github.com/green-llama/k8-glerp-monitoring
+    type: application
+    urls:
+    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.18/glerp-monitoring-2.1.18.tgz
+    version: 2.1.18
+  - annotations:
+      artifacthub.io/changes: |
         - kind: fixed
           description: "CVE density recording rule interval changed from 1h to 5m — a 1h group's first-evaluation timer is reset by every Rancher config reload, so it could stay perpetually unevaluated and never produce glerp:cve_density. 5m evaluates promptly and survives reloads; still one series, no OOM risk"
     apiVersion: v2
@@ -924,4 +978,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.2/k8-glerp-ai-intake-0.3.2.tgz
     version: 0.3.2
-generated: "2026-07-25T18:12:00.779402523Z"
+generated: "2026-07-25T19:07:17.049083394Z"
