@@ -3,7 +3,7 @@
 
 image:
   repository: ghcr.io/green-llama/k8-glerp-ai-intake
-  tag: "0.3.7"
+  tag: "0.3.8"
   pullPolicy: Always
 
 imagePullSecrets:
@@ -22,8 +22,8 @@ config:
   APP_ENV: "development"
   LOG_LEVEL: "INFO"
   LLM_PROVIDER: "gemini"
-  GEMINI_MODEL: "gemini-2.0-flash"
-  ANTHROPIC_MODEL: "claude-sonnet-4-5-20250929"
+  GEMINI_MODEL: "gemini-2.5-flash"
+  ANTHROPIC_MODEL: "claude-sonnet-4-6"
   OPENAI_MODEL: "gpt-4o"
   GROQ_MODEL: "llama-3.3-70b-versatile"
   VLLM_BASE_URL: "http://vllm-service.glerp-ai-intake.svc.cluster.local/v1"
