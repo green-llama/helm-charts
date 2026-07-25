@@ -16,6 +16,8 @@ namespace: glerp-ai-intake-sandbox
 apiReplicas: 1
 # -- Number of async worker replicas
 workerReplicas: 2
+# -- ReplicaSet history retained for rollback (Rancher GUI: Additional Values → revisionHistoryLimit)
+revisionHistoryLimit: 3
 
 # -- Non-secret configuration (mirrors 00-configmap.yaml)
 config:
