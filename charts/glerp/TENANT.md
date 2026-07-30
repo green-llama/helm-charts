@@ -131,40 +131,44 @@ vault write auth/kubernetes/role/${TENANT}-app-role \
   ttl=24h
 ```
 
-### 2b. Per-tenant KES Vault policy + k8s-auth role (`<tenant>-minio-kes`) — REQUIRED for MinIO encryption
+### 2b. KES Vault policy + k8s-auth role (`glerp-minio-kes`) — ONE-TIME PER CLUSTER
 
 MinIO encryption-at-rest (SSE-KMS) is provided by **KES**, which talks to Vault as a **KV v2
-client** over its own k8s-auth JWT — the KMS root key never lands in a K8s Secret. KES needs its
-own Vault policy + role (separate from `<tenant>-app-role`; leave that one alone). The chart
-templates the K8s side (the `<tenant>-minio-tenant-kes` ServiceAccount, `kes-config-secret`, and
-the KES sidecar on the Tenant); this Vault admin step is the one-time prerequisite, run per tenant
-by CI (`deploy_image.yml`, same AppRole path as `<tenant>-app-role`) or an admin. Skip it only if
-`tenant.minio.kes.enabled=false`.
+client** over its own k8s-auth JWT — the KMS root key never lands in a K8s Secret. This is a
+**single cluster-wide** policy + role that **every tenant shares** — run it ONCE per cluster, NOT
+per install. The policy wildcards the namespace path segment (`+`, exactly like the
+`eso-pushwriter` store in §3), and the role binds to the `*-minio-tenant-kes` ServiceAccount
+across all namespaces. Adding a new GLerp site needs **no Vault commands** — the chart templates
+the per-tenant K8s side (the `<ns>-minio-tenant-kes` SA, `kes-config-secret`, the KES sidecar) and
+KES authenticates against this shared role. (Separate from `<tenant>-app-role` — leave that alone.)
 
 ```bash
-TENANT=<tenant>
-# KES creates+manages the root key itself at secret/<tenant>/minio-kes/root-key/<key-name> — the
-# /* child paths are REQUIRED (KES appends the logical key name as a further path segment).
-cat > /tmp/${TENANT}-minio-kes.hcl <<EOF
-path "secret/data/${TENANT}/minio-kes/root-key"       { capabilities = ["create","read","update"] }
-path "secret/data/${TENANT}/minio-kes/root-key/*"     { capabilities = ["create","read","update"] }
-path "secret/metadata/${TENANT}/minio-kes/root-key"   { capabilities = ["read","list"] }
-path "secret/metadata/${TENANT}/minio-kes/root-key/*" { capabilities = ["read","list"] }
-EOF
-vault policy write ${TENANT}-minio-kes /tmp/${TENANT}-minio-kes.hcl
+# KES creates+manages each tenant's root key at secret/<ns>/minio-kes/root-key/<ns>-minio-key.
+# The `+` matches the namespace segment; the /* child paths are REQUIRED (KES appends the logical
+# key name as a further path segment).
+vault policy write glerp-minio-kes - <<'HCL'
+path "secret/data/+/minio-kes/root-key"       { capabilities = ["create","read","update"] }
+path "secret/data/+/minio-kes/root-key/*"     { capabilities = ["create","read","update"] }
+path "secret/metadata/+/minio-kes/root-key"   { capabilities = ["read","list"] }
+path "secret/metadata/+/minio-kes/root-key/*" { capabilities = ["read","list"] }
+HCL
 
-vault write auth/kubernetes/role/${TENANT}-minio-kes \
-  bound_service_account_names=${TENANT}-minio-tenant-kes \
-  bound_service_account_namespaces=${TENANT} \
-  policies=${TENANT}-minio-kes \
+vault write auth/kubernetes/role/glerp-minio-kes \
+  bound_service_account_names="*-minio-tenant-kes" \
+  bound_service_account_namespaces="*" \
+  policies=glerp-minio-kes \
   audience="https://kubernetes.default.svc.cluster.local" \
   ttl=24h
 ```
 
-Nothing pre-populates the root-key secret — KES writes it on first key create. After install, the
-chart's post-install hook pins the KES↔MinIO cert identity and enables SSE-KMS on the `<tenant>`
-bucket automatically. Verify: `mc stat <alias>/<tenant>/<a-newly-uploaded-object>` shows an
-`Encryption: SSE-KMS (arn:aws:kms:<tenant>-minio-key)` line.
+Confirm: `vault policy read glerp-minio-kes` and `vault read auth/kubernetes/role/glerp-minio-kes`.
+(The role name is `tenant.minio.kes.vaultRole` in the chart, default `glerp-minio-kes` — keep them
+in sync if you rename.)
+
+Nothing pre-populates the root-key secret — KES writes it on first key create. After each install
+the chart's post-install hook pins the KES↔MinIO cert identity and enables SSE-KMS on the `<ns>`
+bucket automatically. Verify: `mc stat <alias>/<ns>/<a-newly-uploaded-object>` shows an
+`Encryption: SSE-KMS (arn:aws:kms:<ns>-minio-key)` line.
 
 **Backfilling existing (pre-encryption) data — for sites that already hold plaintext objects:**
 SSE-KMS is not retroactive; it only encrypts objects written *after* it is enabled. Existing

@@ -55,6 +55,8 @@ stringData:
         version: "v2"
         prefix: {{ printf "%s/minio-kes/root-key" $ns | quote }}
         kubernetes:
-          role: {{ printf "%s-minio-kes" $ns | quote }}
+          # Cluster-wide shared role (one-time per cluster); its policy wildcards the namespace
+          # path segment, and its k8s-auth binding matches "*-minio-tenant-kes" across namespaces.
+          role: {{ ($m.kes | default dict).vaultRole | default "glerp-minio-kes" | quote }}
           jwt: "/var/run/secrets/kubernetes.io/serviceaccount/token"
 {{- end }}

@@ -77,12 +77,18 @@ tenant:
     # and Vault and talks to Vault as a KV client over its own k8s-auth JWT — the KMS root key
     # never lands in a K8s Secret. The KMS key name is the "<namespace>-minio-key" convention
     # (used as the KES keyName, the mc encrypt key, and the Vault root-key path segment — one
-    # source of truth, derived from the namespace). REQUIRES the per-tenant "<ns>-minio-kes"
-    # Vault policy + k8s-auth role (one-time, see TENANT.md). Post-install hook pins the KES↔MinIO
-    # cert identity and enables SSE-KMS on the bucket. Set enabled=false to skip encryption.
+    # source of truth, derived from the namespace). Post-install hook pins the KES↔MinIO cert
+    # identity and enables SSE-KMS on the bucket. Set enabled=false to skip encryption.
+    #
+    # Vault prerequisite is ONE-TIME PER CLUSTER (not per install): a single wildcard policy +
+    # k8s-auth role (default name "glerp-minio-kes") that every tenant's KES shares — the role is
+    # bound to the "*-minio-tenant-kes" SA across all namespaces, and the policy wildcards the
+    # namespace path segment. See TENANT.md. No Vault commands are needed per new site.
     kes:
       enabled: true
       image: minio/kes:2025-03-12T09-35-18Z
+      # Cluster-wide Vault k8s-auth role KES authenticates as (created once per cluster).
+      vaultRole: glerp-minio-kes
   velero:
     enabled: true                 # daily namespace backup
     namespace: velero
