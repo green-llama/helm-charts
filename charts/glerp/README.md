@@ -81,10 +81,11 @@ backups, and DFP external-storage auto-config.
 Tenant mode consumes cluster-level resources it does **not** create — they must already
 exist. Chiefly: ESO with a **`vault-pushwriter`** ClusterSecretStore (write-capable — the
 default `vault-backend` reader is read-only and cannot seed the generated MariaDB/MinIO
-creds), the per-tenant Vault policy/role, cert-manager, Traefik, the MinIO operator +
-DirectPV, Velero, and the wildcard TLS secret. **Read [TENANT.md](TENANT.md) for the exact
-one-time setup before enabling.** Leave `tenant.enabled=false` for isolated/dev installs
-(e.g. `glerp-ci`) that lack these systems.
+creds), the **`glerp-minio-kes`** Vault policy + role (one-time per cluster, for MinIO
+encryption-at-rest via KES), the per-tenant Vault policy/role, cert-manager, Traefik, the
+MinIO operator + DirectPV, Velero, and the wildcard TLS secret. **Read [TENANT.md](TENANT.md)
+for the exact one-time setup before enabling.** Leave `tenant.enabled=false` for isolated/dev
+installs (e.g. `glerp-ci`) that lack these systems.
 
 ## Values you'll actually set
 

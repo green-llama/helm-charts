@@ -131,58 +131,6 @@ vault write auth/kubernetes/role/${TENANT}-app-role \
   ttl=24h
 ```
 
-### 2b. KES Vault policy + k8s-auth role (`glerp-minio-kes`) — ONE-TIME PER CLUSTER
-
-MinIO encryption-at-rest (SSE-KMS) is provided by **KES**, which talks to Vault as a **KV v2
-client** over its own k8s-auth JWT — the KMS root key never lands in a K8s Secret. This is a
-**single cluster-wide** policy + role that **every tenant shares** — run it ONCE per cluster, NOT
-per install. The policy wildcards the namespace path segment (`+`, exactly like the
-`eso-pushwriter` store in §3), and the role binds to the `*-minio-tenant-kes` ServiceAccount
-across all namespaces. Adding a new GLerp site needs **no Vault commands** — the chart templates
-the per-tenant K8s side (the `<ns>-minio-tenant-kes` SA, `kes-config-secret`, the KES sidecar) and
-KES authenticates against this shared role. (Separate from `<tenant>-app-role` — leave that alone.)
-
-```bash
-# KES creates+manages each tenant's root key at secret/<ns>/minio-kes/root-key/<ns>-minio-key.
-# The `+` matches the namespace segment; the /* child paths are REQUIRED (KES appends the logical
-# key name as a further path segment).
-vault policy write glerp-minio-kes - <<'HCL'
-path "secret/data/+/minio-kes/root-key"       { capabilities = ["create","read","update"] }
-path "secret/data/+/minio-kes/root-key/*"     { capabilities = ["create","read","update"] }
-path "secret/metadata/+/minio-kes/root-key"   { capabilities = ["read","list"] }
-path "secret/metadata/+/minio-kes/root-key/*" { capabilities = ["read","list"] }
-HCL
-
-vault write auth/kubernetes/role/glerp-minio-kes \
-  bound_service_account_names="*-minio-tenant-kes" \
-  bound_service_account_namespaces="*" \
-  policies=glerp-minio-kes \
-  audience="https://kubernetes.default.svc.cluster.local" \
-  ttl=24h
-```
-
-Confirm: `vault policy read glerp-minio-kes` and `vault read auth/kubernetes/role/glerp-minio-kes`.
-(The role name is `tenant.minio.kes.vaultRole` in the chart, default `glerp-minio-kes` — keep them
-in sync if you rename.)
-
-Nothing pre-populates the root-key secret — KES writes it on first key create. After each install
-the chart's post-install hook pins the KES↔MinIO cert identity and enables SSE-KMS on the `<ns>`
-bucket automatically. Verify: `mc stat <alias>/<ns>/<a-newly-uploaded-object>` shows an
-`Encryption: SSE-KMS (arn:aws:kms:<ns>-minio-key)` line.
-
-**Backfilling existing (pre-encryption) data — for sites that already hold plaintext objects:**
-SSE-KMS is not retroactive; it only encrypts objects written *after* it is enabled. Existing
-objects stay plaintext until rewritten. Enabling encryption does NOT change any object's path.
-Re-encrypt existing data in place (same paths), scheduled per site by data volume (a maintenance
-window is recommended for large live buckets — it is a full read+write of every byte):
-
-```bash
-mc cp --recursive <alias>/<tenant>/ <alias>/<tenant>/
-```
-
-Do not block new-write protection on this: the hook protects all new writes immediately; run the
-backfill on its own timeline.
-
 ### 3. Write-capable ESO store for PushSecrets (ONE-TIME per cluster) — REQUIRED
 
 ESO's default `vault-backend` store authenticates as `eso-universal-reader`, which is
@@ -227,6 +175,56 @@ spec:
 > Verify: `kubectl get clustersecretstore vault-pushwriter` → Ready. After a tenant install,
 > `kubectl get pushsecret,externalsecret -n <tenant>` should all be Synced, and
 > `vault kv get secret/<tenant>/minio-creds` should show the pushed keys.
+
+### 3b. KES Vault policy + k8s-auth role for MinIO encryption (ONE-TIME per cluster) — REQUIRED
+
+MinIO encryption-at-rest (SSE-KMS) is provided by **KES**, which talks to Vault as a **KV v2
+client** over its own k8s-auth JWT — the KMS root key never lands in a K8s Secret. Like the
+`eso-pushwriter` store above, this is a **single cluster-wide** policy + role that **every tenant
+shares** — run it ONCE per cluster, NOT per install. The policy wildcards the namespace path
+segment (`+`), and the role binds to the `*-minio-tenant-kes` ServiceAccount across all
+namespaces. Adding a new GLerp site then needs **no Vault commands** — the chart templates the
+per-tenant K8s side (the `<ns>-minio-tenant-kes` SA, `kes-config-secret`, the KES sidecar) and KES
+authenticates against this shared role. (Separate from `<tenant>-app-role` — leave that alone.)
+
+```bash
+# KES creates+manages each tenant's root key at secret/<ns>/minio-kes/root-key/<ns>-minio-key.
+# The `+` matches the namespace segment; the /* child paths are REQUIRED (KES appends the logical
+# key name as a further path segment).
+vault policy write glerp-minio-kes - <<'HCL'
+path "secret/data/+/minio-kes/root-key"       { capabilities = ["create","read","update"] }
+path "secret/data/+/minio-kes/root-key/*"     { capabilities = ["create","read","update"] }
+path "secret/metadata/+/minio-kes/root-key"   { capabilities = ["read","list"] }
+path "secret/metadata/+/minio-kes/root-key/*" { capabilities = ["read","list"] }
+HCL
+
+vault write auth/kubernetes/role/glerp-minio-kes \
+  bound_service_account_names="*-minio-tenant-kes" \
+  bound_service_account_namespaces="*" \
+  policies=glerp-minio-kes \
+  audience="https://kubernetes.default.svc.cluster.local" \
+  ttl=24h
+```
+
+> Verify: `vault policy read glerp-minio-kes` and `vault read auth/kubernetes/role/glerp-minio-kes`.
+> (Role name = chart value `tenant.minio.kes.vaultRole`, default `glerp-minio-kes` — keep in sync
+> if you rename.) Nothing pre-populates the root-key secret — KES writes it on first key create.
+> After each install the chart's post-install hook pins the KES↔MinIO cert identity and enables
+> SSE-KMS on the `<ns>` bucket automatically; verify with
+> `mc stat <alias>/<ns>/<a-newly-uploaded-object>` →
+> `Encryption: SSE-KMS (arn:aws:kms:<ns>-minio-key)`.
+
+**Backfilling existing (pre-encryption) data** — per-site, NOT a cluster prereq: SSE-KMS is not
+retroactive; it only encrypts objects written *after* it is enabled. Existing objects stay
+plaintext until rewritten (path is unchanged). Re-encrypt in place, scheduled per site by data
+volume (maintenance window recommended for large live buckets — full read+write of every byte):
+
+```bash
+mc cp --recursive <alias>/<ns>/ <alias>/<ns>/
+```
+
+Do not block new-write protection on this: the hook protects all new writes immediately; run the
+backfill on its own timeline.
 
 ### 4. Shared cluster resources (one-time per cluster, already present in prod)
 ESO ClusterSecretStores (`vault-backend` read, `vault-pushwriter` write, `kubernetes-token-auth`),
