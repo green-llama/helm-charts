@@ -131,6 +131,54 @@ vault write auth/kubernetes/role/${TENANT}-app-role \
   ttl=24h
 ```
 
+### 2b. Per-tenant KES Vault policy + k8s-auth role (`<tenant>-minio-kes`) — REQUIRED for MinIO encryption
+
+MinIO encryption-at-rest (SSE-KMS) is provided by **KES**, which talks to Vault as a **KV v2
+client** over its own k8s-auth JWT — the KMS root key never lands in a K8s Secret. KES needs its
+own Vault policy + role (separate from `<tenant>-app-role`; leave that one alone). The chart
+templates the K8s side (the `<tenant>-minio-tenant-kes` ServiceAccount, `kes-config-secret`, and
+the KES sidecar on the Tenant); this Vault admin step is the one-time prerequisite, run per tenant
+by CI (`deploy_image.yml`, same AppRole path as `<tenant>-app-role`) or an admin. Skip it only if
+`tenant.minio.kes.enabled=false`.
+
+```bash
+TENANT=<tenant>
+# KES creates+manages the root key itself at secret/<tenant>/minio-kes/root-key/<key-name> — the
+# /* child paths are REQUIRED (KES appends the logical key name as a further path segment).
+cat > /tmp/${TENANT}-minio-kes.hcl <<EOF
+path "secret/data/${TENANT}/minio-kes/root-key"       { capabilities = ["create","read","update"] }
+path "secret/data/${TENANT}/minio-kes/root-key/*"     { capabilities = ["create","read","update"] }
+path "secret/metadata/${TENANT}/minio-kes/root-key"   { capabilities = ["read","list"] }
+path "secret/metadata/${TENANT}/minio-kes/root-key/*" { capabilities = ["read","list"] }
+EOF
+vault policy write ${TENANT}-minio-kes /tmp/${TENANT}-minio-kes.hcl
+
+vault write auth/kubernetes/role/${TENANT}-minio-kes \
+  bound_service_account_names=${TENANT}-minio-tenant-kes \
+  bound_service_account_namespaces=${TENANT} \
+  policies=${TENANT}-minio-kes \
+  audience="https://kubernetes.default.svc.cluster.local" \
+  ttl=24h
+```
+
+Nothing pre-populates the root-key secret — KES writes it on first key create. After install, the
+chart's post-install hook pins the KES↔MinIO cert identity and enables SSE-KMS on the `<tenant>`
+bucket automatically. Verify: `mc stat <alias>/<tenant>/<a-newly-uploaded-object>` shows an
+`Encryption: SSE-KMS (arn:aws:kms:<tenant>-minio-key)` line.
+
+**Backfilling existing (pre-encryption) data — for sites that already hold plaintext objects:**
+SSE-KMS is not retroactive; it only encrypts objects written *after* it is enabled. Existing
+objects stay plaintext until rewritten. Enabling encryption does NOT change any object's path.
+Re-encrypt existing data in place (same paths), scheduled per site by data volume (a maintenance
+window is recommended for large live buckets — it is a full read+write of every byte):
+
+```bash
+mc cp --recursive <alias>/<tenant>/ <alias>/<tenant>/
+```
+
+Do not block new-write protection on this: the hook protects all new writes immediately; run the
+backfill on its own timeline.
+
 ### 3. Write-capable ESO store for PushSecrets (ONE-TIME per cluster) — REQUIRED
 
 ESO's default `vault-backend` store authenticates as `eso-universal-reader`, which is

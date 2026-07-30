@@ -72,9 +72,17 @@ tenant:
     volumesPerServer: 2
     volumeSize: 3Gi
     storageClass: directpv-min-io
-    vaultKmsRole: ""              # defaults to "<ns>-role"
-    vaultKmsKeyName: minio-key
     vaultAddr: http://vault-active.vault-system.svc.cluster.local:8200
+    # Encryption-at-rest via KES (MinIO Key Encryption Service) + Vault. KES sits between MinIO
+    # and Vault and talks to Vault as a KV client over its own k8s-auth JWT — the KMS root key
+    # never lands in a K8s Secret. The KMS key name is the "<namespace>-minio-key" convention
+    # (used as the KES keyName, the mc encrypt key, and the Vault root-key path segment — one
+    # source of truth, derived from the namespace). REQUIRES the per-tenant "<ns>-minio-kes"
+    # Vault policy + k8s-auth role (one-time, see TENANT.md). Post-install hook pins the KES↔MinIO
+    # cert identity and enables SSE-KMS on the bucket. Set enabled=false to skip encryption.
+    kes:
+      enabled: true
+      image: minio/kes:2025-03-12T09-35-18Z
   velero:
     enabled: true                 # daily namespace backup
     namespace: velero
@@ -156,7 +164,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.40
+  tag: 1.0.41
 imagePullSecrets:
   - name: ghcr-cred
 ingress:

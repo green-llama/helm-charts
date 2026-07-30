@@ -1,0 +1,60 @@
+{{- if and .Values.tenant.enabled .Values.tenant.minio.enabled (.Values.tenant.minio.kes | default dict).enabled }}
+{{- $ns := .Release.Namespace -}}
+{{- $m := .Values.tenant.minio -}}
+# KES server config consumed by the Tenant's KES pod (spec.kes.kesSecret -> this Secret).
+#
+# keystore.vault is a Vault KV v2 CLIENT (handoff doc §2 gotcha): `engine` is the KV mount
+# PATH ("secret") and `version` is the KV engine version ("v2") — it is NOT Vault Transit.
+# Pointing this at a Transit mount yields a misleading "404 unsupported path". KES creates and
+# manages the root key itself at "<engine>/<prefix>/<keyName>" over its own k8s-auth JWT.
+#
+# policy.minio.identities is the SHA-256 of MinIO's Operator-generated client-cert public key.
+# That cert only exists AFTER the Tenant is created, so it cannot be a static template value —
+# the post-install hook (job-minio-kes-activate.yaml) computes it and patches this Secret, then
+# restarts KES. The "_pending_" placeholder below is replaced on first install; until then KES
+# runs but rejects MinIO (which is fine — the hook resolves it in the same install).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kes-config-secret
+  namespace: {{ $ns }}
+  labels:
+    {{- include "erpnext.labels" . | nindent 4 }}
+  annotations:
+    # Let Helm keep managing this Secret across upgrades WITHOUT clobbering the hook-patched
+    # identity: the hook owns policy.minio.identities at runtime. helm.sh/resource-policy keep
+    # is deliberately NOT set (we want upgrades to reconcile the rest of the config); the hook
+    # re-patches the identity every upgrade, so a template overwrite is self-healing.
+    glerp.io/kes-identity: hook-managed
+stringData:
+  server-config.yaml: |
+    version: v1
+    address: :7373
+    admin:
+      identity: disabled
+    tls:
+      cert: /tmp/kes/server.crt
+      key: /tmp/kes/server.key
+    policy:
+      minio:
+        allow:
+          - /v1/key/create/*
+          - /v1/key/generate/*
+          - /v1/key/decrypt/*
+          - /v1/key/bulk/decrypt/*
+          - /v1/key/list/*
+          - /v1/status
+          - /v1/metrics
+          - /v1/api
+        identities:
+          - "_pending_"   # patched to sha256(MinIO client cert pubkey) by the activate hook
+    keystore:
+      vault:
+        endpoint: {{ $m.vaultAddr | default "http://vault-active.vault-system.svc.cluster.local:8200" | quote }}
+        engine: "secret"
+        version: "v2"
+        prefix: {{ printf "%s/minio-kes/root-key" $ns | quote }}
+        kubernetes:
+          role: {{ printf "%s-minio-kes" $ns | quote }}
+          jwt: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+{{- end }}

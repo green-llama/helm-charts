@@ -1,6 +1,7 @@
 {{- if and .Values.tenant.enabled .Values.tenant.minio.enabled }}
 {{- $m := .Values.tenant.minio -}}
 {{- $ns := .Release.Namespace -}}
+{{- $kes := $m.kes | default dict -}}
 apiVersion: minio.min.io/v2
 kind: Tenant
 metadata:
@@ -31,25 +32,26 @@ spec:
       value: {{ printf "https://minio-%s" (include "glerp.tenantFqdn" .) | quote }}
     - name: MINIO_BROWSER_REDIRECT_URL
       value: {{ printf "https://minio-%s" (include "glerp.tenantFqdn" .) | quote }}
-    - name: MINIO_KMS_VAULT_ENABLE
-      value: "on"
-    - name: MINIO_KMS_VAULT_ENDPOINT
-      value: {{ $m.vaultAddr | default "http://vault-active.vault-system.svc.cluster.local:8200" | quote }}
-    - name: MINIO_KMS_VAULT_AUTH_TYPE
-      value: "jwt"
-    - name: MINIO_KMS_VAULT_ROLE
-      value: {{ $m.vaultKmsRole | default (printf "%s-role" $ns) | quote }}
-    - name: MINIO_KMS_VAULT_KEY_NAME
-      value: {{ $m.vaultKmsKeyName | default "minio-key" | quote }}
-    - name: MINIO_KMS_VAULT_JWT_PATH
-      value: "/var/run/secrets/kubernetes.io/serviceaccount/token"
-  poolsMetadata:
-    annotations:
+  # Encryption-at-rest is provided by KES (below), which talks to Vault as a KV client over its
+  # own k8s-auth JWT. MinIO does NOT talk to Vault directly anymore — the old MINIO_KMS_VAULT_*
+  # env (MinIO->Vault) was the abandoned approach (handoff doc §7) and is intentionally gone.
+  {{- if $kes.enabled }}
+  kes:
+    keyName: {{ printf "%s-minio-key" $ns | quote }}
+    serviceAccountName: {{ printf "%s-minio-tenant-kes" $ns | quote }}
+    image: {{ $kes.image | default "minio/kes:2025-03-12T09-35-18Z" | quote }}
+    # LABEL (not annotation) is what gets KES a mesh sidecar in an UNLABELED namespace — Istio's
+    # injector matches the pod label via objectSelector (handoff doc §2). Do not change to annotation.
+    labels:
       sidecar.istio.io/inject: "true"
-      traffic.sidecar.istio.io/includeInboundPorts: "10443"
-      traffic.sidecar.istio.io/includeOutboundPorts: "8200"
-      traffic.sidecar.istio.io/excludeInboundPorts: "9000, 9090"
-      traffic.sidecar.istio.io/excludeOutboundPorts: "9000, 9090"
+    # Exclude KES's port 7373 from Envoy inbound capture: KES serves native TLS there, so Envoy
+    # must not build an HTTP inbound listener for it or every connection resets (doc §2). A
+    # PERMISSIVE PeerAuthentication does NOT fix this — the exclusion is the actual fix.
+    annotations:
+      traffic.sidecar.istio.io/excludeInboundPorts: "7373"
+    kesSecret:
+      name: kes-config-secret
+  {{- end }}
   pools:
     {{- range $i := until (int ($m.pools | default 2)) }}
     - name: pool-{{ $i }}

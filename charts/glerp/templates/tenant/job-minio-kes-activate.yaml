@@ -1,0 +1,156 @@
+{{- if and .Values.tenant.enabled .Values.tenant.minio.enabled (.Values.tenant.minio.kes | default dict).enabled }}
+{{- $ns := .Release.Namespace -}}
+{{- $m := .Values.tenant.minio -}}
+{{- $kes := $m.kes | default dict -}}
+# Post-install/upgrade hook: turns "Tenant created" into "encryption actually working", with no
+# manual step (handoff doc §3 + §6). Two ordered steps:
+#   initContainer "patch-identity" (glerp image — has python3/openssl/curl):
+#     waits for the Operator-generated MinIO client-cert secret, computes
+#     sha256(client cert public key), and patches kes-config-secret's policy.minio.identities
+#     via the Kubernetes API — bouncing KES ONLY when the value changed (idempotent; upgrades are
+#     no-ops when the cert is unchanged; also self-heals on cert rotation).
+#   container "encrypt-bucket" (minio/mc):
+#     waits for the S3 API, then `mc encrypt set sse-kms` on the chart's bucket so NEW writes
+#     encrypt. Backfill of pre-existing plaintext objects is documented + scheduled separately.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "%s-minio-kes-activate" $ns }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "erpnext.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ $kes.activateBackoffLimit | default 10 }}
+  {{- with .Values.jobs.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "erpnext.labels" . | nindent 8 }}
+    spec:
+      # Runs as the KES SA; RBAC (minio-kes-rbac.yaml) grants exactly get/list/patch secrets +
+      # get/list/delete pods, in THIS namespace only.
+      serviceAccountName: {{ printf "%s-minio-tenant-kes" $ns }}
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: patch-identity
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python3", "-c"]
+          env:
+            - name: NS
+              value: {{ $ns | quote }}
+            - name: TENANT
+              value: {{ printf "%s-minio-tenant" $ns | quote }}
+            # Operator client-cert secret. Empty => auto-discover the tls.crt-bearing operator
+            # secret in this namespace (its exact name is Operator-version specific).
+            - name: CLIENT_CERT_SECRET
+              value: {{ $kes.clientCertSecret | default "" | quote }}
+          args:
+            - |
+              import base64, hashlib, json, os, ssl, subprocess, sys, time, urllib.request
+
+              NS = os.environ["NS"]; TENANT = os.environ["TENANT"]
+              PINNED = os.environ.get("CLIENT_CERT_SECRET") or ""
+              API = "https://kubernetes.default.svc"
+              tok = open("/var/run/secrets/kubernetes.io/serviceaccount/token").read().strip()
+              ctx = ssl.create_default_context(cafile="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+
+              def api(path, method="GET", body=None):
+                  data = json.dumps(body).encode() if body is not None else None
+                  ct = "application/strategic-merge-patch+json" if method == "PATCH" else "application/json"
+                  req = urllib.request.Request(API + path, data=data, method=method,
+                      headers={"Authorization": f"Bearer {tok}", "Content-Type": ct})
+                  with urllib.request.urlopen(req, context=ctx) as r:
+                      b = r.read(); return json.loads(b) if b else {}
+
+              def find_cert_secret():
+                  if PINNED:
+                      return PINNED
+                  items = api(f"/api/v1/namespaces/{NS}/secrets").get("items", [])
+                  # Prefer a kubernetes.io/tls secret tied to this tenant/kes/client, with tls.crt.
+                  cands = [s["metadata"]["name"] for s in items
+                           if (s.get("data") or {}).get("tls.crt")
+                           and any(k in s["metadata"]["name"].lower() for k in (TENANT, "client", "kes"))]
+                  return cands[0] if cands else None
+
+              # 1. Wait for the operator to publish the client cert.
+              cs = None
+              for _ in range(60):
+                  cs = find_cert_secret()
+                  if cs:
+                      sec = api(f"/api/v1/namespaces/{NS}/secrets/{cs}")
+                      if (sec.get("data") or {}).get("tls.crt"):
+                          break
+                  print("waiting for MinIO client-cert secret..."); time.sleep(5)
+              else:
+                  print("client-cert secret not found in time", file=sys.stderr); sys.exit(1)
+              print(f"using client-cert secret: {cs}")
+              crt = base64.b64decode(sec["data"]["tls.crt"])
+
+              # 2. identity = sha256 of the cert's DER-encoded PUBLIC KEY (hex, lowercase).
+              der = subprocess.run(["openssl", "x509", "-pubkey", "-noout"], input=crt,
+                                   capture_output=True, check=True).stdout
+              der = subprocess.run(["openssl", "pkey", "-pubin", "-outform", "DER"], input=der,
+                                   capture_output=True, check=True).stdout
+              identity = hashlib.sha256(der).hexdigest()
+              print(f"identity: {identity}")
+
+              # 3. Patch kes-config-secret only if the identity changed; bounce KES if patched.
+              kc = api(f"/api/v1/namespaces/{NS}/secrets/kes-config-secret")
+              cfg = base64.b64decode(kc["data"]["server-config.yaml"]).decode()
+              if f'"{identity}"' in cfg:
+                  print("identity already current — no patch, no restart."); sys.exit(0)
+              import re
+              new = re.sub(r'- "(?:_pending_|[0-9a-f]{64})"', f'- "{identity}"', cfg)
+              api(f"/api/v1/namespaces/{NS}/secrets/kes-config-secret", "PATCH",
+                  {"data": {"server-config.yaml": base64.b64encode(new.encode()).decode()}})
+              print("patched kes-config-secret; restarting KES pods...")
+              pods = api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
+              for p in pods:
+                  n = p["metadata"]["name"]
+                  if "kes" in n:
+                      api(f"/api/v1/namespaces/{NS}/pods/{n}", "DELETE"); print(f"  deleted pod {n}")
+      containers:
+        - name: encrypt-bucket
+          image: {{ $kes.activateImage | default "minio/mc:RELEASE.2025-03-12T17-29-24Z" | quote }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          env:
+            - name: KEY_NAME
+              value: {{ printf "%s-minio-key" $ns | quote }}
+            - name: BUCKET
+              value: {{ $ns | quote }}
+            - name: MINIO_ENDPOINT
+              value: {{ printf "http://minio.%s.svc.cluster.local:80" $ns | quote }}
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-minio-creds" $ns | quote }}
+                  key: accesskey
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-minio-creds" $ns | quote }}
+                  key: secretkey
+          args:
+            - |
+              set -eu
+              i=0
+              until mc alias set t "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" >/dev/null 2>&1; do
+                i=$((i+1)); [ "$i" -gt 60 ] && { echo "MinIO S3 API not reachable"; exit 1; }
+                echo "waiting for MinIO S3 API..."; sleep 5
+              done
+              mc encrypt set sse-kms "$KEY_NAME" "t/$BUCKET"
+              mc encrypt info "t/$BUCKET" || true
+              echo "SSE-KMS enabled on bucket '$BUCKET' with key '$KEY_NAME' — new writes are encrypted."
+{{- end }}

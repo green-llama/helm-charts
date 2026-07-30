@@ -116,6 +116,17 @@ questions:
     show_if: "tenant.enabled=true"
     group: "Backends"
 
+  - variable: tenant.minio.kes.enabled
+    label: MinIO encryption at rest (KES + Vault)
+    description: >-
+      Encrypt MinIO object storage at rest via KES + Vault (SSE-KMS). ON by default. Requires the
+      one-time per-tenant "<namespace>-minio-kes" Vault policy + role (see TENANT.md). Leave ON for
+      the compliance requirement; turn OFF only for a cluster without the KES/Vault prerequisites.
+    type: boolean
+    default: true
+    show_if: "tenant.enabled=true&&tenant.minio.enabled=true"
+    group: "Backends"
+
   - variable: valkey-cache.enabled
     label: Use Valkey for cache/queue (recommended)
     description: >-

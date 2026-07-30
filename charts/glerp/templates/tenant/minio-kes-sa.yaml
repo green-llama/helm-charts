@@ -1,0 +1,13 @@
+{{- if and .Values.tenant.enabled .Values.tenant.minio.enabled (.Values.tenant.minio.kes | default dict).enabled }}
+# ServiceAccount for the MinIO Tenant's KES pod. MUST exist and be named exactly
+# "<ns>-minio-tenant-kes" — the MinIO Operator otherwise defaults KES to the namespace's
+# "default" ServiceAccount, which will not match the "<ns>-minio-kes" Vault k8s-auth role
+# (handoff doc §2). KES authenticates to Vault with this SA's projected JWT.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ printf "%s-minio-tenant-kes" .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "erpnext.labels" . | nindent 4 }}
+{{- end }}
