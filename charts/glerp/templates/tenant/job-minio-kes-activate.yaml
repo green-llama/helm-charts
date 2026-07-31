@@ -51,16 +51,21 @@ spec:
               value: {{ $ns | quote }}
             - name: TENANT
               value: {{ printf "%s-minio-tenant" $ns | quote }}
-            # Operator client-cert secret. Empty => auto-discover the tls.crt-bearing operator
-            # secret in this namespace (its exact name is Operator-version specific).
+            # The MinIO client cert MinIO presents to KES. The Operator generates this as an
+            # Opaque secret "<tenant>-client-tls" with the cert under key "public.crt" (verified
+            # against the running MinIO pod's mounted /tmp/certs/client.crt). Overridable in case a
+            # future Operator version changes the name/key.
             - name: CLIENT_CERT_SECRET
-              value: {{ $kes.clientCertSecret | default "" | quote }}
+              value: {{ $kes.clientCertSecret | default (printf "%s-minio-tenant-client-tls" $ns) | quote }}
+            - name: CLIENT_CERT_KEY
+              value: {{ $kes.clientCertKey | default "public.crt" | quote }}
           args:
             - |
-              import base64, hashlib, json, os, ssl, subprocess, sys, time, urllib.request
+              import base64, hashlib, json, os, ssl, subprocess, sys, time, urllib.request, urllib.error
 
               NS = os.environ["NS"]; TENANT = os.environ["TENANT"]
-              PINNED = os.environ.get("CLIENT_CERT_SECRET") or ""
+              CERT_SECRET = os.environ["CLIENT_CERT_SECRET"]
+              CERT_KEY = os.environ["CLIENT_CERT_KEY"]
               API = "https://kubernetes.default.svc"
               tok = open("/var/run/secrets/kubernetes.io/serviceaccount/token").read().strip()
               ctx = ssl.create_default_context(cafile="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
@@ -73,29 +78,32 @@ spec:
                   with urllib.request.urlopen(req, context=ctx) as r:
                       b = r.read(); return json.loads(b) if b else {}
 
-              def find_cert_secret():
-                  if PINNED:
-                      return PINNED
-                  items = api(f"/api/v1/namespaces/{NS}/secrets").get("items", [])
-                  # Prefer a kubernetes.io/tls secret tied to this tenant/kes/client, with tls.crt.
-                  cands = [s["metadata"]["name"] for s in items
-                           if (s.get("data") or {}).get("tls.crt")
-                           and any(k in s["metadata"]["name"].lower() for k in (TENANT, "client", "kes"))]
-                  return cands[0] if cands else None
+              def get_secret(name):
+                  try:
+                      return api(f"/api/v1/namespaces/{NS}/secrets/{name}")
+                  except urllib.error.HTTPError as e:
+                      if e.code == 404:
+                          return None
+                      raise
 
-              # 1. Wait for the operator to publish the client cert.
-              cs = None
+              # Try CERT_KEY first, then fall back across Operator versions (public.crt current).
+              KEY_CANDIDATES = [CERT_KEY] + [k for k in ("public.crt", "tls.crt") if k != CERT_KEY]
+
+              # 1. Wait for the Operator to publish the client-cert secret (deterministic name).
+              sec = crt_b64 = None
               for _ in range(60):
-                  cs = find_cert_secret()
-                  if cs:
-                      sec = api(f"/api/v1/namespaces/{NS}/secrets/{cs}")
-                      if (sec.get("data") or {}).get("tls.crt"):
+                  sec = get_secret(CERT_SECRET)
+                  if sec:
+                      data = sec.get("data") or {}
+                      crt_b64 = next((data[k] for k in KEY_CANDIDATES if data.get(k)), None)
+                      if crt_b64:
                           break
-                  print("waiting for MinIO client-cert secret..."); time.sleep(5)
+                  print(f"waiting for client-cert secret {CERT_SECRET}..."); time.sleep(5)
               else:
-                  print("client-cert secret not found in time", file=sys.stderr); sys.exit(1)
-              print(f"using client-cert secret: {cs}")
-              crt = base64.b64decode(sec["data"]["tls.crt"])
+                  print(f"client-cert secret {CERT_SECRET} (key {CERT_KEY}) not found in time",
+                        file=sys.stderr); sys.exit(1)
+              print(f"using client-cert secret: {CERT_SECRET}")
+              crt = base64.b64decode(crt_b64)
 
               # 2. identity = sha256 of the cert's DER-encoded PUBLIC KEY (hex, lowercase).
               der = subprocess.run(["openssl", "x509", "-pubkey", "-noout"], input=crt,

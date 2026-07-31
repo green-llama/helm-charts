@@ -89,6 +89,12 @@ tenant:
       image: minio/kes:2025-03-12T09-35-18Z
       # Cluster-wide Vault k8s-auth role KES authenticates as (created once per cluster).
       vaultRole: glerp-minio-kes
+      # The MinIO client cert the activate hook hashes for KES's policy.minio.identities. The
+      # MinIO Operator generates an Opaque secret "<namespace>-minio-tenant-client-tls" with the
+      # cert under key "public.crt" (verified against the running MinIO pod's mounted
+      # /tmp/certs/client.crt). Override only if a future Operator version changes name/key.
+      clientCertSecret: ""            # empty -> "<namespace>-minio-tenant-client-tls"
+      clientCertKey: public.crt
   velero:
     enabled: true                 # daily namespace backup
     namespace: velero
@@ -170,7 +176,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.41
+  tag: 1.0.42
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
