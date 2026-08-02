@@ -113,21 +113,43 @@ spec:
               identity = hashlib.sha256(der).hexdigest()
               print(f"identity: {identity}")
 
-              # 3. Patch kes-config-secret only if the identity changed; bounce KES if patched.
+              # 3. Patch kes-config-secret if the identity changed.
               kc = api(f"/api/v1/namespaces/{NS}/secrets/kes-config-secret")
               cfg = base64.b64decode(kc["data"]["server-config.yaml"]).decode()
-              if f'"{identity}"' in cfg:
-                  print("identity already current — no patch, no restart."); sys.exit(0)
               import re
-              new = re.sub(r'- "(?:_pending_|[0-9a-f]{64})"', f'- "{identity}"', cfg)
-              api(f"/api/v1/namespaces/{NS}/secrets/kes-config-secret", "PATCH",
-                  {"data": {"server-config.yaml": base64.b64encode(new.encode()).decode()}})
-              print("patched kes-config-secret; restarting KES pods...")
+              if f'"{identity}"' in cfg:
+                  print("identity already current — no config patch needed.")
+              else:
+                  new = re.sub(r'- "(?:_pending_|[0-9a-f]{64})"', f'- "{identity}"', cfg)
+                  api(f"/api/v1/namespaces/{NS}/secrets/kes-config-secret", "PATCH",
+                      {"data": {"server-config.yaml": base64.b64encode(new.encode()).decode()}})
+                  print("patched kes-config-secret with the resolved identity.")
+
+              # 4. ALWAYS bounce the KES pods, then wait for them Ready. This is deliberately
+              # unconditional: even when the identity was already correct, KES may be running on a
+              # STALE Vault token cached before its k8s-auth path was ready (fresh installs race
+              # cold) — that surfaces later as "insufficient permissions to perform KMS operation".
+              # A restart forces KES to re-authenticate to Vault. Idempotent + cheap; and if the
+              # encrypt-bucket step still fails, the Job's backoffLimit re-runs this whole init,
+              # bouncing KES again — so the flow self-heals the token race without manual steps.
               pods = api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
-              for p in pods:
-                  n = p["metadata"]["name"]
-                  if "kes" in n:
-                      api(f"/api/v1/namespaces/{NS}/pods/{n}", "DELETE"); print(f"  deleted pod {n}")
+              kes_pods = [p["metadata"]["name"] for p in pods if "kes" in p["metadata"]["name"]]
+              for n in kes_pods:
+                  api(f"/api/v1/namespaces/{NS}/pods/{n}", "DELETE"); print(f"  deleted KES pod {n}")
+
+              # Wait for KES pods to be Ready again so the encrypt container doesn't race DNS/startup.
+              print("waiting for KES pods to become Ready...")
+              for _ in range(60):
+                  time.sleep(5)
+                  pods = api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
+                  kes = [p for p in pods if "kes" in p["metadata"]["name"]]
+                  ready = [p for p in kes
+                           if p.get("status", {}).get("phase") == "Running"
+                           and all(c.get("ready") for c in p.get("status", {}).get("containerStatuses", []))]
+                  if kes and len(ready) == len(kes):
+                      print(f"  {len(ready)}/{len(kes)} KES pods Ready."); break
+              else:
+                  print("KES pods did not become Ready in time (continuing; encrypt step will retry).")
       containers:
         - name: encrypt-bucket
           image: {{ $kes.activateImage | default "minio/mc:RELEASE.2025-03-12T17-29-24Z" | quote }}
