@@ -2,16 +2,19 @@
 {{- $ns := .Release.Namespace -}}
 {{- $m := .Values.tenant.minio -}}
 {{- $kes := $m.kes | default dict -}}
-# Post-install/upgrade hook: turns "Tenant created" into "encryption actually working", with no
-# manual step (handoff doc §3 + §6). Two ordered steps:
-#   initContainer "patch-identity" (glerp image — has python3/openssl/curl):
-#     waits for the Operator-generated MinIO client-cert secret, computes
-#     sha256(client cert public key), and patches kes-config-secret's policy.minio.identities
-#     via the Kubernetes API — bouncing KES ONLY when the value changed (idempotent; upgrades are
-#     no-ops when the cert is unchanged; also self-heals on cert rotation).
-#   container "encrypt-bucket" (minio/mc):
-#     waits for the S3 API, then `mc encrypt set sse-kms` on the chart's bucket so NEW writes
-#     encrypt. Backfill of pre-existing plaintext objects is documented + scheduled separately.
+# Post-install/upgrade hook: turns "Tenant created" into "encryption actually working", no manual
+# steps. SINGLE main container (glerp image: python3/openssl/curl) that also gets the static `mc`
+# binary copied in by an initContainer from minio/mc — so ONE process can do everything AND bounce
+# KES between attempts:
+#   1. resolve the MinIO client-cert identity (sha256 of <ns>-minio-tenant-client-tls/public.crt)
+#      and patch kes-config-secret's policy.minio.identities via the K8s API.
+#   2. RETRY LOOP: bounce the KES pods (K8s API) so KES re-initializes its Vault keystore, wait
+#      for them Ready, then run a REAL KMS op (`mc admin kms key create` + `mc encrypt set`). If
+#      the op fails (fresh-install KES cold-start caches a broken keystore / stale Vault token,
+#      surfacing as "insufficient permissions"), loop: bounce KES again and retry. This is the
+#      reliable fix — KES gets re-bounced IN the loop until a real KMS operation succeeds, rather
+#      than relying on Job-level restarts.
+# Backfill of pre-existing plaintext objects is documented + scheduled separately (TENANT.md).
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -24,7 +27,7 @@ metadata:
     "helm.sh/hook-weight": "5"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
-  backoffLimit: {{ $kes.activateBackoffLimit | default 10 }}
+  backoffLimit: {{ $kes.activateBackoffLimit | default 6 }}
   {{- with .Values.jobs.ttlSecondsAfterFinished }}
   ttlSecondsAfterFinished: {{ . }}
   {{- end }}
@@ -41,176 +44,162 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+        - name: mcbin
+          emptyDir: {}
       initContainers:
-        - name: patch-identity
+        # Copy the STATIC `mc` binary out of minio/mc into a shared volume so the main container
+        # (glerp image — which has python3/openssl/curl but not mc) can run KMS operations.
+        - name: fetch-mc
+          image: {{ $kes.activateImage | default "minio/mc:RELEASE.2025-03-12T17-29-24Z" | quote }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["cp /usr/bin/mc /mcbin/mc && chmod 0755 /mcbin/mc && echo 'mc copied'"]
+          volumeMounts:
+            - name: mcbin
+              mountPath: /mcbin
+      containers:
+        - name: activate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["python3", "-c"]
+          volumeMounts:
+            - name: mcbin
+              mountPath: /mcbin
           env:
             - name: NS
               value: {{ $ns | quote }}
             - name: TENANT
               value: {{ printf "%s-minio-tenant" $ns | quote }}
-            # The MinIO client cert MinIO presents to KES. The Operator generates this as an
-            # Opaque secret "<tenant>-client-tls" with the cert under key "public.crt" (verified
-            # against the running MinIO pod's mounted /tmp/certs/client.crt). Overridable in case a
-            # future Operator version changes the name/key.
-            - name: CLIENT_CERT_SECRET
-              value: {{ $kes.clientCertSecret | default (printf "%s-minio-tenant-client-tls" $ns) | quote }}
-            - name: CLIENT_CERT_KEY
-              value: {{ $kes.clientCertKey | default "public.crt" | quote }}
-          args:
-            - |
-              import base64, hashlib, json, os, ssl, subprocess, sys, time, urllib.request, urllib.error
-
-              NS = os.environ["NS"]; TENANT = os.environ["TENANT"]
-              CERT_SECRET = os.environ["CLIENT_CERT_SECRET"]
-              CERT_KEY = os.environ["CLIENT_CERT_KEY"]
-              API = "https://kubernetes.default.svc"
-              tok = open("/var/run/secrets/kubernetes.io/serviceaccount/token").read().strip()
-              ctx = ssl.create_default_context(cafile="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-
-              def api(path, method="GET", body=None):
-                  data = json.dumps(body).encode() if body is not None else None
-                  ct = "application/strategic-merge-patch+json" if method == "PATCH" else "application/json"
-                  req = urllib.request.Request(API + path, data=data, method=method,
-                      headers={"Authorization": f"Bearer {tok}", "Content-Type": ct})
-                  with urllib.request.urlopen(req, context=ctx) as r:
-                      b = r.read(); return json.loads(b) if b else {}
-
-              def get_secret(name):
-                  try:
-                      return api(f"/api/v1/namespaces/{NS}/secrets/{name}")
-                  except urllib.error.HTTPError as e:
-                      if e.code == 404:
-                          return None
-                      raise
-
-              # Try CERT_KEY first, then fall back across Operator versions (public.crt current).
-              KEY_CANDIDATES = [CERT_KEY] + [k for k in ("public.crt", "tls.crt") if k != CERT_KEY]
-
-              # 1. Wait for the Operator to publish the client-cert secret (deterministic name).
-              sec = crt_b64 = None
-              for _ in range(60):
-                  sec = get_secret(CERT_SECRET)
-                  if sec:
-                      data = sec.get("data") or {}
-                      crt_b64 = next((data[k] for k in KEY_CANDIDATES if data.get(k)), None)
-                      if crt_b64:
-                          break
-                  print(f"waiting for client-cert secret {CERT_SECRET}..."); time.sleep(5)
-              else:
-                  print(f"client-cert secret {CERT_SECRET} (key {CERT_KEY}) not found in time",
-                        file=sys.stderr); sys.exit(1)
-              print(f"using client-cert secret: {CERT_SECRET}")
-              crt = base64.b64decode(crt_b64)
-
-              # 2. identity = sha256 of the cert's DER-encoded PUBLIC KEY (hex, lowercase).
-              der = subprocess.run(["openssl", "x509", "-pubkey", "-noout"], input=crt,
-                                   capture_output=True, check=True).stdout
-              der = subprocess.run(["openssl", "pkey", "-pubin", "-outform", "DER"], input=der,
-                                   capture_output=True, check=True).stdout
-              identity = hashlib.sha256(der).hexdigest()
-              print(f"identity: {identity}")
-
-              # 3. Patch kes-config-secret if the identity changed.
-              kc = api(f"/api/v1/namespaces/{NS}/secrets/kes-config-secret")
-              cfg = base64.b64decode(kc["data"]["server-config.yaml"]).decode()
-              import re
-              if f'"{identity}"' in cfg:
-                  print("identity already current — no config patch needed.")
-              else:
-                  new = re.sub(r'- "(?:_pending_|[0-9a-f]{64})"', f'- "{identity}"', cfg)
-                  api(f"/api/v1/namespaces/{NS}/secrets/kes-config-secret", "PATCH",
-                      {"data": {"server-config.yaml": base64.b64encode(new.encode()).decode()}})
-                  print("patched kes-config-secret with the resolved identity.")
-
-              # 4. ALWAYS bounce the KES pods, then wait for them Ready. This is deliberately
-              # unconditional: even when the identity was already correct, KES may be running on a
-              # STALE Vault token cached before its k8s-auth path was ready (fresh installs race
-              # cold) — that surfaces later as "insufficient permissions to perform KMS operation".
-              # A restart forces KES to re-authenticate to Vault. Idempotent + cheap; and if the
-              # encrypt-bucket step still fails, the Job's backoffLimit re-runs this whole init,
-              # bouncing KES again — so the flow self-heals the token race without manual steps.
-              pods = api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
-              kes_pods = [p["metadata"]["name"] for p in pods if "kes" in p["metadata"]["name"]]
-              for n in kes_pods:
-                  api(f"/api/v1/namespaces/{NS}/pods/{n}", "DELETE"); print(f"  deleted KES pod {n}")
-
-              # Wait for KES pods to be Ready again so the encrypt container doesn't race DNS/startup.
-              print("waiting for KES pods to become Ready...")
-              for _ in range(60):
-                  time.sleep(5)
-                  pods = api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
-                  kes = [p for p in pods if "kes" in p["metadata"]["name"]]
-                  ready = [p for p in kes
-                           if p.get("status", {}).get("phase") == "Running"
-                           and all(c.get("ready") for c in p.get("status", {}).get("containerStatuses", []))]
-                  if kes and len(ready) == len(kes):
-                      print(f"  {len(ready)}/{len(kes)} KES pods Ready."); break
-              else:
-                  print("KES pods did not become Ready in time (continuing; encrypt step will retry).")
-      containers:
-        - name: encrypt-bucket
-          image: {{ $kes.activateImage | default "minio/mc:RELEASE.2025-03-12T17-29-24Z" | quote }}
-          imagePullPolicy: IfNotPresent
-          command: ["/bin/sh", "-c"]
-          env:
             - name: KEY_NAME
               value: {{ printf "%s-minio-key" $ns | quote }}
             - name: BUCKET
               value: {{ $ns | quote }}
             - name: MINIO_ENDPOINT
               value: {{ printf "http://minio.%s.svc.cluster.local:80" $ns | quote }}
-            - name: MINIO_ACCESS_KEY
+            # The MinIO client cert MinIO presents to KES. The Operator generates this as an Opaque
+            # secret "<tenant>-client-tls" with the cert under key "public.crt". Overridable.
+            - name: CLIENT_CERT_SECRET
+              value: {{ $kes.clientCertSecret | default (printf "%s-minio-tenant-client-tls" $ns) | quote }}
+            - name: CLIENT_CERT_KEY
+              value: {{ $kes.clientCertKey | default "public.crt" | quote }}
+            - name: MC
+              value: "/mcbin/mc"
+            - name: MC_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ printf "%s-minio-creds" $ns | quote }}
                   key: accesskey
-            - name: MINIO_SECRET_KEY
+            - name: MC_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ printf "%s-minio-creds" $ns | quote }}
                   key: secretkey
           args:
             - |
-              set -eu
-              i=0
-              until mc alias set t "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" >/dev/null 2>&1; do
-                i=$((i+1)); [ "$i" -gt 60 ] && { echo "MinIO S3 API not reachable"; exit 1; }
-                echo "waiting for MinIO S3 API..."; sleep 5
-              done
-              # Ensure the KMS key exists, then GATE ON A REAL KMS OPERATION. Constraints:
-              # the minio/mc image is minimal (sh + mc only — NO grep/sed/awk), AND
-              # `mc admin kms key status` is NOT a reliable gate: it exits 0 as long as the key
-              # EXISTS and KES is reachable, even when it reports "Encryption ✗ (insufficient
-              # permissions)" — which happens when KES cached a stale Vault token at cold start.
-              # The truthful test is `mc encrypt set sse-kms` itself: it performs a real
-              # key/generate KMS op and exits NON-ZERO on the permission failure. So we drive the
-              # loop with it (idempotent to re-run). If it never succeeds here, we exit non-zero;
-              # the Job's backoffLimit then re-runs the whole hook, and the initContainer bounces
-              # KES again so it re-authenticates to Vault — self-healing the stale-token race.
-              i=0
-              until mc admin kms key status t >/dev/null 2>&1; do
-                i=$((i+1)); [ "$i" -gt 60 ] && { echo "KES/KMS not reachable via MinIO"; exit 1; }
-                echo "waiting for MinIO->KES KMS to be reachable..."; sleep 5
-              done
-              mc admin kms key create t "$KEY_NAME" >/dev/null 2>&1 || true   # idempotent
-              ok=0
-              i=0
-              while [ "$i" -le 24 ]; do
-                # `mc encrypt set` == a real KES key/generate; success here means encryption WORKS.
-                if mc encrypt set sse-kms "$KEY_NAME" "t/$BUCKET" 2>/tmp/es; then ok=1; break; fi
-                echo "KMS op not ready yet (KES may be re-authenticating to Vault); retrying..."
-                cat /tmp/es 2>/dev/null || true
-                i=$((i+1)); sleep 5
-              done
-              if [ "$ok" != "1" ]; then
-                echo "SSE-KMS could not be enabled after retries — exiting non-zero so the Job"
-                echo "re-runs and the initContainer bounces KES to force a fresh Vault login."
-                exit 1
-              fi
-              mc encrypt info "t/$BUCKET" || true
-              mc admin kms key status t "$KEY_NAME" || true
-              echo "SSE-KMS enabled on bucket '$BUCKET' with key '$KEY_NAME' — new writes are encrypted."
+              import base64, hashlib, json, os, re, ssl, subprocess, sys, time, urllib.request, urllib.error
+
+              NS=os.environ["NS"]; TENANT=os.environ["TENANT"]
+              KEY_NAME=os.environ["KEY_NAME"]; BUCKET=os.environ["BUCKET"]
+              ENDPOINT=os.environ["MINIO_ENDPOINT"]
+              CERT_SECRET=os.environ["CLIENT_CERT_SECRET"]; CERT_KEY=os.environ["CLIENT_CERT_KEY"]
+              MC=os.environ["MC"]; AK=os.environ["MC_ACCESS_KEY"]; SK=os.environ["MC_SECRET_KEY"]
+              API="https://kubernetes.default.svc"
+              tok=open("/var/run/secrets/kubernetes.io/serviceaccount/token").read().strip()
+              ctx=ssl.create_default_context(cafile="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+
+              def api(path, method="GET", body=None):
+                  data=json.dumps(body).encode() if body is not None else None
+                  ct="application/strategic-merge-patch+json" if method=="PATCH" else "application/json"
+                  req=urllib.request.Request(API+path, data=data, method=method,
+                      headers={"Authorization": f"Bearer {tok}", "Content-Type": ct})
+                  with urllib.request.urlopen(req, context=ctx) as r:
+                      b=r.read(); return json.loads(b) if b else {}
+
+              def get_secret(name):
+                  try: return api(f"/api/v1/namespaces/{NS}/secrets/{name}")
+                  except urllib.error.HTTPError as e:
+                      if e.code==404: return None
+                      raise
+
+              def kes_pod_names():
+                  pods=api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
+                  return [p["metadata"]["name"] for p in pods if "kes" in p["metadata"]["name"]]
+
+              def bounce_kes():
+                  for n in kes_pod_names():
+                      try: api(f"/api/v1/namespaces/{NS}/pods/{n}", "DELETE"); print(f"  bounced KES pod {n}")
+                      except urllib.error.HTTPError as e:
+                          if e.code!=404: raise
+
+              def wait_kes_ready(timeout=180):
+                  for _ in range(timeout//5):
+                      time.sleep(5)
+                      pods=api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
+                      kes=[p for p in pods if "kes" in p["metadata"]["name"]]
+                      ready=[p for p in kes if p.get("status",{}).get("phase")=="Running"
+                             and all(c.get("ready") for c in p.get("status",{}).get("containerStatuses",[]))]
+                      if kes and len(ready)==len(kes):
+                          print(f"  {len(ready)}/{len(kes)} KES pods Ready."); return True
+                  print("  KES pods not Ready in time (continuing)." ); return False
+
+              def mc(*a, check=False):
+                  return subprocess.run([MC, *a], capture_output=True, text=True, check=check)
+
+              # ---- 1. Resolve the MinIO client-cert identity and patch kes-config-secret ----
+              KEY_CANDIDATES=[CERT_KEY]+[k for k in ("public.crt","tls.crt") if k!=CERT_KEY]
+              sec=crt_b64=None
+              for _ in range(60):
+                  sec=get_secret(CERT_SECRET)
+                  if sec:
+                      d=sec.get("data") or {}
+                      crt_b64=next((d[k] for k in KEY_CANDIDATES if d.get(k)), None)
+                      if crt_b64: break
+                  print(f"waiting for client-cert secret {CERT_SECRET}..."); time.sleep(5)
+              else:
+                  print(f"client-cert secret {CERT_SECRET} not found in time", file=sys.stderr); sys.exit(1)
+              crt=base64.b64decode(crt_b64)
+              der=subprocess.run(["openssl","x509","-pubkey","-noout"], input=crt, capture_output=True, check=True).stdout
+              der=subprocess.run(["openssl","pkey","-pubin","-outform","DER"], input=der, capture_output=True, check=True).stdout
+              identity=hashlib.sha256(der).hexdigest()
+              print(f"identity: {identity}")
+              kc=api(f"/api/v1/namespaces/{NS}/secrets/kes-config-secret")
+              cfg=base64.b64decode(kc["data"]["server-config.yaml"]).decode()
+              if f'"{identity}"' in cfg:
+                  print("identity already current — no config patch needed.")
+              else:
+                  new=re.sub(r'- "(?:_pending_|[0-9a-f]{64})"', f'- "{identity}"', cfg)
+                  api(f"/api/v1/namespaces/{NS}/secrets/kes-config-secret", "PATCH",
+                      {"data": {"server-config.yaml": base64.b64encode(new.encode()).decode()}})
+                  print("patched kes-config-secret with the resolved identity.")
+
+              # ---- 2. Configure mc + wait for the S3 API ----
+              mc("alias","set","t",ENDPOINT,AK,SK)
+              for _ in range(60):
+                  if mc("ready","t").returncode==0 or mc("ls","t").returncode==0: break
+                  print("waiting for MinIO S3 API..."); time.sleep(5)
+
+              # ---- 3. Retry loop: bounce KES -> wait -> real KMS op, until it truly works ----
+              # A fresh-install KES can be pod-Ready yet have a broken Vault keystore (stale token /
+              # cold-start init), which surfaces as "insufficient permissions". Only a KES restart
+              # AFTER Vault is settled fixes it, so we bounce KES INSIDE the loop and gate on a real
+              # KMS operation (`mc encrypt set` == KES key/generate; exits non-zero on failure).
+              MAX=int(os.environ.get("MAX_CYCLES","8"))
+              ok=False
+              for c in range(1, MAX+1):
+                  print(f"=== KMS activation cycle {c}/{MAX}: bouncing KES then testing a real KMS op ===")
+                  bounce_kes(); wait_kes_ready()
+                  # give KES a moment to (re)connect its Vault keystore after Ready
+                  time.sleep(10)
+                  mc("admin","kms","key","create","t",KEY_NAME)   # idempotent; ignore result
+                  r=mc("encrypt","set","sse-kms",KEY_NAME,f"t/{BUCKET}")
+                  if r.returncode==0:
+                      ok=True; print("SSE-KMS enabled — real KMS op succeeded."); break
+                  print(f"  KMS op still failing: {(r.stderr or r.stdout).strip()[:200]}")
+                  time.sleep(5)
+              if not ok:
+                  print("KMS activation did not succeed after all cycles.", file=sys.stderr); sys.exit(1)
+              print(mc("encrypt","info",f"t/{BUCKET}").stdout)
+              print(mc("admin","kms","key","status","t",KEY_NAME).stdout)
+              print(f"Done: bucket '{BUCKET}' encrypts new writes with SSE-KMS key '{KEY_NAME}'.")
 {{- end }}
