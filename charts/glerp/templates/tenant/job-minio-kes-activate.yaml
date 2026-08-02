@@ -180,23 +180,28 @@ spec:
                 i=$((i+1)); [ "$i" -gt 60 ] && { echo "MinIO S3 API not reachable"; exit 1; }
                 echo "waiting for MinIO S3 API..."; sleep 5
               done
-              # Wait for KES to be reachable AND ensure the KMS root key EXISTS. `mc encrypt set`
-              # does NOT reliably auto-create the key (verified: it failed with "key with given
-              # key ID does not exist" until `mc admin kms key create` was run). So create it
-              # explicitly and idempotently — "already exists" is success, not an error.
+              # Wait for MinIO->KES to be reachable, then ensure the KMS root key EXISTS AND WORKS.
+              # `mc encrypt set` does NOT create the key, so we create it. This must be robust in
+              # the minio/mc image, which is MINIMAL: only sh + mc (NO grep/sed/awk). So we do NOT
+              # parse error text — we test the key's health with `mc admin kms key status <key>`,
+              # which is the source of truth: if it reports the key is usable, we're done, whether
+              # this run created it or it already existed (idempotent, no string matching).
               i=0
               until mc admin kms key status t >/dev/null 2>&1; do
                 i=$((i+1)); [ "$i" -gt 60 ] && { echo "KES/KMS not reachable via MinIO"; exit 1; }
                 echo "waiting for MinIO->KES KMS to be reachable..."; sleep 5
               done
-              if mc admin kms key create t "$KEY_NAME" 2>/tmp/kc; then
-                echo "created KMS key '$KEY_NAME'"
-              elif grep -qiE "already exists|exist" /tmp/kc; then
-                echo "KMS key '$KEY_NAME' already exists"
-              else
-                echo "failed to create KMS key '$KEY_NAME':"; cat /tmp/kc; exit 1
-              fi
-              # Confirm the key works end-to-end before enabling bucket encryption.
+              # Try to create the key (harmless if it already exists), then verify by STATUS —
+              # ignoring the create's exit code entirely (an "already exists" error is success here).
+              ok=0
+              i=0
+              while [ "$i" -le 12 ]; do
+                mc admin kms key create t "$KEY_NAME" >/dev/null 2>&1 || true
+                if mc admin kms key status t "$KEY_NAME" >/dev/null 2>&1; then ok=1; break; fi
+                i=$((i+1)); echo "key '$KEY_NAME' not usable yet; retrying..."; sleep 5
+              done
+              [ "$ok" = "1" ] || { echo "KMS key '$KEY_NAME' is not usable after retries"; mc admin kms key status t "$KEY_NAME" || true; exit 1; }
+              echo "KMS key '$KEY_NAME' is present and usable."
               mc admin kms key status t "$KEY_NAME"
               mc encrypt set sse-kms "$KEY_NAME" "t/$BUCKET"
               mc encrypt info "t/$BUCKET" || true
