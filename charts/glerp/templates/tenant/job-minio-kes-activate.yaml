@@ -180,30 +180,37 @@ spec:
                 i=$((i+1)); [ "$i" -gt 60 ] && { echo "MinIO S3 API not reachable"; exit 1; }
                 echo "waiting for MinIO S3 API..."; sleep 5
               done
-              # Wait for MinIO->KES to be reachable, then ensure the KMS root key EXISTS AND WORKS.
-              # `mc encrypt set` does NOT create the key, so we create it. This must be robust in
-              # the minio/mc image, which is MINIMAL: only sh + mc (NO grep/sed/awk). So we do NOT
-              # parse error text — we test the key's health with `mc admin kms key status <key>`,
-              # which is the source of truth: if it reports the key is usable, we're done, whether
-              # this run created it or it already existed (idempotent, no string matching).
+              # Ensure the KMS key exists, then GATE ON A REAL KMS OPERATION. Constraints:
+              # the minio/mc image is minimal (sh + mc only — NO grep/sed/awk), AND
+              # `mc admin kms key status` is NOT a reliable gate: it exits 0 as long as the key
+              # EXISTS and KES is reachable, even when it reports "Encryption ✗ (insufficient
+              # permissions)" — which happens when KES cached a stale Vault token at cold start.
+              # The truthful test is `mc encrypt set sse-kms` itself: it performs a real
+              # key/generate KMS op and exits NON-ZERO on the permission failure. So we drive the
+              # loop with it (idempotent to re-run). If it never succeeds here, we exit non-zero;
+              # the Job's backoffLimit then re-runs the whole hook, and the initContainer bounces
+              # KES again so it re-authenticates to Vault — self-healing the stale-token race.
               i=0
               until mc admin kms key status t >/dev/null 2>&1; do
                 i=$((i+1)); [ "$i" -gt 60 ] && { echo "KES/KMS not reachable via MinIO"; exit 1; }
                 echo "waiting for MinIO->KES KMS to be reachable..."; sleep 5
               done
-              # Try to create the key (harmless if it already exists), then verify by STATUS —
-              # ignoring the create's exit code entirely (an "already exists" error is success here).
+              mc admin kms key create t "$KEY_NAME" >/dev/null 2>&1 || true   # idempotent
               ok=0
               i=0
-              while [ "$i" -le 12 ]; do
-                mc admin kms key create t "$KEY_NAME" >/dev/null 2>&1 || true
-                if mc admin kms key status t "$KEY_NAME" >/dev/null 2>&1; then ok=1; break; fi
-                i=$((i+1)); echo "key '$KEY_NAME' not usable yet; retrying..."; sleep 5
+              while [ "$i" -le 24 ]; do
+                # `mc encrypt set` == a real KES key/generate; success here means encryption WORKS.
+                if mc encrypt set sse-kms "$KEY_NAME" "t/$BUCKET" 2>/tmp/es; then ok=1; break; fi
+                echo "KMS op not ready yet (KES may be re-authenticating to Vault); retrying..."
+                cat /tmp/es 2>/dev/null || true
+                i=$((i+1)); sleep 5
               done
-              [ "$ok" = "1" ] || { echo "KMS key '$KEY_NAME' is not usable after retries"; mc admin kms key status t "$KEY_NAME" || true; exit 1; }
-              echo "KMS key '$KEY_NAME' is present and usable."
-              mc admin kms key status t "$KEY_NAME"
-              mc encrypt set sse-kms "$KEY_NAME" "t/$BUCKET"
+              if [ "$ok" != "1" ]; then
+                echo "SSE-KMS could not be enabled after retries — exiting non-zero so the Job"
+                echo "re-runs and the initContainer bounces KES to force a fresh Vault login."
+                exit 1
+              fi
               mc encrypt info "t/$BUCKET" || true
+              mc admin kms key status t "$KEY_NAME" || true
               echo "SSE-KMS enabled on bucket '$BUCKET' with key '$KEY_NAME' — new writes are encrypted."
 {{- end }}
