@@ -226,6 +226,30 @@ mc cp --recursive <alias>/<ns>/ <alias>/<ns>/
 Do not block new-write protection on this: the hook protects all new writes immediately; run the
 backfill on its own timeline.
 
+### 3c. Troubleshooting KES encryption (if a site's KES isn't working)
+
+The chart config is correct; encryption failures are almost always ONE of these operational
+issues (each masks the next — work down the list). Verify success at any point with, from a MinIO
+pod (container name `minio`): `mc alias set l http://localhost:9000 <ak> <sk>` (creds in
+`<ns>-minio-creds`) then `mc admin kms key status l` → expect `Encryption ✔ / Decryption ✔`.
+
+1. **No KES pods / no `<ns>-minio-tenant-client-tls` secret; Tenant stuck at `Initialized`.**
+   The MinIO Operator isn't reconciling the tenant's `spec.kes` (common on a long-running operator
+   pod with a stale cache). **Fix (once per cluster):**
+   `kubectl -n minio-operator rollout restart deploy/minio-operator`. Within ~2min the operator
+   generates the KES certs and starts KES pods for every tenant. (A `force-sync` annotation does
+   NOT fix this; the restart does.)
+2. **KES pods up but `mc` shows `_pending_` identity / KES rejects MinIO.** Re-run the chart
+   upgrade so the activate hook patches the real cert identity, or patch `kes-config-secret`
+   `policy.minio.identities` with `sha256(DER pubkey)` of `<ns>-minio-tenant-client-tls`/`public.crt`.
+3. **`insufficient permissions to perform KMS operation`.** KES cached a stale Vault token. **Fix:**
+   bounce the KES pods (`kubectl -n <ns> delete pod -l v1.min.io/tenant=<ns>-minio-tenant` for the
+   kes pods) so KES re-authenticates. (The Vault policy/role are correct if
+   `vault read auth/kubernetes/role/glerp-minio-kes` shows the `glerp-minio-kes` policy.)
+4. **`key with given key ID does not exist`.** The KMS root key was never created — `mc encrypt
+   set` does NOT create it. **Fix:** `mc admin kms key create l <ns>-minio-key`, then
+   `mc encrypt set sse-kms <ns>-minio-key l/<ns>`. (The activate hook now does this automatically.)
+
 ### 4. Shared cluster resources (one-time per cluster, already present in prod)
 ESO ClusterSecretStores (`vault-backend` read, `vault-pushwriter` write, `kubernetes-token-auth`),
 cert-manager ClusterIssuer (`apps-general-signer`), Traefik, Velero + the `idrive-e2` BSL, the
