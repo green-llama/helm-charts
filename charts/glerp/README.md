@@ -72,6 +72,32 @@ kubectl -n <your-namespace> logs job/glerp-new-site -f
 > a specific reason. The Bitnami MariaDB/PostgreSQL/Redis subcharts were removed
 > (Broadcom moved those images behind a paywall).
 
+## Encryption at rest (MinIO object storage)
+
+User file storage (the per-tenant MinIO object store, where `dfp_external_storage` puts
+Frappe attachments) is **encrypted at rest with SSE-KMS**, enabled by default in tenant mode
+(`tenant.minio.kes.enabled: true`). Design:
+
+- **KES + HashiCorp Vault.** MinIO's KES (Key Encryption Service) sidecar holds the data keys;
+  the KMS **root key never lands in a Kubernetes Secret** — KES stores/retrieves it directly in
+  Vault (KV v2) over its own Kubernetes-auth JWT.
+- **One encryption key per tenant.** Key name `<namespace>-minio-key`, stored at the per-tenant
+  Vault path `secret/<namespace>/minio-kes/root-key/…`. Tenants do not share a key.
+- **Automatic, no manual steps.** A post-install/upgrade hook resolves the MinIO↔KES cert
+  identity, ensures the KMS key exists, and turns on bucket SSE-KMS — every new object write is
+  encrypted from install onward.
+- **`requestAutoCert: false`** by design — the S3 API stays plain HTTP internally (the trust
+  boundary is Traefik→browser TLS + the single trusted cluster), so `dfp_external_storage` works
+  unchanged. KES's own Vault hop is the one leg that gets mTLS via the service mesh.
+
+Verify on a running tenant (from a MinIO pod, container `minio`):
+`mc admin kms key status <alias>` → `Encryption ✔ / Decryption ✔`.
+
+**One-time-per-cluster prerequisite:** the `glerp-minio-kes` Vault policy + Kubernetes-auth role
+(shared by all tenants; the policy wildcards the namespace path segment). See
+[TENANT.md](TENANT.md) §3b. **Not retroactive:** enabling SSE-KMS encrypts only *new* writes;
+backfill pre-existing objects with `mc cp --recursive` (TENANT.md).
+
 ## Tenant mode (production)
 
 Set `tenant.enabled=true` to also have the chart manage the per-tenant infrastructure:

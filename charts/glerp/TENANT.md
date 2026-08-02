@@ -214,6 +214,33 @@ vault write auth/kubernetes/role/glerp-minio-kes \
 > `mc stat <alias>/<ns>/<a-newly-uploaded-object>` →
 > `Encryption: SSE-KMS (arn:aws:kms:<ns>-minio-key)`.
 
+#### Key scoping across namespaces (current model + isolation note)
+
+**Each tenant has its own encryption key and its own key storage path** — keys are NOT shared:
+- Key name: `<namespace>-minio-key` (unique per tenant).
+- Vault storage path: `secret/<namespace>/minio-kes/root-key/…` (per-namespace path).
+
+**What is shared is the Vault k8s-auth *role* (`glerp-minio-kes`), not the key.** The role is
+just the authentication mechanism; its policy scopes each request to
+`secret/data/+/minio-kes/root-key` where `+` matches the caller's own namespace segment, so a
+given request only ever reads one namespace's path.
+
+**Known residual isolation gap (accepted, documented):** because the role binds
+`bound_service_account_names="*-minio-tenant-kes"` across `bound_service_account_namespaces="*"`,
+Vault has no way to bind a caller's *own* namespace to which `+` segment it may touch. So a KES
+pod in namespace A, using its legitimate SA, could in principle authenticate and read namespace
+B's `secret/data/B/minio-kes/root-key`. The **keys themselves remain separate** (per-tenant), and
+all KES pods are operator-managed with the same trust level — but this cross-namespace *reach* is
+a real (if narrow) finding for a strict multi-tenant isolation control.
+
+**Why not tighter today:** the clean fix is Vault **templated ACL policies** (one policy that
+self-scopes to `{{identity…service_account_namespace}}`), which is a **Vault Enterprise-only**
+feature — this cluster runs **Vault Community Edition**, so it is not available. The CE-compatible
+alternative is a genuine **per-tenant** `<ns>-minio-kes` policy+role, auto-created by a Helm hook
+at install (design captured in `MINIO-KES-VAULT-PROVISIONER-HANDOFF.md`). That tightening is
+**deferred**: the current shared-role model is in production and working; per-tenant roles are a
+future hardening step, not a blocker. Get encryption working first, tighten isolation second.
+
 **Backfilling existing (pre-encryption) data** — per-site, NOT a cluster prereq: SSE-KMS is not
 retroactive; it only encrypts objects written *after* it is enabled. Existing objects stay
 plaintext until rewritten (path is unchanged). Re-encrypt in place, scheduled per site by data
