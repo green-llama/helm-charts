@@ -14,6 +14,20 @@ it exists to guarantee a cluster that default-enables injection can never wrap t
 Envoy. (Note: the "sidecar" container present on every MinIO tenant pod is
 `minio/operator-sidecar`, the operator's own config-reload sidecar — **not** Istio.)
 
+## Activate hook — correct KES pod selector + patient final retry
+
+- **KES pod selector fix:** the hook selected KES pods with `v1.min.io/tenant=<tenant>`, but the
+  operator labels KES pods `v1.min.io/kes=<tenant>-kes` (only the *pool* pods carry
+  `v1.min.io/tenant`). The wrong selector returned zero pods, so the Ready/stable waits timed out
+  and the hook stalled. `tenant_pods()` now uses the correct label per kind.
+- **Patient, idempotent final activation:** `mc admin kms key create` + `mc encrypt set` are both
+  idempotent, so the final step now retries patiently (`ACTIVATE_ATTEMPTS`, default 12) rather than
+  failing fast. This rides out a **transient** MinIO storage state seen on very small dev drives:
+  a "minimum free drive threshold" that surfaces from `mc encrypt set` as the MISLEADING error
+  `SetEncryption is not supported for filesystem` even when the backend is Erasure — it clears once
+  the drives settle. The log now flags that error as transient. (Guidance: keep MinIO `volumeSize`
+  comfortably above MinIO's reserved overhead — ~1Gi+ — to avoid this threshold on tiny drives.)
+
 ## Fresh-install KES activation — delayed one-shot (replaces the retry/bounce loop)
 
 **Confirmed root cause of the fresh-install "insufficient permissions to perform KMS operation":**

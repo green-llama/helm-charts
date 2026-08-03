@@ -243,19 +243,28 @@ spec:
               wait_ready("pool")           # MinIO may re-init its KMS client after KES returns
               time.sleep(SETTLE)
 
-              # 3c. ONE clean activation: create the KMS key, enable bucket SSE-KMS. A couple of short
-              # retries only to ride out DNS/endpoint propagation right after the bounce — NOT a
-              # bounce loop.
+              # 3c. Clean activation: create the KMS key, enable bucket SSE-KMS. Both ops are
+              # IDEMPOTENT (create = "already exists", encrypt set = re-applies the same config), so
+              # this retries PATIENTLY — it isn't a bounce loop, it's just waiting out transient
+              # storage states. Notably, right after startup MinIO can report a "minimum free drive
+              # threshold" (tiny drives) which surfaces from `mc encrypt set` as the MISLEADING error
+              # "SetEncryption is not supported for filesystem" even though the backend is Erasure;
+              # it clears on its own once the drives settle, so we keep retrying rather than fail.
+              ACT_ATTEMPTS=int(os.environ.get("ACTIVATE_ATTEMPTS","12"))
               ok=False
-              for attempt in range(1,6):
+              for attempt in range(1, ACT_ATTEMPTS+1):
                   mc("admin","kms","key","create","t",KEY_NAME)   # idempotent; ignore result
                   r=mc("encrypt","set","sse-kms",KEY_NAME,f"t/{BUCKET}")
                   if r.returncode==0:
                       ok=True; print(f"SSE-KMS enabled on attempt {attempt}."); break
-                  print(f"  attempt {attempt}/5 not ready yet: {(r.stderr or r.stdout).strip()[:200]}")
+                  msg=(r.stderr or r.stdout).strip()[:200]
+                  hint=""
+                  if "filesystem" in msg or "minimum free drive" in msg:
+                      hint=" (transient: MinIO drives still settling / minimum-free-drive threshold — will retry)"
+                  print(f"  attempt {attempt}/{ACT_ATTEMPTS} not ready yet: {msg}{hint}")
                   time.sleep(SETTLE)
               if not ok:
-                  print("KMS activation did not succeed after all cycles.", file=sys.stderr); sys.exit(1)
+                  print("KMS activation did not succeed after all attempts.", file=sys.stderr); sys.exit(1)
               print(mc("encrypt","info",f"t/{BUCKET}").stdout)
               print(mc("admin","kms","key","status","t",KEY_NAME).stdout)
               print(f"Done: bucket '{BUCKET}' encrypts new writes with SSE-KMS key '{KEY_NAME}'.")
