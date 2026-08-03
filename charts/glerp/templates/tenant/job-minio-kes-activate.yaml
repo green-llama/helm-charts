@@ -179,24 +179,35 @@ spec:
                   if mc("ready","t").returncode==0 or mc("ls","t").returncode==0: break
                   print("waiting for MinIO S3 API..."); time.sleep(5)
 
-              # ---- 3. Retry loop: bounce KES -> wait -> real KMS op, until it truly works ----
-              # A fresh-install KES can be pod-Ready yet have a broken Vault keystore (stale token /
-              # cold-start init), which surfaces as "insufficient permissions". Only a KES restart
-              # AFTER Vault is settled fixes it, so we bounce KES INSIDE the loop and gate on a real
-              # KMS operation (`mc encrypt set` == KES key/generate; exits non-zero on failure).
-              MAX=int(os.environ.get("MAX_CYCLES","8"))
-              ok=False
+              # ---- 3. Retry loop: try a real KMS op; bounce KES only when needed, until it works ----
+              # CONFIRMED root cause of fresh-install "insufficient permissions": KES is pod-Ready
+              # but its Vault KEYSTORE SESSION isn't usable yet (cold-start). A KES restart AFTER the
+              # cluster/Vault settles fixes it. But bouncing KES on EVERY cycle just resets its
+              # settle clock, so instead: try the op first; only bounce when it's been failing, and
+              # give a generous settle after each bounce. Gate on a real KMS op (`mc encrypt set` ==
+              # KES key/generate; nonzero on failure), never on parsed text.
+              #   MAX_CYCLES default 20 and BOUNCE_EVERY 3 => up to ~20*settle of runtime, bouncing
+              #   ~every 3rd failing cycle — tolerates a slow-settling fresh cluster (the failure
+              #   mode this session, where 8 cycles gave up before Vault settled). All tunable via env.
+              MAX=int(os.environ.get("MAX_CYCLES","20"))
+              SETTLE=int(os.environ.get("SETTLE_SECONDS","15"))     # wait after Ready before a KMS op
+              BOUNCE_EVERY=int(os.environ.get("BOUNCE_EVERY","3"))  # bounce KES once per N failing cycles
+              ok=False; fails=0
               for c in range(1, MAX+1):
-                  print(f"=== KMS activation cycle {c}/{MAX}: bouncing KES then testing a real KMS op ===")
-                  bounce_kes(); wait_kes_ready()
-                  # give KES a moment to (re)connect its Vault keystore after Ready
-                  time.sleep(10)
+                  # On the first cycle, and once per BOUNCE_EVERY failures thereafter, bounce KES so it
+                  # re-auths to Vault; otherwise just wait and retry (let the existing session settle).
+                  if c==1 or (fails and fails % BOUNCE_EVERY == 0):
+                      print(f"=== cycle {c}/{MAX}: bouncing KES so it re-auths to Vault ===")
+                      bounce_kes(); wait_kes_ready()
+                  else:
+                      print(f"=== cycle {c}/{MAX}: retrying KMS op (letting KES's Vault session settle) ===")
+                  time.sleep(SETTLE)
                   mc("admin","kms","key","create","t",KEY_NAME)   # idempotent; ignore result
                   r=mc("encrypt","set","sse-kms",KEY_NAME,f"t/{BUCKET}")
                   if r.returncode==0:
                       ok=True; print("SSE-KMS enabled — real KMS op succeeded."); break
-                  print(f"  KMS op still failing: {(r.stderr or r.stdout).strip()[:200]}")
-                  time.sleep(5)
+                  fails+=1
+                  print(f"  KMS op still failing (fail {fails}): {(r.stderr or r.stdout).strip()[:200]}")
               if not ok:
                   print("KMS activation did not succeed after all cycles.", file=sys.stderr); sys.exit(1)
               print(mc("encrypt","info",f"t/{BUCKET}").stdout)

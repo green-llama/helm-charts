@@ -72,6 +72,19 @@ tenant:
     volumesPerServer: 2
     volumeSize: 3Gi
     storageClass: directpv-min-io
+    # Capacity growth beyond the initial `pools`/`servers`/`volumesPerServer`/`volumeSize` shape
+    # above. MinIO Operator pools are ADDITIVE and IMMUTABLE once created — you cannot resize or
+    # remove an existing pool's volumeClaimTemplate, only add a new one alongside it. So growth
+    # (e.g. a client exhausting current capacity) means appending a pool here, not editing the
+    # defaults above (which only apply to the pools created at install time). Leave EMPTY for a
+    # normal single-shape install — this is an advanced/rarely-touched escape hatch, deliberately
+    # NOT part of the simple top-level fields so a basic install form stays uncluttered. Each
+    # entry is a full additional pool spec; omitted fields fall back to the shared defaults above.
+    #   extraPools:
+    #     - volumeSize: 10Gi   # pool-N: a second, larger pool added later for capacity growth
+    #       servers: 2
+    #       volumesPerServer: 2
+    extraPools: []
     vaultAddr: http://vault-active.vault-system.svc.cluster.local:8200
     # Encryption-at-rest via KES (MinIO Key Encryption Service) + Vault. KES sits between MinIO
     # and Vault and talks to Vault as a KV client over its own k8s-auth JWT — the KMS root key
@@ -176,7 +189,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.49
+  tag: 1.0.50
 imagePullSecrets:
   - name: ghcr-cred
 ingress:

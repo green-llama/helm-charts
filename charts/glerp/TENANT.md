@@ -269,25 +269,22 @@ pod (container name `minio`): `mc alias set l http://localhost:9000 <ak> <sk>` (
 2. **KES pods up but `mc` shows `_pending_` identity / KES rejects MinIO.** Re-run the chart
    upgrade so the activate hook patches the real cert identity, or patch `kes-config-secret`
    `policy.minio.identities` with `sha256(DER pubkey)` of `<ns>-minio-tenant-client-tls`/`public.crt`.
-3. **`insufficient permissions to perform KMS operation`.** This generic error has TWO distinct
-   causes — check the KES pod log FIRST to tell them apart (`kubectl -n <ns> logs <ns>-minio-tenant-kes-0 -c kes`):
-   - **(a) `tls: client didn't provide a certificate` in the KES log** → an **Istio sidecar on the
-     MinIO data-plane pods** is intercepting MinIO's outbound call to KES:7373 and stripping MinIO's
-     client cert. Check with
-     `kubectl -n <ns> get pod <ns>-minio-tenant-pool-0-0 -o jsonpath='{.spec.containers[*].name}'`
-     — if you see a `sidecar`/`istio-proxy` container, that's it. **Fix:** the chart sets
-     `sidecar.istio.io/inject: "false"` on the MinIO pool pods (`spec.pools[].labels`) so the mesh
-     stays off the data plane (KES itself stays meshed). Upgrade to the chart version that includes
-     this; if pods still have the sidecar, they need to roll (the operator rebuilds the StatefulSet).
-     This is the usual cause on clusters with default sidecar injection ON (e.g. the dev cluster);
-     prod MinIO pods have no sidecar. Bouncing KES will NOT fix this.
-   - **(b) NOTHING new in the KES log except the startup banner, i.e. the request reached KES but it
-     denied it** → KES cached a stale Vault token. **Fix:** bounce the KES pods
-     (`kubectl -n <ns> delete pod -l v1.min.io/tenant=<ns>-minio-tenant` for the kes pods) so KES
-     re-authenticates. (The Vault policy/role are correct if
-     `vault read auth/kubernetes/role/glerp-minio-kes` shows the `glerp-minio-kes` policy; you can
-     prove the write path with `vault write auth/kubernetes/login role=glerp-minio-kes jwt=$(kubectl
-     -n <ns> create token <ns>-minio-tenant-kes)` then a `vault kv put secret/<ns>/minio-kes/root-key/probe x=1`.)
+3. **`insufficient permissions to perform KMS operation` (esp. on a FRESH install).** On a
+   brand-new tenant, KES can be pod-Ready while its **Vault keystore session is not yet usable**
+   (fresh-install cold-start), so MinIO's KMS calls fail and the KES pod log shows nothing new for
+   the request. **Fix: bounce the KES pods once the cluster has settled** so KES re-authenticates to
+   Vault: `kubectl -n <ns> delete pod -l v1.min.io/tenant=<ns>-minio-tenant` (the kes pods), wait
+   Ready, then re-run `mc admin kms key create <alias> <ns>-minio-key` — it should return
+   `Encryption ✔ / Decryption ✔`. The `job-minio-kes-activate` hook does this bounce+retry
+   automatically, but on a slow-settling fresh cluster it can exhaust its retry budget before Vault
+   settles; if so, just re-run the hook or bounce KES manually as above.
+   - The Vault policy/role are correct if `vault read auth/kubernetes/role/glerp-minio-kes` shows
+     the `glerp-minio-kes` policy; prove the write path with `vault write
+     auth/kubernetes/login role=glerp-minio-kes jwt=$(kubectl -n <ns> create token
+     <ns>-minio-tenant-kes)` then `vault kv put secret/<ns>/minio-kes/root-key/probe x=1`.
+   - Not a cause: the `MINIO_KMS_SECRET_KEY_FILE=kms_master_key` env in the MinIO process is a
+     harmless MinIO-Operator default present on working sites too; and the `sidecar` container on
+     the pod is `minio/operator-sidecar` (the operator's own), **not** Istio.
 4. **`key with given key ID does not exist`.** The KMS root key was never created — `mc encrypt
    set` does NOT create it. **Fix:** `mc admin kms key create l <ns>-minio-key`, then
    `mc encrypt set sse-kms <ns>-minio-key l/<ns>`. (The activate hook now does this automatically.)

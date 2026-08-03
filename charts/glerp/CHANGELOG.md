@@ -3,23 +3,31 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
-## MinIO KES on Istio-meshed clusters — keep the sidecar off the data plane
+## MinIO data-plane pods kept out of the service mesh (defensive)
 
-**Fix:** the MinIO **pool (data-plane) pods** now carry `sidecar.istio.io/inject: "false"`, so no
-Envoy sidecar is injected onto them. On clusters where sidecar injection is on by default (our dev
-cluster), an injected Envoy intercepted MinIO's **outbound** call to KES on `:7373` and
-re-originated the TLS **without MinIO's client certificate**. KES requires mTLS client auth and
-rejected it (`tls: client didn't provide a certificate`), which surfaced to `mc` as the generic
-`insufficient permissions to perform KMS operation` — encryption silently never activated on a
-fresh install. The **KES pod itself stays meshed** (`.spec.kes.labels sidecar.istio.io/inject:
-"true"` + `excludeInboundPorts: 7373`) so its Vault hop is still protected; only the
-high-throughput S3 data path is kept out of the mesh — matching production and avoiding Envoy
-latency/overhead on object I/O.
+The MinIO **pool (data-plane) pods** now carry `sidecar.istio.io/inject: "false"`. This is a
+**defensive** label, not a bug fix: it keeps the high-throughput S3 object path out of the mesh
+(mesh is reserved for sensitive traffic; avoids Envoy latency/overhead) and matches production,
+where the MinIO pods run un-meshed. The KES pod stays meshed (`.spec.kes.labels`) so its Vault hop
+is protected. On our clusters sidecar injection is already default-off, so this is a no-op there;
+it exists to guarantee a cluster that default-enables injection can never wrap these pods in an
+Envoy. (Note: the "sidecar" container present on every MinIO tenant pod is
+`minio/operator-sidecar`, the operator's own config-reload sidecar — **not** Istio.)
 
-This was the true root cause of the fresh-install "insufficient permissions" symptom (NOT a KES
-Vault-keystore cold-start, as earlier suspected). All structural config — Vault policy/role, KES
-client identity, cert CA chain, MinIO config/mounts — was correct throughout; the only broken leg
-was the meshed MinIO→KES connection, which is why bouncing KES never helped.
+## Fresh-install KES encryption activation — KES Vault-session cold-start
+
+**Confirmed root cause of the fresh-install "insufficient permissions to perform KMS operation"
+symptom:** on a brand-new tenant, KES can be pod-Ready while its Vault keystore session is not yet
+usable, so MinIO's KMS calls fail. A **KES restart after the cluster has settled** re-establishes
+the Vault session and encryption immediately works (`mc admin kms key status` →
+`Encryption ✔ / Decryption ✔`; a written object shows `Encryption: SSE-KMS`). Every other config
+artifact (Vault policy/role, KES client-cert identity, cert CA chain, MinIO `config.env`, the
+`MINIO_KMS_SECRET_KEY_FILE=kms_master_key` operator default) is byte-identical to a working
+production site and is **not** the cause. The `job-minio-kes-activate` hook already bounces KES and
+retries the KMS op for exactly this reason; on a slow-settling fresh cluster it can exhaust its
+retry budget before Vault settles — see the hook's `MAX_CYCLES`/`activateBackoffLimit` if a fresh
+install still shows `Encryption ✗`, and re-run the hook (or bounce the KES pods) once the cluster
+is quiet.
 
 ## MinIO encryption at rest (KES + Vault) — chart 1.0.66 → 1.0.71
 

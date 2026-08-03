@@ -110,7 +110,15 @@ Tenant domain: tenant.domain, else top-level domain. Required when tenant.enable
 */}}
 {{- define "glerp.tenantDomain" -}}
 {{- $d := .Values.tenant.domain | default .Values.domain -}}
-{{- required "tenant.enabled requires tenant.domain (or .Values.domain)" $d -}}
+{{- $d = required "tenant.enabled requires tenant.domain (or .Values.domain)" $d -}}
+{{/* Fail fast on a malformed domain (e.g. a comma/space typo like "dev,greenllama.tech").
+     Left unchecked it flows into MINIO_BROWSER_REDIRECT_URL and MinIO crash-loops at boot with
+     "FATAL Invalid MINIO_BROWSER_REDIRECT_URL: invalid hostname". A valid DNS domain is dot-
+     separated labels of [a-z0-9-]; catch the common typos here with a clear message. */}}
+{{- if not (regexMatch "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$" $d) -}}
+{{- fail (printf "invalid domain %q: must be a dot-separated DNS name (lowercase letters, digits, hyphens) with no commas, spaces, or underscores — e.g. dev.greenllama.tech" $d) -}}
+{{- end -}}
+{{- $d -}}
 {{- end -}}
 
 {{/*
@@ -186,4 +194,47 @@ Resolve mariadb-sts root password secret key.
 {{- $m := (index .Values "mariadb-sts") | default dict -}}
 {{- $existing := (get $m "existingSecret") | default dict -}}
 {{- default "mariadb-root-password" (get $existing "key") -}}
+{{- end -}}
+
+{{/*
+Render one MinIO Tenant pool entry. Context (dict): name, spec (this pool's overrides, may be
+empty), defaults (tenant.minio, for servers/volumesPerServer/volumeSize/storageClass fallback).
+Used for both the uniform base pools and tenant.minio.extraPools entries so the two loops in
+minio-tenant.yaml can't drift out of sync (mesh-exclusion labels, security contexts, etc.).
+*/}}
+{{- define "glerp.minioPool" -}}
+{{- $spec := .spec | default dict -}}
+{{- $defaults := .defaults | default dict -}}
+- name: {{ .name }}
+  servers: {{ $spec.servers | default $defaults.servers | default 2 }}
+  volumesPerServer: {{ $spec.volumesPerServer | default $defaults.volumesPerServer | default 2 }}
+  # Keep the service mesh OFF the MinIO data-plane pods: the mesh is reserved for sensitive
+  # traffic only, not the high-throughput S3 object path (avoids Envoy latency/overhead), and
+  # this matches production, where the MinIO pods run un-meshed. The KES pod DOES stay meshed
+  # (see .spec.kes.labels in minio-tenant.yaml) so its Vault hop is protected. This label is a
+  # no-op on clusters where sidecar injection is already default-off; it is a guard so that a
+  # cluster which default-enables injection can never wrap these pods in an Envoy.
+  labels:
+    sidecar.istio.io/inject: "false"
+  volumeClaimTemplate:
+    metadata:
+      name: data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: {{ $spec.storageClass | default $defaults.storageClass | default "directpv-min-io" }}
+      resources:
+        requests:
+          # NOTE: MinIO Operator treats this as immutable once the pool exists — for an
+          # existing pool, a size mismatch against its live PVCs fails/is rejected on upgrade,
+          # not silently resized. Grow capacity via tenant.minio.extraPools (a new pool),
+          # never by editing an already-created pool's size here.
+          storage: {{ $spec.volumeSize | default $defaults.volumeSize | default "3Gi" }}
+  securityContext:
+    fsGroup: 1000
+  containerSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
 {{- end -}}

@@ -53,35 +53,11 @@ spec:
       name: kes-config-secret
   {{- end }}
   pools:
-    {{- range $i := until (int ($m.pools | default 2)) }}
-    - name: pool-{{ $i }}
-      servers: {{ $m.servers | default 2 }}
-      volumesPerServer: {{ $m.volumesPerServer | default 2 }}
-      # Keep the service mesh OFF the MinIO data-plane pods (matches production; mesh is reserved
-      # for sensitive traffic only). An injected Envoy captures MinIO's OUTBOUND call to KES:7373
-      # and re-originates it WITHOUT MinIO's client cert, so KES (which requires mTLS client auth)
-      # rejects it with "client didn't provide a certificate" — surfacing to `mc` as the generic
-      # "insufficient permissions to perform KMS operation" and silently breaking encryption. The
-      # KES pod itself stays meshed (see .spec.kes.labels above) so its Vault hop is protected;
-      # only the high-throughput S3 data path is kept out of the mesh (no Envoy latency/overhead).
-      labels:
-        sidecar.istio.io/inject: "false"
-      volumeClaimTemplate:
-        metadata:
-          name: data
-        spec:
-          accessModes:
-            - ReadWriteOnce
-          storageClassName: {{ $m.storageClass | default "directpv-min-io" }}
-          resources:
-            requests:
-              storage: {{ $m.volumeSize | default "3Gi" }}
-      securityContext:
-        fsGroup: 1000
-      containerSecurityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        runAsNonRoot: true
-        allowPrivilegeEscalation: false
+    {{- $poolCount := int ($m.pools | default 2) }}
+    {{- range $i := until $poolCount }}
+    {{- include "glerp.minioPool" (dict "name" (printf "pool-%d" $i) "spec" dict "defaults" $m) | nindent 4 }}
+    {{- end }}
+    {{- range $j, $extra := ($m.extraPools | default list) }}
+    {{- include "glerp.minioPool" (dict "name" (printf "pool-%d" (add $poolCount $j)) "spec" $extra "defaults" $m) | nindent 4 }}
     {{- end }}
 {{- end }}
