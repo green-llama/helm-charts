@@ -124,14 +124,13 @@ spec:
                       if e.code==404: return None
                       raise
 
-              def kes_pod_names():
-                  pods=api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
-                  return [p["metadata"]["name"] for p in pods if "kes" in p["metadata"]["name"]]
-
               def tenant_pods(kind):
-                  # kind: "kes" or "pool" — filter the tenant's pods by name.
-                  pods=api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
-                  return [p for p in pods if kind in p["metadata"]["name"]]
+                  # The MinIO Operator labels the two pod kinds DIFFERENTLY:
+                  #   KES pods:  v1.min.io/kes=<tenant>-kes        (NOT v1.min.io/tenant)
+                  #   pool pods: v1.min.io/tenant=<tenant>
+                  # Selecting the wrong label returns [] and any wait on it times out.
+                  sel = f"v1.min.io/kes={TENANT}-kes" if kind=="kes" else f"v1.min.io/tenant={TENANT}"
+                  return api(f"/api/v1/namespaces/{NS}/pods?labelSelector={sel}").get("items", [])
 
               def pods_ready(kind):
                   ps=tenant_pods(kind)
