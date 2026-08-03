@@ -14,20 +14,27 @@ it exists to guarantee a cluster that default-enables injection can never wrap t
 Envoy. (Note: the "sidecar" container present on every MinIO tenant pod is
 `minio/operator-sidecar`, the operator's own config-reload sidecar — **not** Istio.)
 
-## Fresh-install KES encryption activation — KES Vault-session cold-start
+## Fresh-install KES activation — delayed one-shot (replaces the retry/bounce loop)
 
-**Confirmed root cause of the fresh-install "insufficient permissions to perform KMS operation"
-symptom:** on a brand-new tenant, KES can be pod-Ready while its Vault keystore session is not yet
-usable, so MinIO's KMS calls fail. A **KES restart after the cluster has settled** re-establishes
-the Vault session and encryption immediately works (`mc admin kms key status` →
-`Encryption ✔ / Decryption ✔`; a written object shows `Encryption: SSE-KMS`). Every other config
-artifact (Vault policy/role, KES client-cert identity, cert CA chain, MinIO `config.env`, the
+**Confirmed root cause of the fresh-install "insufficient permissions to perform KMS operation":**
+on a brand-new tenant, KES is pod-Ready before its Vault keystore session is usable (cold-start),
+AND MinIO itself crash-loops while its KMS init fails. Every other config artifact (Vault
+policy/role, KES client-cert identity, cert CA chain, MinIO `config.env`, the
 `MINIO_KMS_SECRET_KEY_FILE=kms_master_key` operator default) is byte-identical to a working
-production site and is **not** the cause. The `job-minio-kes-activate` hook already bounces KES and
-retries the KMS op for exactly this reason; on a slow-settling fresh cluster it can exhaust its
-retry budget before Vault settles — see the hook's `MAX_CYCLES`/`activateBackoffLimit` if a fresh
-install still shows `Encryption ✗`, and re-run the hook (or bounce the KES pods) once the cluster
-is quiet.
+production site and is **not** the cause. A KES restart *after the cluster settles* fixes it.
+
+The previous `job-minio-kes-activate` design retried in a tight loop and bounced KES repeatedly;
+that **fought** the fresh-install dynamics — it reset KES's Vault-settle clock, and bouncing both
+KES replicas at once opened a `no such host` / connection-refused gap. It did not reliably
+self-heal. **Redesigned as a delayed one-shot:** the hook now (1) waits for the KES and MinIO pods
+to be Ready *and* stable (past their crash-loop — no restart for a quiet window), (2) does **one
+rolling KES bounce** (one replica at a time, so the KES Service never loses all endpoints) to force
+a clean Vault re-auth now that the cluster is settled, then (3) does **one** clean activation
+(create KMS key + enable bucket SSE-KMS), with only a few short retries to ride out DNS propagation
+— not a bounce loop. Also runs Python **unbuffered** (`python3 -u` / `PYTHONUNBUFFERED=1`) so
+`kubectl logs` shows live progress. Tunable via `SETTLE_SECONDS` / `STABLE_QUIET` /
+`SETTLE_TIMEOUT`. If a fresh install still shows `Encryption ✗`, the TENANT.md §3c manual runbook
+(one KES bounce once the cluster is quiet) still applies.
 
 ## MinIO encryption at rest (KES + Vault) — chart 1.0.66 → 1.0.71
 

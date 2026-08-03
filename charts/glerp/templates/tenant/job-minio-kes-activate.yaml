@@ -62,11 +62,13 @@ spec:
         - name: activate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python3", "-c"]
+          command: ["python3", "-u", "-c"]   # -u = unbuffered stdout so `kubectl logs` shows live progress
           volumeMounts:
             - name: mcbin
               mountPath: /mcbin
           env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
             - name: NS
               value: {{ $ns | quote }}
             - name: TENANT
@@ -126,22 +128,54 @@ spec:
                   pods=api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
                   return [p["metadata"]["name"] for p in pods if "kes" in p["metadata"]["name"]]
 
-              def bounce_kes():
-                  for n in kes_pod_names():
-                      try: api(f"/api/v1/namespaces/{NS}/pods/{n}", "DELETE"); print(f"  bounced KES pod {n}")
+              def tenant_pods(kind):
+                  # kind: "kes" or "pool" — filter the tenant's pods by name.
+                  pods=api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
+                  return [p for p in pods if kind in p["metadata"]["name"]]
+
+              def pods_ready(kind):
+                  ps=tenant_pods(kind)
+                  ready=[p for p in ps if p.get("status",{}).get("phase")=="Running"
+                         and all(c.get("ready") for c in p.get("status",{}).get("containerStatuses",[]))]
+                  return ps, ready
+
+              def wait_ready(kind, timeout=300):
+                  # Wait until ALL pods of this kind are Running+Ready. Returns True on success.
+                  for _ in range(timeout//5):
+                      ps, ready = pods_ready(kind)
+                      if ps and len(ready)==len(ps):
+                          print(f"  {len(ready)}/{len(ps)} {kind} pods Ready."); return True
+                      time.sleep(5)
+                  print(f"  {kind} pods not all Ready within {timeout}s (continuing)."); return False
+
+              def pods_stable(kind, quiet=45):
+                  # True only if every pod of this kind is Ready AND its container(s) started at least
+                  # `quiet` seconds ago with no restart in that window — i.e. it's past its crash-loop.
+                  import datetime
+                  now=datetime.datetime.now(datetime.timezone.utc)
+                  ps, ready = pods_ready(kind)
+                  if not ps or len(ready)!=len(ps): return False
+                  for p in ps:
+                      for cs in p.get("status",{}).get("containerStatuses",[]):
+                          st=(cs.get("state") or {}).get("running") or {}
+                          started=st.get("startedAt")
+                          if not started: return False
+                          age=(now-datetime.datetime.fromisoformat(started.replace("Z","+00:00"))).total_seconds()
+                          if age < quiet: return False
+                  return True
+
+              def bounce_kes_rolling():
+                  # Restart KES ONE replica at a time, waiting for each to come back Ready before the
+                  # next — so the KES Service never loses all endpoints (avoids the "no such host" /
+                  # connection-refused gap that a simultaneous both-replica delete caused).
+                  names=[p["metadata"]["name"] for p in tenant_pods("kes")]
+                  for n in names:
+                      try:
+                          api(f"/api/v1/namespaces/{NS}/pods/{n}", "DELETE"); print(f"  bounced KES pod {n}; waiting for it to return Ready...")
                       except urllib.error.HTTPError as e:
                           if e.code!=404: raise
-
-              def wait_kes_ready(timeout=180):
-                  for _ in range(timeout//5):
-                      time.sleep(5)
-                      pods=api(f"/api/v1/namespaces/{NS}/pods?labelSelector=v1.min.io/tenant={TENANT}").get("items", [])
-                      kes=[p for p in pods if "kes" in p["metadata"]["name"]]
-                      ready=[p for p in kes if p.get("status",{}).get("phase")=="Running"
-                             and all(c.get("ready") for c in p.get("status",{}).get("containerStatuses",[]))]
-                      if kes and len(ready)==len(kes):
-                          print(f"  {len(ready)}/{len(kes)} KES pods Ready."); return True
-                  print("  KES pods not Ready in time (continuing)." ); return False
+                      # wait for that pod to be gone-and-recreated Ready before touching the next one
+                      time.sleep(5); wait_ready("kes")
 
               def mc(*a, check=False):
                   return subprocess.run([MC, *a], capture_output=True, text=True, check=check)
@@ -179,35 +213,48 @@ spec:
                   if mc("ready","t").returncode==0 or mc("ls","t").returncode==0: break
                   print("waiting for MinIO S3 API..."); time.sleep(5)
 
-              # ---- 3. Retry loop: try a real KMS op; bounce KES only when needed, until it works ----
-              # CONFIRMED root cause of fresh-install "insufficient permissions": KES is pod-Ready
-              # but its Vault KEYSTORE SESSION isn't usable yet (cold-start). A KES restart AFTER the
-              # cluster/Vault settles fixes it. But bouncing KES on EVERY cycle just resets its
-              # settle clock, so instead: try the op first; only bounce when it's been failing, and
-              # give a generous settle after each bounce. Gate on a real KMS op (`mc encrypt set` ==
-              # KES key/generate; nonzero on failure), never on parsed text.
-              #   MAX_CYCLES default 20 and BOUNCE_EVERY 3 => up to ~20*settle of runtime, bouncing
-              #   ~every 3rd failing cycle — tolerates a slow-settling fresh cluster (the failure
-              #   mode this session, where 8 cycles gave up before Vault settled). All tunable via env.
-              MAX=int(os.environ.get("MAX_CYCLES","20"))
-              SETTLE=int(os.environ.get("SETTLE_SECONDS","15"))     # wait after Ready before a KMS op
-              BOUNCE_EVERY=int(os.environ.get("BOUNCE_EVERY","3"))  # bounce KES once per N failing cycles
-              ok=False; fails=0
-              for c in range(1, MAX+1):
-                  # On the first cycle, and once per BOUNCE_EVERY failures thereafter, bounce KES so it
-                  # re-auths to Vault; otherwise just wait and retry (let the existing session settle).
-                  if c==1 or (fails and fails % BOUNCE_EVERY == 0):
-                      print(f"=== cycle {c}/{MAX}: bouncing KES so it re-auths to Vault ===")
-                      bounce_kes(); wait_kes_ready()
-                  else:
-                      print(f"=== cycle {c}/{MAX}: retrying KMS op (letting KES's Vault session settle) ===")
-                  time.sleep(SETTLE)
+              # ---- 3. DELAYED ONE-SHOT activation ----
+              # Root cause of the fresh-install "insufficient permissions": KES is pod-Ready before its
+              # Vault keystore SESSION is usable (cold-start), AND MinIO itself crash-loops while its
+              # KMS init fails. A tight retry loop that bounces KES repeatedly fought this (it reset
+              # KES's settle clock and, bouncing both replicas at once, opened a "no such host" gap).
+              # The manual fix only ever worked because by then the cluster had SETTLED. So: WAIT for
+              # the tenant to actually settle, do ONE rolling KES bounce (to force a clean Vault
+              # re-auth once Vault is reachable), then do ONE clean activation. No thrash loop.
+              SETTLE=int(os.environ.get("SETTLE_SECONDS","20"))      # pause after things look stable
+              STABLE_QUIET=int(os.environ.get("STABLE_QUIET","45"))  # a pod must be crash-loop-free this long
+              SETTLE_TIMEOUT=int(os.environ.get("SETTLE_TIMEOUT","600"))
+
+              # 3a. Wait for KES + MinIO pods to be Ready AND stable (past their fresh-install crash-loop).
+              print("waiting for KES + MinIO pods to be Ready...")
+              wait_ready("kes"); wait_ready("pool")
+              print(f"waiting for pods to be STABLE (no restart for {STABLE_QUIET}s) before activating...")
+              deadline=time.time()+SETTLE_TIMEOUT
+              while time.time()<deadline:
+                  if pods_stable("kes") and pods_stable("pool"):
+                      print("  KES + MinIO are stable."); break
+                  time.sleep(10)
+              else:
+                  print("  pods did not reach the stable window in time — proceeding anyway.")
+
+              # 3b. ONE rolling KES bounce so KES re-auths to Vault now that the cluster is settled
+              # (this is the step the manual fix performed). Rolling = one replica at a time, no gap.
+              print("performing one rolling KES bounce for a fresh Vault session...")
+              bounce_kes_rolling()
+              wait_ready("pool")           # MinIO may re-init its KMS client after KES returns
+              time.sleep(SETTLE)
+
+              # 3c. ONE clean activation: create the KMS key, enable bucket SSE-KMS. A couple of short
+              # retries only to ride out DNS/endpoint propagation right after the bounce — NOT a
+              # bounce loop.
+              ok=False
+              for attempt in range(1,6):
                   mc("admin","kms","key","create","t",KEY_NAME)   # idempotent; ignore result
                   r=mc("encrypt","set","sse-kms",KEY_NAME,f"t/{BUCKET}")
                   if r.returncode==0:
-                      ok=True; print("SSE-KMS enabled — real KMS op succeeded."); break
-                  fails+=1
-                  print(f"  KMS op still failing (fail {fails}): {(r.stderr or r.stdout).strip()[:200]}")
+                      ok=True; print(f"SSE-KMS enabled on attempt {attempt}."); break
+                  print(f"  attempt {attempt}/5 not ready yet: {(r.stderr or r.stdout).strip()[:200]}")
+                  time.sleep(SETTLE)
               if not ok:
                   print("KMS activation did not succeed after all cycles.", file=sys.stderr); sys.exit(1)
               print(mc("encrypt","info",f"t/{BUCKET}").stdout)
