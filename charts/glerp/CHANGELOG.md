@@ -14,6 +14,23 @@ it exists to guarantee a cluster that default-enables injection can never wrap t
 Envoy. (Note: the "sidecar" container present on every MinIO tenant pod is
 `minio/operator-sidecar`, the operator's own config-reload sidecar — **not** Istio.)
 
+## Activate hook — also bounce MinIO (real fix for the "filesystem" error)
+
+**Root cause of the misleading `SetEncryption is not supported for filesystem` on a fresh install
+(the backend is actually Erasure):** MinIO boots and initializes its **IAM subsystem**, which needs
+KMS; but KES's Vault session isn't usable yet (cold-start), so MinIO's IAM stays **partially
+initialized** (`unable to write the IAM format: insufficient permissions to perform KMS operation`
+in the MinIO log). In that state MinIO rejects `mc encrypt set` with the bogus "filesystem" error.
+Bouncing KES fixes the Vault session, but MinIO **does not re-run IAM init on its own** — so
+activation only ever succeeded when MinIO happened to recover minutes later (which is why manual
+retries "worked").
+
+**Fix:** after the rolling KES bounce, the hook now **also rolling-bounces the MinIO pool pods**
+(one at a time, no endpoint gap) so MinIO re-initializes IAM against the now-healthy KMS, then
+activates. This is the step that makes fresh-install activation actually complete hands-off. (The
+earlier "minimum free drive threshold" reading was wrong — drives had ample free space; the
+"filesystem" error is the IAM/KMS init race, not a storage-space issue.)
+
 ## Activate hook — correct KES pod selector + patient final retry
 
 - **KES pod selector fix:** the hook selected KES pods with `v1.min.io/tenant=<tenant>`, but the

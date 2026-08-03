@@ -18,7 +18,9 @@ rules:
     verbs: ["get", "list", "patch"]
   - apiGroups: [""]
     resources: ["pods"]
-    # list KES pods and delete them to force a reload after the config changes.
+    # list + delete the tenant's KES and MinIO pods to force a rolling reload: KES to re-auth to
+    # Vault after the identity patch, and MinIO to re-initialize its IAM subsystem against the
+    # now-healthy KMS. (Namespaced — only this tenant's pods.)
     verbs: ["get", "list", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

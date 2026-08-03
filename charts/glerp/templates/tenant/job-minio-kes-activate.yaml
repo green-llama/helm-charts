@@ -163,18 +163,18 @@ spec:
                           if age < quiet: return False
                   return True
 
-              def bounce_kes_rolling():
-                  # Restart KES ONE replica at a time, waiting for each to come back Ready before the
-                  # next — so the KES Service never loses all endpoints (avoids the "no such host" /
-                  # connection-refused gap that a simultaneous both-replica delete caused).
-                  names=[p["metadata"]["name"] for p in tenant_pods("kes")]
+              def bounce_rolling(kind):
+                  # Restart a tenant pod kind ("kes" or "pool") ONE pod at a time, waiting for each to
+                  # come back Ready before the next — so the Service never loses all endpoints (avoids
+                  # the "no such host" / connection-refused gap a simultaneous delete would cause).
+                  names=[p["metadata"]["name"] for p in tenant_pods(kind)]
                   for n in names:
                       try:
-                          api(f"/api/v1/namespaces/{NS}/pods/{n}", "DELETE"); print(f"  bounced KES pod {n}; waiting for it to return Ready...")
+                          api(f"/api/v1/namespaces/{NS}/pods/{n}", "DELETE"); print(f"  bounced {kind} pod {n}; waiting for it to return Ready...")
                       except urllib.error.HTTPError as e:
                           if e.code!=404: raise
                       # wait for that pod to be gone-and-recreated Ready before touching the next one
-                      time.sleep(5); wait_ready("kes")
+                      time.sleep(5); wait_ready(kind)
 
               def mc(*a, check=False):
                   return subprocess.run([MC, *a], capture_output=True, text=True, check=check)
@@ -236,20 +236,29 @@ spec:
               else:
                   print("  pods did not reach the stable window in time — proceeding anyway.")
 
-              # 3b. ONE rolling KES bounce so KES re-auths to Vault now that the cluster is settled
-              # (this is the step the manual fix performed). Rolling = one replica at a time, no gap.
-              print("performing one rolling KES bounce for a fresh Vault session...")
-              bounce_kes_rolling()
-              wait_ready("pool")           # MinIO may re-init its KMS client after KES returns
+              # 3b. Bounce KES, THEN MinIO — in that order — one pod at a time (no endpoint gap).
+              # WHY BOTH: on a fresh install MinIO boots, tries to initialize its IAM subsystem
+              # (which needs KMS), but KES's Vault session isn't usable yet (cold-start). MinIO's
+              # IAM then stays PARTIALLY INITIALIZED ("unable to write the IAM format: insufficient
+              # permissions to perform KMS operation" in the MinIO log), and in that state MinIO
+              # rejects `mc encrypt set` with the MISLEADING error "SetEncryption is not supported
+              # for filesystem". Bouncing KES fixes the Vault session, but MinIO does NOT re-run IAM
+              # init on its own — so we must ALSO bounce the MinIO pods so they re-initialize IAM
+              # against the now-healthy KMS. This is the step that makes activation actually succeed
+              # (previously it only worked when MinIO happened to recover on its own, minutes later).
+              print("rolling-bouncing KES so it re-auths to Vault (cluster is settled)...")
+              bounce_rolling("kes")
+              print("rolling-bouncing MinIO so it re-initializes IAM against the now-healthy KMS...")
+              bounce_rolling("pool")
               time.sleep(SETTLE)
 
               # 3c. Clean activation: create the KMS key, enable bucket SSE-KMS. Both ops are
-              # IDEMPOTENT (create = "already exists", encrypt set = re-applies the same config), so
-              # this retries PATIENTLY — it isn't a bounce loop, it's just waiting out transient
-              # storage states. Notably, right after startup MinIO can report a "minimum free drive
-              # threshold" (tiny drives) which surfaces from `mc encrypt set` as the MISLEADING error
-              # "SetEncryption is not supported for filesystem" even though the backend is Erasure;
-              # it clears on its own once the drives settle, so we keep retrying rather than fail.
+              # IDEMPOTENT (create = "already exists"; encrypt set re-applies the same config), so
+              # this retries patiently to ride out the last bit of settling after the MinIO bounce.
+              # NOTE: if MinIO's IAM is still recovering, `mc encrypt set` returns the MISLEADING
+              # error "SetEncryption is not supported for filesystem" even though the backend is
+              # Erasure — that means MinIO's IAM/config subsystem hasn't finished re-initializing
+              # against KMS yet (the MinIO bounce in 3b is what fixes it).
               ACT_ATTEMPTS=int(os.environ.get("ACTIVATE_ATTEMPTS","12"))
               ok=False
               for attempt in range(1, ACT_ATTEMPTS+1):
@@ -259,8 +268,8 @@ spec:
                       ok=True; print(f"SSE-KMS enabled on attempt {attempt}."); break
                   msg=(r.stderr or r.stdout).strip()[:200]
                   hint=""
-                  if "filesystem" in msg or "minimum free drive" in msg:
-                      hint=" (transient: MinIO drives still settling / minimum-free-drive threshold — will retry)"
+                  if "filesystem" in msg:
+                      hint=" (MinIO IAM/config still re-initializing against KMS — will retry)"
                   print(f"  attempt {attempt}/{ACT_ATTEMPTS} not ready yet: {msg}{hint}")
                   time.sleep(SETTLE)
               if not ok:
