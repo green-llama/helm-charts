@@ -3,6 +3,24 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## MinIO KES on Istio-meshed clusters — keep the sidecar off the data plane
+
+**Fix:** the MinIO **pool (data-plane) pods** now carry `sidecar.istio.io/inject: "false"`, so no
+Envoy sidecar is injected onto them. On clusters where sidecar injection is on by default (our dev
+cluster), an injected Envoy intercepted MinIO's **outbound** call to KES on `:7373` and
+re-originated the TLS **without MinIO's client certificate**. KES requires mTLS client auth and
+rejected it (`tls: client didn't provide a certificate`), which surfaced to `mc` as the generic
+`insufficient permissions to perform KMS operation` — encryption silently never activated on a
+fresh install. The **KES pod itself stays meshed** (`.spec.kes.labels sidecar.istio.io/inject:
+"true"` + `excludeInboundPorts: 7373`) so its Vault hop is still protected; only the
+high-throughput S3 data path is kept out of the mesh — matching production and avoiding Envoy
+latency/overhead on object I/O.
+
+This was the true root cause of the fresh-install "insufficient permissions" symptom (NOT a KES
+Vault-keystore cold-start, as earlier suspected). All structural config — Vault policy/role, KES
+client identity, cert CA chain, MinIO config/mounts — was correct throughout; the only broken leg
+was the meshed MinIO→KES connection, which is why bouncing KES never helped.
+
 ## MinIO encryption at rest (KES + Vault) — chart 1.0.66 → 1.0.71
 
 Introduced and hardened **encryption at rest for MinIO object storage** (per-tenant user file

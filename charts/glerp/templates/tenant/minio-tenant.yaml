@@ -57,6 +57,15 @@ spec:
     - name: pool-{{ $i }}
       servers: {{ $m.servers | default 2 }}
       volumesPerServer: {{ $m.volumesPerServer | default 2 }}
+      # Keep the service mesh OFF the MinIO data-plane pods (matches production; mesh is reserved
+      # for sensitive traffic only). An injected Envoy captures MinIO's OUTBOUND call to KES:7373
+      # and re-originates it WITHOUT MinIO's client cert, so KES (which requires mTLS client auth)
+      # rejects it with "client didn't provide a certificate" — surfacing to `mc` as the generic
+      # "insufficient permissions to perform KMS operation" and silently breaking encryption. The
+      # KES pod itself stays meshed (see .spec.kes.labels above) so its Vault hop is protected;
+      # only the high-throughput S3 data path is kept out of the mesh (no Envoy latency/overhead).
+      labels:
+        sidecar.istio.io/inject: "false"
       volumeClaimTemplate:
         metadata:
           name: data
