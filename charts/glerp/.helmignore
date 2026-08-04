@@ -20,3 +20,9 @@
 .idea/
 *.tmproj
 .vscode/
+# Human-facing documentation — versioned on GitHub, NOT bundled into the chart .tgz
+# (adds weight, never used at render/runtime). README/questions/app-readme are kept
+# on purpose so Rancher/catalog rendering still works.
+docs/
+CHANGELOG.md
+TENANT.md

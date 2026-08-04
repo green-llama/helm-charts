@@ -269,15 +269,22 @@ pod (container name `minio`): `mc alias set l http://localhost:9000 <ak> <sk>` (
 2. **KES pods up but `mc` shows `_pending_` identity / KES rejects MinIO.** Re-run the chart
    upgrade so the activate hook patches the real cert identity, or patch `kes-config-secret`
    `policy.minio.identities` with `sha256(DER pubkey)` of `<ns>-minio-tenant-client-tls`/`public.crt`.
-3. **`insufficient permissions to perform KMS operation` (esp. on a FRESH install).** On a
-   brand-new tenant, KES can be pod-Ready while its **Vault keystore session is not yet usable**
-   (fresh-install cold-start), so MinIO's KMS calls fail and the KES pod log shows nothing new for
-   the request. **Fix: bounce the KES pods once the cluster has settled** so KES re-authenticates to
-   Vault: `kubectl -n <ns> delete pod -l v1.min.io/tenant=<ns>-minio-tenant` (the kes pods), wait
-   Ready, then re-run `mc admin kms key create <alias> <ns>-minio-key` — it should return
-   `Encryption ✔ / Decryption ✔`. The `job-minio-kes-activate` hook does this bounce+retry
-   automatically, but on a slow-settling fresh cluster it can exhaust its retry budget before Vault
-   settles; if so, just re-run the hook or bounce KES manually as above.
+3. **`insufficient permissions to perform KMS operation` OR `SetEncryption is not supported for
+   filesystem` on a FRESH install.** This is the KMS cold-start race: MinIO initializes its IAM
+   subsystem (which needs KMS) before KES's Vault session is usable, so IAM ends up partially
+   initialized and MinIO then rejects the KMS op — the `filesystem` wording is misleading (the
+   backend is Erasure). The `job-minio-kes-activate` hook handles this automatically (it bounces
+   **KES then MinIO** once the cluster is settled, then activates). **Manual fix if needed:** once
+   the cluster is quiet, bounce the KES pods, then the MinIO pool pods, then re-run activation:
+   ```
+   kubectl -n <ns> delete pod -l v1.min.io/kes=<ns>-minio-tenant-kes      # KES first, wait Ready
+   kubectl -n <ns> delete pod -l v1.min.io/tenant=<ns>-minio-tenant       # then MinIO, wait Ready
+   # then, from a MinIO pod:
+   mc admin kms key create l <ns>-minio-key ; mc encrypt set sse-kms <ns>-minio-key l/<ns>
+   ```
+   Expect `Encryption ✔ / Decryption ✔`. (Bouncing KES alone is NOT enough — MinIO must re-init IAM
+   against the healthy KMS, which needs the MinIO bounce.) Full detail:
+   `docs/ENCRYPTION-ARCHITECTURE.md` §1.4.
    - The Vault policy/role are correct if `vault read auth/kubernetes/role/glerp-minio-kes` shows
      the `glerp-minio-kes` policy; prove the write path with `vault write
      auth/kubernetes/login role=glerp-minio-kes jwt=$(kubectl -n <ns> create token
@@ -292,8 +299,12 @@ pod (container name `minio`): `mc alias set l http://localhost:9000 <ak> <sk>` (
 ### 4. Shared cluster resources (one-time per cluster, already present in prod)
 ESO ClusterSecretStores (`vault-backend` read, `vault-pushwriter` write, `kubernetes-token-auth`),
 cert-manager ClusterIssuer (`apps-general-signer`), Traefik, Velero + the `idrive-e2` BSL, the
-MinIO operator + DirectPV, and the `letsencrypt-…-tls` secret. The chart consumes these; it
-does not install them.
+MinIO operator + DirectPV, the `letsencrypt-…-tls` secret, and — for at-rest encryption — the
+`glerp-minio-kes` Vault policy/role (§3b), plus the Longhorn LUKS prerequisites: the
+`longhorn-crypto` Secret in `longhorn-system` (key `CRYPTO_KEY_VALUE`) and the encrypted
+StorageClasses `longhorn-crypto-mariadb-rwo` / `longhorn-crypto-rwm` that the DB and shared-asset
+volumes bind to. The chart consumes all of these; it does not install them. See
+`docs/DATA-ENCRYPTION.md` and `docs/ENCRYPTION-ARCHITECTURE.md`.
 
 ## Install
 
