@@ -3,11 +3,11 @@
 
 image:
   repository: ghcr.io/green-llama/k8-glerp-ai-intake
-  tag: "0.3.8"
+  tag: "0.3.9"
   pullPolicy: Always
 
 imagePullSecrets:
-  - name: ghcr-pull-secret
+  - name: ghcr-cred
 
 # -- Kubernetes namespace (must exist before install)
 namespace: glerp-ai-intake-sandbox
@@ -44,9 +44,22 @@ config:
   CONTEXT_PROVIDER_BANK_STATEMENT: "gemini"
   CONTEXT_PROVIDER_ISSUE: "gemini"
 
-# -- Secret name that holds LLM API keys and JWT_SECRET_KEY
-# Create before install: kubectl create secret generic intake-secrets -n <namespace> ...
+# -- Secret name that holds JWT_SECRET_KEY
+# With eso.enabled=true this secret is created automatically via ExternalSecret from Vault.
+# With eso.enabled=false (default) create manually: kubectl create secret generic intake-secrets -n <namespace> --from-literal=JWT_SECRET_KEY="$(openssl rand -hex 32)"
 existingSecret: intake-secrets
+
+# -- External Secrets Operator + Vault integration
+# Set eso.enabled=true to have the chart fully manage secrets via ESO (zero manual kubectl steps).
+# Prerequisites: vault-backend and vault-pushwriter ClusterSecretStores must exist in the cluster.
+eso:
+  enabled: false
+  vaultStore: vault-backend               # ClusterSecretStore for reads (ExternalSecrets)
+  vaultMountPath: secret                  # KV v2 mount name
+  ghcrVaultKey: secret/data/github/ghcr-cred  # shared Vault path for GHCR creds (same as glerp chart)
+  pushSecrets:
+    enabled: true                         # auto-generate JWT key and push to Vault on first install
+    store: vault-pushwriter               # ClusterSecretStore for writes (PushSecrets)
 
 # -- Redis deployment (enabled = deploy in-cluster Redis)
 redis:

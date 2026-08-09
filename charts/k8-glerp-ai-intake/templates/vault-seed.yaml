@@ -1,0 +1,53 @@
+{{- if and .Values.eso.enabled .Values.eso.pushSecrets.enabled }}
+{{- $ns := .Release.Namespace -}}
+{{- $store := .Values.eso.pushSecrets.store -}}
+{{- $mount := .Values.eso.vaultMountPath -}}
+{{- /*
+  Auto-generate JWT_SECRET_KEY and push to Vault on first install.
+
+  Uses an ESO Password generator → PushSecret flow (same pattern as the glerp chart).
+  updatePolicy: IfNotExists ensures the key is generated exactly once and never
+  overwritten on helm upgrade, keeping the shared secret stable.
+
+  The generated value is written to Vault at:
+    <mount>/<namespace>/intake-secrets → property: jwt-secret-key
+
+  The ExternalSecret in externalsecrets.yaml reads it back and materialises
+  it as the JWT_SECRET_KEY field in the intake-secrets K8s Secret.
+*/ -}}
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: {{ $ns }}-gen-jwt
+  namespace: {{ $ns }}
+spec:
+  length: 64
+  digits: 16
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: {{ $ns }}-intake-jwt-push
+  namespace: {{ $ns }}
+spec:
+  refreshInterval: 1h
+  updatePolicy: IfNotExists
+  deletionPolicy: None
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: {{ $store }}
+  selector:
+    generatorRef:
+      apiVersion: generators.external-secrets.io/v1alpha1
+      kind: Password
+      name: {{ $ns }}-gen-jwt
+  data:
+    - match:
+        secretKey: password
+        remoteRef:
+          remoteKey: {{ $mount }}/{{ $ns }}/intake-secrets
+          property: jwt-secret-key
+{{- end }}
