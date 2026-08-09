@@ -9,9 +9,6 @@ image:
 imagePullSecrets:
   - name: ghcr-cred
 
-# -- Kubernetes namespace (must exist before install)
-namespace: glerp-ai-intake-sandbox
-
 # -- Number of API gateway replicas
 apiReplicas: 1
 # -- Number of async worker replicas
@@ -30,7 +27,7 @@ config:
   GROQ_MODEL: "llama-3.3-70b-versatile"
   VLLM_BASE_URL: "http://vllm-service.glerp-ai-intake.svc.cluster.local/v1"
   VLLM_MODEL: "deepseek-ai/DeepSeek-V3"
-  REDIS_URL: ""  # auto-computed from .Values.namespace; override explicitly if needed
+  REDIS_URL: ""  # auto-computed from .Release.Namespace; override explicitly if needed
   OCR_CONFIDENCE_THRESHOLD: "0.95"
   TEMP_STORAGE_PATH: "/tmp/intake-docs"
   CONTEXT_PROVIDER_AP: "gemini"
