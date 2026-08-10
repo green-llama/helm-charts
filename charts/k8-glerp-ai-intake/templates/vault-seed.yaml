@@ -10,7 +10,9 @@
   overwritten on helm upgrade, keeping the shared secret stable.
 
   The generated value is written to Vault at:
-    <mount>/<namespace>/intake-secrets → property: jwt-secret-key
+    <namespace>/intake-secrets → property: jwt-secret-key
+  (ESO PushSecret prepends the mount from the ClusterSecretStore automatically —
+  do not include the mount name in remoteKey or it doubles up)
 
   The ExternalSecret in externalsecrets.yaml reads it back and materialises
   it as the JWT_SECRET_KEY field in the intake-secrets K8s Secret.
@@ -48,6 +50,6 @@ spec:
     - match:
         secretKey: password
         remoteRef:
-          remoteKey: {{ $mount }}/{{ $ns }}/intake-secrets
+          remoteKey: {{ $ns }}/intake-secrets
           property: jwt-secret-key
 {{- end }}
