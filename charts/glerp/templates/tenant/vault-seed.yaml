@@ -48,7 +48,11 @@ spec:
     - match:
         secretKey: password
         remoteRef:
-          remoteKey: {{ $mount }}/{{ $ns }}/{{ $ns }}-mariadb-root
+          # PushSecret remoteKey is a LOGICAL path within the mount — ESO prepends the mount
+          # (from the ClusterSecretStore) automatically. Do NOT include the mount here, or the
+          # Vault path doubles (secret/data/secret/<ns>/…). This must resolve to the SAME path the
+          # tenant ExternalSecret reads: `{{ $mount }}/data/{{ $ns }}/{{ $ns }}-mariadb-root`.
+          remoteKey: {{ $ns }}/{{ $ns }}-mariadb-root
           property: mariadb-root-password
 {{- if .Values.tenant.minio.enabled }}
 ---
@@ -97,7 +101,8 @@ spec:
     - match:
         secretKey: password
         remoteRef:
-          remoteKey: {{ $mount }}/{{ $ns }}/minio-creds
+          # Logical path within the mount (ESO prepends the mount) — no mount prefix, or it doubles.
+          remoteKey: {{ $ns }}/minio-creds
           property: accesskey
 ---
 apiVersion: external-secrets.io/v1alpha1
@@ -121,7 +126,8 @@ spec:
     - match:
         secretKey: password
         remoteRef:
-          remoteKey: {{ $mount }}/{{ $ns }}/minio-creds
+          # Logical path within the mount (ESO prepends the mount) — no mount prefix, or it doubles.
+          remoteKey: {{ $ns }}/minio-creds
           property: secretkey
 {{- end }}
 {{- end }}

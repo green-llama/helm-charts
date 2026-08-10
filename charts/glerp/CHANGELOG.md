@@ -3,6 +3,35 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## Fix: Vault seed PushSecret paths no longer double the mount (`secret/secret/…`)
+
+The three `PushSecret` `remoteKey` values in `templates/tenant/vault-seed.yaml` (mariadb-root,
+minio accesskey, minio secretkey) incorrectly included the mount prefix
+(`{{ $mount }}/{{ $ns }}/…`). ESO handles the two path styles differently:
+
+- **ExternalSecret** `remoteRef.key` is the **full KV v2 API path** — includes the mount and
+  `/data/` (e.g. `secret/data/<ns>/minio-creds`). *(unchanged — already correct)*
+- **PushSecret** `remoteRef.remoteKey` is a **logical path within the mount** — ESO **prepends the
+  mount** from the ClusterSecretStore automatically. Including it yourself **doubles** it.
+
+So the seed wrote each credential to `secret/data/secret/<ns>/…` while the ExternalSecret read from
+`secret/data/<ns>/…`. No functional breakage (the ExternalSecret always read the correct
+pre-existing path, and `updatePolicy: IfNotExists` meant the stray copy was written once then
+ignored), but it left a **duplicate credential** at a stray path — a hygiene/audit/rotation and
+Vault-policy-surface concern.
+
+**Fix:** drop the `{{ $mount }}/` prefix from all three `remoteKey`s so the PushSecret writes to the
+exact path the ExternalSecret reads (`<ns>/…` → mount-prepended → `secret/data/<ns>/…`). Verified by
+`helm template`: PushSecret `remoteKey: <ns>/minio-creds` and ExternalSecret
+`key: secret/data/<ns>/minio-creds` now resolve to the same Vault path.
+
+**Cleanup for existing installs (manual, one-time per affected site):** the stray copies at
+`secret/<ns>/secret/<ns>/…` (i.e. `secret/data/secret/<ns>/…` via the API) are orphaned — delete
+them after confirming the authoritative `secret/<ns>/…` path holds the live values:
+`vault kv list secret/<ns>` will show a nested `secret/` folder if a stray copy exists;
+`vault kv delete secret/<ns>/<ns>-mariadb-root` etc. against the **stray** path removes it. The
+chart change stops new installs/upgrades from creating them.
+
 ## MinIO encryption at rest (KES + Vault) — final architecture (through chart 1.0.80)
 
 **Encryption at rest for MinIO object storage** (per-tenant user file store) via MinIO KES +
