@@ -18,6 +18,8 @@ spec:
       labels:
         app.kubernetes.io/name: {{ include "erpnext.name" . }}-worker-l
         app.kubernetes.io/instance: {{ .Release.Name }}-worker-l
+        # Exclude this pod from Trivy Operator scans (matched by skipResourceByLabels).
+        glerp.io/trivy-skip: "true"
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

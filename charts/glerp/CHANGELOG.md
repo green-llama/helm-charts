@@ -3,6 +3,16 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## Trivy scan-skip label on the 6 non-gunicorn Deployments
+
+Added the pod label `glerp.io/trivy-skip: "true"` to the `spec.template.metadata.labels` of the six
+non-gunicorn GLerp Deployments — **nginx, socketio, scheduler, worker-default, worker-short,
+worker-long** — so Trivy Operator excludes those pods from vulnerability scans (via its
+`skipResourceByLabels: "glerp.io/trivy-skip"` setting, configured on the Trivy Operator side, not in
+this chart). **gunicorn is intentionally left unlabeled** so it continues to be scanned. The label is
+on the pod template only (not the Deployment metadata, not the immutable selector), so it is safe to
+apply on upgrade.
+
 ## Fix: Vault seed PushSecret paths no longer double the mount (`secret/secret/…`)
 
 The three `PushSecret` `remoteKey` values in `templates/tenant/vault-seed.yaml` (mariadb-root,

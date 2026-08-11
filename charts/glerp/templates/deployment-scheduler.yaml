@@ -16,6 +16,8 @@ spec:
       labels:
         app.kubernetes.io/name: {{ include "erpnext.name" . }}-scheduler
         app.kubernetes.io/instance: {{ .Release.Name }}-scheduler
+        # Exclude this pod from Trivy Operator scans (matched by skipResourceByLabels).
+        glerp.io/trivy-skip: "true"
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
