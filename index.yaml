@@ -3,7 +3,7 @@ entries:
   glerp:
   - apiVersion: v2
     appVersion: 1.0.56
-    created: "2026-08-10T01:04:49.862165176Z"
+    created: '2026-08-10T01:04:49.862165176Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -25,7 +25,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: 03fcbb19751d75d5c7a8768179f93353afc8fd869fff6ec97dca17ab3ccecb46
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -44,7 +44,7 @@ entries:
     version: 1.0.82
   - apiVersion: v2
     appVersion: 1.0.55
-    created: "2026-08-04T02:08:50.118084206Z"
+    created: '2026-08-04T02:08:50.118084206Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -66,7 +66,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: cab4bd8169d1296ab2bd460659a20b6dbae983cf1e63485560924d54f39e86c7
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -85,7 +85,7 @@ entries:
     version: 1.0.81
   - apiVersion: v2
     appVersion: 1.0.54
-    created: "2026-08-03T23:59:54.724646557Z"
+    created: '2026-08-03T23:59:54.724646557Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -107,7 +107,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: 95fe9a973279e3788eca1c11987c164758971eb3ebac9dfeb6fa6da246dd3741
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -126,7 +126,7 @@ entries:
     version: 1.0.80
   - apiVersion: v2
     appVersion: 1.0.53
-    created: "2026-08-03T21:14:26.695760516Z"
+    created: '2026-08-03T21:14:26.695760516Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -148,7 +148,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: 12cfc139809fca7bdd7d69add290f96eb547e2d4d6e4749cc8d61eb1a21de06d
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -167,7 +167,7 @@ entries:
     version: 1.0.79
   - apiVersion: v2
     appVersion: 1.0.52
-    created: "2026-08-03T19:54:17.284582842Z"
+    created: '2026-08-03T19:54:17.284582842Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -189,7 +189,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: 13711c745aee42a27d5f3742d631eb88ebcd120c79010b65c31c006a104a03d4
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -208,7 +208,7 @@ entries:
     version: 1.0.78
   - apiVersion: v2
     appVersion: 1.0.51
-    created: "2026-08-03T16:18:08.746644795Z"
+    created: '2026-08-03T16:18:08.746644795Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -230,7 +230,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: 23aa31f52b63756da4cfb0a59c89d6cda5dbe722d949b7a79ae7dddb82f5b2bf
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -249,7 +249,7 @@ entries:
     version: 1.0.77
   - apiVersion: v2
     appVersion: 1.0.50
-    created: "2026-08-03T15:02:34.499307068Z"
+    created: '2026-08-03T15:02:34.499307068Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -271,7 +271,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: 68e619996839dfabf33871b10e8f3f017c83f1ad1bc9c2cf9149088549a6926a
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -290,7 +290,7 @@ entries:
     version: 1.0.76
   - apiVersion: v2
     appVersion: 1.0.49
-    created: "2026-08-03T00:56:57.218344708Z"
+    created: '2026-08-03T00:56:57.218344708Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -312,7 +312,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: 8ba9cbef01daef45322da5a58085844bd38a95b2a9058b6de901521f597ba2ad
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -331,7 +331,7 @@ entries:
     version: 1.0.75
   - apiVersion: v2
     appVersion: 1.0.48
-    created: "2026-08-02T23:13:49.148530241Z"
+    created: '2026-08-02T23:13:49.148530241Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -353,7 +353,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: 02e6008a9d7b1b9ababfef3a252d10cfb212058983d19071754a6e38cb27d2e0
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -372,7 +372,7 @@ entries:
     version: 1.0.74
   - apiVersion: v2
     appVersion: 1.0.47
-    created: "2026-08-02T19:52:06.683334798Z"
+    created: '2026-08-02T19:52:06.683334798Z'
     dependencies:
     - alias: dragonfly-cache
       condition: dragonfly-cache.enabled
@@ -394,7 +394,7 @@ entries:
       name: valkey
       repository: https://valkey-io.github.io/valkey-helm
       version: 0.9.3
-    description: GLerp — ERPNext v16 + Green Llama custom apps
+    description: "GLerp \u2014 ERPNext v16 + Green Llama custom apps"
     digest: 856f806091c0d9b2684339a14508f982c26265ece4f782db001c9e86156a8d46
     home: https://github.com/green-llama/glerp-image
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp.svg
@@ -414,9 +414,9 @@ entries:
   glerp-documenso:
   - apiVersion: v2
     appVersion: v1.8.1
-    created: "2026-07-15T04:29:26.443669879Z"
-    description: A Helm chart for Documenso — green-llama infrastructure edition (Traefik
-      IngressRoute + external-dns)
+    created: '2026-07-15T04:29:26.443669879Z'
+    description: "A Helm chart for Documenso \u2014 green-llama infrastructure edition\
+      \ (Traefik IngressRoute + external-dns)"
     digest: 4b287cc0c8bea224f0b206cd0ece008f821c28f295c98a4324e4f13c50d9c46a
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-documenso.svg
     name: glerp-documenso
@@ -426,9 +426,9 @@ entries:
     version: 1.1.1
   - apiVersion: v2
     appVersion: v1.8.1
-    created: "2026-07-14T22:30:08.404969861-05:00"
-    description: A Helm chart for Documenso — green-llama infrastructure edition (Traefik
-      IngressRoute + external-dns)
+    created: '2026-07-14T22:30:08.404969861-05:00'
+    description: "A Helm chart for Documenso \u2014 green-llama infrastructure edition\
+      \ (Traefik IngressRoute + external-dns)"
     digest: f1b86b558d8e769f950bb8822f212a48e6d999436e0591acee0e94897f461ae0
     icon: https://www.documenso.com/favicon.ico
     name: glerp-documenso
@@ -438,18 +438,27 @@ entries:
     version: 1.1.0
   glerp-monitoring:
   - annotations:
-      artifacthub.io/changes: |
-        - kind: fixed
-          description: "Trivy scan-job throughput: scanJobTTL 1h -> 90s and scanJobsConcurrentLimit 1 -> 10. Completed scan Jobs count against the concurrency limit; at 1h TTL they occupied every slot and starved new scans, so on a full-cluster scan most workloads never got a report and deleting a report didn't regenerate it (looked like the operator was wedged). Root-caused via debug logs; verified the queue now drains and all app workloads scan"
-        - kind: changed
-          description: "Upgrade trivy-operator subchart 0.32.1 -> 0.35.0 (app 0.30.1 -> 0.33.0)"
-        - kind: fixed
-          description: "Bound Trivy vulnerability scan severity so VulnerabilityReport CRDs stay under the Kubernetes 3 MiB object limit — large glerp-image reports at all-5 severities exceeded it, so the CRD was never written (Request entity too large) and the workload silently got no metric and no dashboard data. Severity is configurable; widening past the safe scope risks re-hitting the limit on the heaviest images"
-        - kind: removed
-          description: "Dead scanJobAdditionalEnvVars/DOCKER_CONFIG scan-job config (invalid subchart key, never rendered) and the unused ghcr-docker-config scan-job volume — Trivy authenticates private scans natively via the workload imagePullSecrets (ghcr-cred)"
+      artifacthub.io/changes: "- kind: fixed\n  description: \"Trivy scan-job throughput:\
+        \ scanJobTTL 1h -> 90s and scanJobsConcurrentLimit 1 -> 10. Completed scan\
+        \ Jobs count against the concurrency limit; at 1h TTL they occupied every\
+        \ slot and starved new scans, so on a full-cluster scan most workloads never\
+        \ got a report and deleting a report didn't regenerate it (looked like the\
+        \ operator was wedged). Root-caused via debug logs; verified the queue now\
+        \ drains and all app workloads scan\"\n- kind: changed\n  description: \"\
+        Upgrade trivy-operator subchart 0.32.1 -> 0.35.0 (app 0.30.1 -> 0.33.0)\"\n\
+        - kind: fixed\n  description: \"Bound Trivy vulnerability scan severity so\
+        \ VulnerabilityReport CRDs stay under the Kubernetes 3 MiB object limit \u2014\
+        \ large glerp-image reports at all-5 severities exceeded it, so the CRD was\
+        \ never written (Request entity too large) and the workload silently got no\
+        \ metric and no dashboard data. Severity is configurable; widening past the\
+        \ safe scope risks re-hitting the limit on the heaviest images\"\n- kind:\
+        \ removed\n  description: \"Dead scanJobAdditionalEnvVars/DOCKER_CONFIG scan-job\
+        \ config (invalid subchart key, never rendered) and the unused ghcr-docker-config\
+        \ scan-job volume \u2014 Trivy authenticates private scans natively via the\
+        \ workload imagePullSecrets (ghcr-cred)\"\n"
     apiVersion: v2
     appVersion: 2.2.1
-    created: "2026-08-11T13:47:05.901912694Z"
+    created: '2026-08-11T13:47:05.901912694Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -498,16 +507,21 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.2.1/glerp-monitoring-2.2.1.tgz
     version: 2.2.1
   - annotations:
-      artifacthub.io/changes: |
-        - kind: changed
-          description: "Upgrade trivy-operator subchart 0.32.1 -> 0.35.0 (app 0.30.1 -> 0.33.0) for a more robust vuln-scan reconciler"
-        - kind: fixed
-          description: "Bound Trivy vulnerability scan severity so VulnerabilityReport CRDs stay under the Kubernetes 3 MiB object limit — large glerp-image reports at all-5 severities exceeded it, so the CRD was never written (Request entity too large) and the workload silently got no metric and no dashboard data. Severity is configurable; widening past the safe scope risks re-hitting the limit on the heaviest images"
-        - kind: removed
-          description: "Dead scanJobAdditionalEnvVars/DOCKER_CONFIG scan-job config (invalid subchart key, never rendered) and the unused ghcr-docker-config scan-job volume — Trivy authenticates private scans natively via the workload imagePullSecrets (ghcr-cred)"
+      artifacthub.io/changes: "- kind: changed\n  description: \"Upgrade trivy-operator\
+        \ subchart 0.32.1 -> 0.35.0 (app 0.30.1 -> 0.33.0) for a more robust vuln-scan\
+        \ reconciler\"\n- kind: fixed\n  description: \"Bound Trivy vulnerability\
+        \ scan severity so VulnerabilityReport CRDs stay under the Kubernetes 3 MiB\
+        \ object limit \u2014 large glerp-image reports at all-5 severities exceeded\
+        \ it, so the CRD was never written (Request entity too large) and the workload\
+        \ silently got no metric and no dashboard data. Severity is configurable;\
+        \ widening past the safe scope risks re-hitting the limit on the heaviest\
+        \ images\"\n- kind: removed\n  description: \"Dead scanJobAdditionalEnvVars/DOCKER_CONFIG\
+        \ scan-job config (invalid subchart key, never rendered) and the unused ghcr-docker-config\
+        \ scan-job volume \u2014 Trivy authenticates private scans natively via the\
+        \ workload imagePullSecrets (ghcr-cred)\"\n"
     apiVersion: v2
     appVersion: 2.2.0
-    created: "2026-08-11T00:44:35.832074006Z"
+    created: '2026-08-11T00:44:35.832074006Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -556,14 +570,17 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.2.0/glerp-monitoring-2.2.0.tgz
     version: 2.2.0
   - annotations:
-      artifacthub.io/changes: |
-        - kind: changed
-          description: "GHCR pull secret conforms to the shared ESO+Vault standard: reads secret/data/github/ghcr-cred via the vault-backend ClusterSecretStore and creates a secret named ghcr-cred (was ghcr-pull-secret from a self-created k8s-to-k8s store). Cross-namespace ClusterExternalSecret fan-out retained so Trivy can scan private images in labeled namespaces"
-        - kind: removed
-          description: "Self-created ghcr-cluster-secret-store.yaml (k8s-ghcr-source) — now uses the shared cluster-wide vault-backend ClusterSecretStore"
+      artifacthub.io/changes: "- kind: changed\n  description: \"GHCR pull secret\
+        \ conforms to the shared ESO+Vault standard: reads secret/data/github/ghcr-cred\
+        \ via the vault-backend ClusterSecretStore and creates a secret named ghcr-cred\
+        \ (was ghcr-pull-secret from a self-created k8s-to-k8s store). Cross-namespace\
+        \ ClusterExternalSecret fan-out retained so Trivy can scan private images\
+        \ in labeled namespaces\"\n- kind: removed\n  description: \"Self-created\
+        \ ghcr-cluster-secret-store.yaml (k8s-ghcr-source) \u2014 now uses the shared\
+        \ cluster-wide vault-backend ClusterSecretStore\"\n"
     apiVersion: v2
     appVersion: 2.1.20
-    created: "2026-08-10T00:37:57.942120529Z"
+    created: '2026-08-10T00:37:57.942120529Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -612,12 +629,13 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.20/glerp-monitoring-2.1.20.tgz
     version: 2.1.20
   - annotations:
-      artifacthub.io/changes: |
-        - kind: added
-          description: "Trivy operator scannerReportTTL (24h) and scanJobTTL (1h) set explicitly so VulnerabilityReports self-expire and regenerate only for in-use images, and scan Jobs auto-clean — self-documented, immune to subchart default drift"
+      artifacthub.io/changes: "- kind: added\n  description: \"Trivy operator scannerReportTTL\
+        \ (24h) and scanJobTTL (1h) set explicitly so VulnerabilityReports self-expire\
+        \ and regenerate only for in-use images, and scan Jobs auto-clean \u2014 self-documented,\
+        \ immune to subchart default drift\"\n"
     apiVersion: v2
     appVersion: 2.1.19
-    created: "2026-07-25T21:36:31.364694214Z"
+    created: '2026-07-25T21:36:31.364694214Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -666,12 +684,12 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.19/glerp-monitoring-2.1.19.tgz
     version: 2.1.19
   - annotations:
-      artifacthub.io/changes: |
-        - kind: added
-          description: "CVE table info panel now explains why upgraded-away images linger (retained 0-replica ReplicaSets) and how to clear them (revisionHistoryLimit / kubectl delete rs)"
+      artifacthub.io/changes: "- kind: added\n  description: \"CVE table info panel\
+        \ now explains why upgraded-away images linger (retained 0-replica ReplicaSets)\
+        \ and how to clear them (revisionHistoryLimit / kubectl delete rs)\"\n"
     apiVersion: v2
     appVersion: 2.1.18
-    created: "2026-07-25T19:07:17.049024094Z"
+    created: '2026-07-25T19:07:17.049024094Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -720,12 +738,14 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.18/glerp-monitoring-2.1.18.tgz
     version: 2.1.18
   - annotations:
-      artifacthub.io/changes: |
-        - kind: fixed
-          description: "CVE density recording rule interval changed from 1h to 5m — a 1h group's first-evaluation timer is reset by every Rancher config reload, so it could stay perpetually unevaluated and never produce glerp:cve_density. 5m evaluates promptly and survives reloads; still one series, no OOM risk"
+      artifacthub.io/changes: "- kind: fixed\n  description: \"CVE density recording\
+        \ rule interval changed from 1h to 5m \u2014 a 1h group's first-evaluation\
+        \ timer is reset by every Rancher config reload, so it could stay perpetually\
+        \ unevaluated and never produce glerp:cve_density. 5m evaluates promptly and\
+        \ survives reloads; still one series, no OOM risk\"\n"
     apiVersion: v2
     appVersion: 2.1.17
-    created: "2026-07-25T18:12:00.77934255Z"
+    created: '2026-07-25T18:12:00.77934255Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -774,16 +794,17 @@ entries:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.17/glerp-monitoring-2.1.17.tgz
     version: 2.1.17
   - annotations:
-      artifacthub.io/changes: |
-        - kind: fixed
-          description: "Security dashboard defaults to the GLerp VictoriaMetrics datasource (was Prometheus), so kube-bench/ZAP/Trivy panels show 90-day history without manual switching"
-        - kind: fixed
-          description: "Pushgateway now persists pushed metrics to a PVC (--persistence.file), so a pod restart no longer wipes weekly kube-bench/ZAP results"
-        - kind: fixed
-          description: "Fleet CVE C+H density is now a pre-computed hourly recording rule (glerp:cve_density) instead of a live high-cardinality query, fixing out-of-memory errors on multi-day lookbacks"
+      artifacthub.io/changes: "- kind: fixed\n  description: \"Security dashboard\
+        \ defaults to the GLerp VictoriaMetrics datasource (was Prometheus), so kube-bench/ZAP/Trivy\
+        \ panels show 90-day history without manual switching\"\n- kind: fixed\n \
+        \ description: \"Pushgateway now persists pushed metrics to a PVC (--persistence.file),\
+        \ so a pod restart no longer wipes weekly kube-bench/ZAP results\"\n- kind:\
+        \ fixed\n  description: \"Fleet CVE C+H density is now a pre-computed hourly\
+        \ recording rule (glerp:cve_density) instead of a live high-cardinality query,\
+        \ fixing out-of-memory errors on multi-day lookbacks\"\n"
     apiVersion: v2
     appVersion: 2.1.16
-    created: "2026-07-25T17:33:29.939871253Z"
+    created: '2026-07-25T17:33:29.939871253Z'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -833,7 +854,7 @@ entries:
     version: 2.1.16
   - apiVersion: v2
     appVersion: 2.1.15
-    created: "2026-07-14T22:30:08.461999977-05:00"
+    created: '2026-07-14T22:30:08.461999977-05:00'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -883,7 +904,7 @@ entries:
     version: 2.1.15
   - apiVersion: v2
     appVersion: 2.1.14
-    created: "2026-07-14T22:30:08.446860979-05:00"
+    created: '2026-07-14T22:30:08.446860979-05:00'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -933,7 +954,7 @@ entries:
     version: 2.1.14
   - apiVersion: v2
     appVersion: 2.1.13
-    created: "2026-07-14T22:30:08.432691763-05:00"
+    created: '2026-07-14T22:30:08.432691763-05:00'
     dependencies:
     - alias: blackbox-exporter
       condition: blackbox-exporter.enabled
@@ -981,61 +1002,12 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.13/glerp-monitoring-2.1.13.tgz
     version: 2.1.13
-  - apiVersion: v2
-    appVersion: 2.1.12
-    created: "2026-07-14T22:30:08.419290226-05:00"
-    dependencies:
-    - alias: blackbox-exporter
-      condition: blackbox-exporter.enabled
-      name: prometheus-blackbox-exporter
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 9.4.0
-    - condition: trivy-operator.enabled
-      name: trivy-operator
-      repository: https://aquasecurity.github.io/helm-charts/
-      version: 0.32.1
-    - condition: prometheus-pushgateway.enabled
-      name: prometheus-pushgateway
-      repository: https://prometheus-community.github.io/helm-charts
-      version: 2.14.0
-    description: 'Unified observability for GLerp RKE2 clusters. Covers uptime/SLA
-      probing (Blackbox Exporter), storage utilization (Longhorn, MinIO, DirectPV,
-      node filesystems), and security compliance (Trivy CVE scanning, kube-bench CIS,
-      OWASP ZAP). Includes shared VictoriaMetrics (90-day retention), unified AlertManager
-      routing, and nine Grafana dashboards. New sites auto-discovered by labeling
-      their Kubernetes Service. '
-    digest: 104fbf4ae9f4fd23d724e2112ef59e4a66edfb71349649920ce01ee03e90802c
-    home: https://github.com/green-llama/k8-glerp-monitoring
-    icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/glerp-monitoring.svg
-    keywords:
-    - monitoring
-    - uptime
-    - sla
-    - storage
-    - longhorn
-    - minio
-    - directpv
-    - security
-    - trivy
-    - kube-bench
-    - owasp-zap
-    - glerp
-    - erpnext
-    maintainers:
-    - email: ops@greenllama.tech
-      name: Green Llama Technologies
-    name: glerp-monitoring
-    sources:
-    - https://github.com/green-llama/k8-glerp-monitoring
-    type: application
-    urls:
-    - https://github.com/green-llama/helm-charts/releases/download/glerp-monitoring-2.1.12/glerp-monitoring-2.1.12.tgz
-    version: 2.1.12
   k8-glerp-ai-intake:
   - apiVersion: v2
     appVersion: 0.3.8
-    created: "2026-08-10T00:09:15.855036506Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-08-10T00:09:15.855036506Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: d14f3cd0e029e869f328653065ca62c9e99b6e0a7f7ec6cc01a2d16a31d76bc0
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1056,8 +1028,9 @@ entries:
     version: 0.4.7
   - apiVersion: v2
     appVersion: 0.3.8
-    created: "2026-08-09T23:22:59.100349172Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-08-09T23:22:59.100349172Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: a5f8e7a479e86201e1c224368b355e2296638525ad5731908a2b6cb7f84dc074
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1078,8 +1051,9 @@ entries:
     version: 0.4.6
   - apiVersion: v2
     appVersion: 0.3.8
-    created: "2026-08-09T22:27:30.619643845Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-08-09T22:27:30.619643845Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: 38728ea9c48af0829fb90417c46dc875e7fb73f4f20559f87b323448977722e8
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1100,8 +1074,9 @@ entries:
     version: 0.4.5
   - apiVersion: v2
     appVersion: 0.3.8
-    created: "2026-08-09T21:35:47.473650497Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-08-09T21:35:47.473650497Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: a16d5acc416199d0d13f406a93d83630fc1e7b069cb5432ecb5dceea51cf1158
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1122,8 +1097,9 @@ entries:
     version: 0.4.4
   - apiVersion: v2
     appVersion: 0.3.8
-    created: "2026-08-09T19:27:38.736768214Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-08-09T19:27:38.736768214Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: d63f508be76bc77246110264522c05a9a7ae9aee0ca2e048dbec527cfcfb372f
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1144,8 +1120,9 @@ entries:
     version: 0.4.3
   - apiVersion: v2
     appVersion: 0.3.9
-    created: "2026-08-09T19:13:13.690882397Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-08-09T19:13:13.690882397Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: 76e35e655bb6a3a5b541456db6034670a3524a6592835ea0a28c1c655900cd1e
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1166,8 +1143,9 @@ entries:
     version: 0.4.2
   - apiVersion: v2
     appVersion: 0.3.8
-    created: "2026-07-25T20:15:13.906067Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-07-25T20:15:13.906067Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: ecb28ad3426454ff11b7f5263f7c92747878610f39f99d1339110b56c6ea0b36
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1188,8 +1166,9 @@ entries:
     version: 0.4.1
   - apiVersion: v2
     appVersion: 0.3.8
-    created: "2026-07-25T20:03:10.631497753Z"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-07-25T20:03:10.631497753Z'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: 1baada5fed7d09c1631fd9ff13671b673d5bcf5e3180443a75ae2f63a827df07
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1210,8 +1189,9 @@ entries:
     version: 0.4.0
   - apiVersion: v2
     appVersion: 0.3.7
-    created: "2026-07-14T22:30:08.49715019-05:00"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-07-14T22:30:08.49715019-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: 33739673744bb96fc55b62eccd0a2007ed3e2c63018c9f6a00fbcb8bbc1cffcb
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1232,8 +1212,9 @@ entries:
     version: 0.3.9
   - apiVersion: v2
     appVersion: 0.3.6
-    created: "2026-07-14T22:30:08.496450217-05:00"
-    description: GLerp AI Intake — document intelligence microservice with MCP interface
+    created: '2026-07-14T22:30:08.496450217-05:00'
+    description: "GLerp AI Intake \u2014 document intelligence microservice with MCP\
+      \ interface"
     digest: 599f231c7f6f89f2cba8463f715f5093894176c41d5103f1ba1817d7892129cc
     home: https://github.com/green-llama/k8-glerp-ai-intake
     icon: https://raw.githubusercontent.com/green-llama/helm-charts/main/icons/k8-glerp-ai-intake.svg
@@ -1252,4 +1233,4 @@ entries:
     urls:
     - https://github.com/green-llama/helm-charts/releases/download/k8-glerp-ai-intake-0.3.8/k8-glerp-ai-intake-0.3.8.tgz
     version: 0.3.8
-generated: "2026-08-11T13:47:05.902015105Z"
+generated: '2026-08-11T13:47:05.902015105Z'
