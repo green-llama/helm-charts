@@ -3,6 +3,30 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## MariaDB fast failover — 30s eviction tolerations (default on)
+
+`mariadb-sts` now ships with `tolerations` by default (in `values.yaml`, injected into the
+StatefulSet pod spec) so `glerp-mariadb-sts-0` is evicted quickly when its node drops:
+
+```
+- key: node.kubernetes.io/unreachable   effect: NoExecute  operator: Exists  tolerationSeconds: 30
+- key: node.kubernetes.io/not-ready     effect: NoExecute  operator: Exists  tolerationSeconds: 30
+```
+
+By default Kubernetes waits **300s** before evicting a pod from an unreachable/not-ready node; these
+30s tolerations mark the pod `Terminating` almost immediately, letting the StatefulSet controller
+reschedule it onto a node with a live storage replica. Target DB downtime on a host failure:
+**~30–45s**, with no extra disk footprint and no node-fencing operator.
+
+**Cluster dependency (NOT set by this chart):** the fast reschedule also requires Longhorn's
+pod-deletion policy `node-down-pod-deletion-policy = delete-statefulset-pod` so Longhorn breaks the
+RWO volume lock and lets the replacement pod attach. The tolerations alone only speed up eviction;
+without that Longhorn setting the new pod can't mount the volume until the old node returns. This is
+a one-time cluster-level Longhorn setting the operator manages.
+
+Override or empty `mariadb-sts.tolerations` to disable. Applied to the pod template only — safe on
+upgrade.
+
 ## Trivy scan-skip label on the 6 non-gunicorn Deployments
 
 Added the pod label `glerp.io/trivy-skip: "true"` to the `spec.template.metadata.labels` of the six

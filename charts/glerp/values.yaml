@@ -189,7 +189,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.57
+  tag: 1.0.58
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
@@ -334,6 +334,25 @@ mariadb-sts:
     requests:
       cpu: 500m
       memory: 1Gi
+  # Fast failover on node loss. By default Kubernetes waits 300s before evicting a pod from an
+  # unreachable/not-ready node; these 30s tolerations mark glerp-mariadb-sts-0 Terminating almost
+  # immediately, so the StatefulSet controller can reschedule it onto a node with a live storage
+  # replica. Target DB downtime on a host failure: ~30-45s.
+  # NOTE: the fast reschedule ALSO requires Longhorn's cluster-level pod-deletion policy
+  #   node-down-pod-deletion-policy = delete-statefulset-pod
+  # (a Longhorn setting, NOT set by this chart) so Longhorn breaks the RWO volume lock and lets the
+  # replacement pod attach. The tolerations alone only speed up eviction; without that Longhorn
+  # policy the new pod can't mount the volume until the old node returns.
+  # Override or empty this list to disable the fast-failover behavior.
+  tolerations:
+    - key: "node.kubernetes.io/unreachable"
+      operator: "Exists"
+      effect: "NoExecute"
+      tolerationSeconds: 30
+    - key: "node.kubernetes.io/not-ready"
+      operator: "Exists"
+      effect: "NoExecute"
+      tolerationSeconds: 30
   # rootPassword / generateRootSecret: chart-managed root secret (dev/test path).
   # existingSecret: point at an externally-managed secret (e.g. the Vault-synced
   # "<namespace>-mariadb-root"). When tenant.enabled=true and name is empty, the helper
