@@ -120,6 +120,7 @@ Verified with the §5 commands. Add rows as sites are checked.
 | backuptest | Encryption ✔ / Decryption ✔ · enabled | yes | — | |
 | belton | Encryption ✔ / Decryption ✔ · enabled | yes | — | |
 | _(fresh-install validation)_ smalltest | Encryption ✔ / Decryption ✔ · enabled | yes | 1.0.80 | 2026-08-03 / |
+| greenllama | Encryption ✔ / Decryption ✔ · enabled | yes | 1.0.81 | 2026-08-07 / |
 
 ## 7. Scope boundaries and compensating design
 
