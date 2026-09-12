@@ -99,7 +99,10 @@ tenant:
     # namespace path segment. See TENANT.md. No Vault commands are needed per new site.
     kes:
       enabled: true
-      image: minio/kes:2025-03-12T09-35-18Z
+      # quay.io, NOT docker.io: MinIO removed the minio/kes repo from Docker Hub (pulls now fail
+      # with "repository does not exist / insufficient_scope"). The identical image + tag is public
+      # on quay.io. Keep the pinned timestamp tag.
+      image: quay.io/minio/kes:2025-03-12T09-35-18Z
       # Cluster-wide Vault k8s-auth role KES authenticates as (created once per cluster).
       vaultRole: glerp-minio-kes
       # The MinIO client cert the activate hook hashes for KES's policy.minio.identities. The
@@ -189,7 +192,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.58
+  tag: 1.0.59
 imagePullSecrets:
   - name: ghcr-cred
 ingress:

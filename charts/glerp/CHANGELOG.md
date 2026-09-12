@@ -3,6 +3,28 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## Fix: MinIO images (kes + mc) moved to quay.io (Docker Hub repos removed)
+
+MinIO **removed both the `minio/kes` and `minio/mc` repositories from Docker Hub** — pulling
+`docker.io/minio/kes:...` or `docker.io/minio/mc:...` now fails with
+`pull access denied, repository does not exist ... insufficient_scope` (the Hub API returns
+`object not found` for each repo). This breaks encryption on any fresh install, or any node that no
+longer has the image cached (already-running tenants keep working until a pod is rescheduled onto a
+node without the cached image — e.g. the `backuptest` dev tenant hit this for `kes`, then the
+activate hook hit it for `mc`).
+
+Both images — **and their exact tags — are public on quay.io**, so the chart's defaults are changed
+from Docker Hub to quay.io (same pinned tags, multi-arch):
+- KES server: `minio/kes:2025-03-12T09-35-18Z` → **`quay.io/minio/kes:2025-03-12T09-35-18Z`**
+  (`values.yaml` `tenant.minio.kes.image` + the `minio-tenant.yaml` template default).
+- Activate-hook `mc` (init container that copies the `mc` binary):
+  `minio/mc:RELEASE.2025-03-12T17-29-24Z` → **`quay.io/minio/mc:RELEASE.2025-03-12T17-29-24Z`**
+  (the `job-minio-kes-activate.yaml` `$kes.activateImage` default).
+
+Override via `tenant.minio.kes.image` / `tenant.minio.kes.activateImage` as before. Quay allows
+anonymous public pulls — no pull secret needed. Existing installs: upgrade to this chart version so
+both images pull from quay.
+
 ## MariaDB fast failover — 30s eviction tolerations (default on)
 
 `mariadb-sts` now ships with `tolerations` by default (in `values.yaml`, injected into the

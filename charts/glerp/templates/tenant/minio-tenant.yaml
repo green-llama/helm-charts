@@ -39,7 +39,9 @@ spec:
   kes:
     keyName: {{ printf "%s-minio-key" $ns | quote }}
     serviceAccountName: {{ printf "%s-minio-tenant-kes" $ns | quote }}
-    image: {{ $kes.image | default "minio/kes:2025-03-12T09-35-18Z" | quote }}
+    # Default is quay.io (NOT docker.io): MinIO removed minio/kes from Docker Hub; the same
+    # image+tag is public on quay.io. Overridable via tenant.minio.kes.image.
+    image: {{ $kes.image | default "quay.io/minio/kes:2025-03-12T09-35-18Z" | quote }}
     # LABEL (not annotation) is what gets KES a mesh sidecar in an UNLABELED namespace — Istio's
     # injector matches the pod label via objectSelector (handoff doc §2). Do not change to annotation.
     labels:

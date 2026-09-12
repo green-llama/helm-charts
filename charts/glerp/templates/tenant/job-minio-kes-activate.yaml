@@ -50,8 +50,10 @@ spec:
       initContainers:
         # Copy the STATIC `mc` binary out of minio/mc into a shared volume so the main container
         # (glerp image — which has python3/openssl/curl but not mc) can run KMS operations.
+        # quay.io, NOT docker.io: MinIO removed the minio/mc repo from Docker Hub (same as minio/kes);
+        # the identical image+tag is public on quay.io. Overridable via tenant.minio.kes.activateImage.
         - name: fetch-mc
-          image: {{ $kes.activateImage | default "minio/mc:RELEASE.2025-03-12T17-29-24Z" | quote }}
+          image: {{ $kes.activateImage | default "quay.io/minio/mc:RELEASE.2025-03-12T17-29-24Z" | quote }}
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c"]
           args: ["cp /usr/bin/mc /mcbin/mc && chmod 0755 /mcbin/mc && echo 'mc copied'"]
