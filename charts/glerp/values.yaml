@@ -118,7 +118,7 @@ tenant:
       image: ghcr.io/green-llama/kes:2025-03-12T09-35-18Z@sha256:856b20e0550cc89c2434534a983a8a219f16091f205390053093ed8a04108ab3
       # mc image for the activate hook's fetch-mc init container. Built from source
       # (github.com/pgsty/mc — maintained AGPL fork; upstream minio/mc is archived) -> GHCR, digest.
-      activateImage: ghcr.io/green-llama/mc:RELEASE.2026-09-16T00-00-00Z@sha256:45731e38da6029da93a49e6d9c93ae796a30974ef9c5bf690b4c53401982a0be
+      activateImage: ghcr.io/green-llama/mc:RELEASE.2026-09-16T00-00-00Z@sha256:71074435b94fae422f1b2cb80e40af021061c73836dc34d1486f03a8752dea40
       # Cluster-wide Vault k8s-auth role KES authenticates as (created once per cluster).
       vaultRole: glerp-minio-kes
       # The MinIO client cert the activate hook hashes for KES's policy.minio.identities. The
@@ -208,7 +208,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.60
+  tag: 1.0.61
 imagePullSecrets:
   - name: ghcr-cred
 ingress:

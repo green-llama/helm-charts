@@ -55,7 +55,7 @@ spec:
         # ghcr.io/green-llama/mc. Binary path /usr/bin/mc is unchanged. Override via
         # tenant.minio.kes.activateImage. See mirror-minio-images.yml.
         - name: fetch-mc
-          image: {{ $kes.activateImage | default "ghcr.io/green-llama/mc:RELEASE.2026-09-16T00-00-00Z@sha256:45731e38da6029da93a49e6d9c93ae796a30974ef9c5bf690b4c53401982a0be" | quote }}
+          image: {{ $kes.activateImage | default "ghcr.io/green-llama/mc:RELEASE.2026-09-16T00-00-00Z@sha256:71074435b94fae422f1b2cb80e40af021061c73836dc34d1486f03a8752dea40" | quote }}
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c"]
           args: ["cp /usr/bin/mc /mcbin/mc && chmod 0755 /mcbin/mc && echo 'mc copied'"]
