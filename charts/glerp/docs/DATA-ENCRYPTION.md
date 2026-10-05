@@ -140,6 +140,14 @@ Verified with the §5 commands. Add rows as sites are checked.
   reach another namespace's key path. This is **documented and accepted**; stricter per-tenant-role
   isolation requires Vault Enterprise templated ACLs (not licensed) or a per-tenant provisioning
   step. It does not affect the "encrypted at rest" control, which is fully met.
+- **Supply-chain integrity (MinIO images):** the MinIO server, KES, and `mc` images are **not**
+  pulled from third-party public registries. After MinIO Inc. withdrew the community images
+  (2026-09), all MinIO images are published to our own `ghcr.io/green-llama/*` registry, **pinned by
+  immutable `@sha256` digest** in the chart, and built reproducibly (KES and `mc` from pinned source;
+  the server image from the maintained community fork). This removes a runtime dependency on an
+  external registry and ensures the encryption-critical KES image is one we control and can
+  reproduce. The SSE-KMS control itself is unchanged and was re-verified end-to-end after the
+  migration. Detail: [`ENCRYPTION-ARCHITECTURE.md`](ENCRYPTION-ARCHITECTURE.md) §0.
 
 ## 8. References (system of record)
 

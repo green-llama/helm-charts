@@ -16,8 +16,10 @@ depends on no registry or prebuilt artifact outside our control:
 - **kes** — BUILT FROM SOURCE (`github.com/minio/kes` @ `2025-03-12T09-35-18Z`, `go build ./cmd/kes`)
   via `build/kes/Dockerfile` → `ghcr.io/green-llama/kes@sha256:856b20e0…`.
 - **mc** (activate-hook `fetch-mc`) — BUILT FROM SOURCE (`github.com/pgsty/mc` — maintained AGPL
-  fork; upstream `minio/mc` is archived) → `ghcr.io/green-llama/mc@sha256:45731e38…`. Binary path
-  `/usr/bin/mc` unchanged.
+  fork; upstream `minio/mc` is archived) via `build/mc/Dockerfile` →
+  `ghcr.io/green-llama/mc@sha256:71074435…`. Finished on **busybox** (NOT `scratch`) because the
+  `fetch-mc` init container stages the binary with `sh -c "cp … && chmod …"` and needs `/bin/sh`;
+  binary path `/usr/bin/mc` unchanged.
 - **minio server** — the chart now sets `Tenant.spec.image` (new `tenant.minio.image` value;
   previously unset → Operator default). Pinned to the **pgsty/silo** community fork mirrored to
   `ghcr.io/green-llama/minio@sha256:b6bfe723…`. silo keeps the `minio` binary + `MINIO_*` env +
@@ -27,6 +29,15 @@ All three images are multi-arch (amd64+arm64), public (anonymous pull — no ima
 Trivy-scanned, and produced by the new `mirror-minio-images` workflow (build kes+mc from source,
 mirror silo server). Override via `tenant.minio.image` / `tenant.minio.kes.image` /
 `tenant.minio.kes.activateImage`; empty `tenant.minio.image` falls back to the Operator default.
+
+**Proven end-to-end on the `backuptest` dev tenant (2026-10):** upgrade → activate hook patches the
+KES identity (off `_pending_`) → rolling-bounces KES then MinIO → `SSE-KMS enabled`, `Encryption ✔ /
+Decryption ✔`, and pre-existing attachments decrypt and serve in GLerp (confirmed by viewing old
+files). The SSE-KMS control, DFP object keys, and `{site}/{base}-{name}.ext` naming are unchanged —
+no per-site datafill or URL rewrites. NOTE for fleet upgrades: an upgrade that rolls the KES pods can
+reset `kes-config-secret` identities to `_pending_`; the activate hook re-patches it, so if existing
+attachments briefly 404 after an upgrade, re-run the upgrade (hook) rather than touching data. Full
+detail in `docs/ENCRYPTION-ARCHITECTURE.md` §0.
 
 **Deferred strategic item:** silo is a community fork of the now-archived MinIO CE. The
 maintained-vs-migrate decision (silo / MinIO AIStor / migrate off MinIO) remains open; this pin is

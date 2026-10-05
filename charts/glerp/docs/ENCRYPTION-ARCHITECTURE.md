@@ -13,6 +13,47 @@ There are two independent at-rest mechanisms, owned by different layers:
 
 ---
 
+## 0. Image supply chain — all MinIO images self-owned in GHCR (2026-10)
+
+**Context:** MinIO Inc. withdrew the community container images — `docker.io/minio/*` was deleted
+(~2026-09-12) and `quay.io/minio/{minio,mc}` went `401`/gone (~2026-09-22). Community MinIO itself is
+archived/unmaintained. Any fresh pull (new install, node reschedule, image GC) of a `minio/*` image
+now fails `ImagePullBackOff`.
+
+**Principle adopted:** the chart depends on **no registry or prebuilt artifact outside our control.**
+Every MinIO image is published to `ghcr.io/green-llama/*`, **multi-arch, public (anonymous pull — no
+imagePullSecret), and pinned BY DIGEST** in the chart. They are produced by the
+`.github/workflows/mirror-minio-images.yml` workflow (`workflow_dispatch` + monthly refresh):
+
+| Image | Source | Build method | Chart field (default) |
+|---|---|---|---|
+| **KES** | `github.com/minio/kes` @ `2025-03-12T09-35-18Z` (AGPLv3) | **built from source** (`build/kes/Dockerfile`, `go build ./cmd/kes`, ubi-micro runtime) | `tenant.minio.kes.image` |
+| **mc** (activate-hook `fetch-mc`) | `github.com/pgsty/mc` @ `RELEASE.2026-09-16T00-00-00Z` (AGPLv3; upstream `minio/mc` is archived) | **built from source** (`build/mc/Dockerfile`, **busybox runtime** — see note) | `tenant.minio.kes.activateImage` |
+| **MinIO server** | `docker.io/pgsty/minio` (silo fork) @ `RELEASE.2026-08-04T00-00-00Z` (AGPLv3) | **mirrored** (crane) | `tenant.minio.image` → `Tenant.spec.image` |
+
+Notes:
+- **mc MUST have a shell.** The `fetch-mc` init container stages the static `mc` binary with
+  `sh -c "cp /usr/bin/mc /mcbin/mc && chmod ..."`. pgsty/mc's own Dockerfile finishes on `scratch`
+  (no `/bin/sh`) → the init container crashes with `exec: "/bin/sh": no such file or directory`.
+  `build/mc/Dockerfile` therefore finishes on **busybox** (provides `/bin/sh` + `cp` + `chmod`) with
+  `mc` at `/usr/bin/mc`, matching the contract the old `docker.io/minio/mc` satisfied.
+- **MinIO server = the pgsty/silo community fork**, not upstream MinIO. silo keeps the `minio`
+  binary, `MINIO_*` env, and `/minio/health/*` routes, so **the KES+Vault SSE-KMS design is
+  unchanged** (verified end-to-end on the `backuptest` dev tenant: identity patch → KES/MinIO reauth
+  → `Encryption ✔ / Decryption ✔` → existing attachments decrypt and serve). The chart now pins the
+  server via `Tenant.spec.image` (`tenant.minio.image`); previously this was unset and the MinIO
+  Operator injected its own default (now the dead upstream image).
+- **Bump procedure:** edit the pinned tag in `mirror-minio-images.yml`, run the workflow, copy the
+  reported `@sha256` digests into `values.yaml` (and the template defaults), commit. Never use a
+  moving tag without a digest.
+
+**Deferred strategic item:** silo is a community fork of the archived MinIO CE. The
+maintained-vs-migrate decision (stay on silo / MinIO AIStor (commercial) / migrate to another S3
+store) remains open; the GHCR digest pins are the durable stopgap that de-risk the registry
+withdrawal and buy time to decide deliberately.
+
+---
+
 ## 1. MinIO object storage — SSE-KMS via KES + Vault
 
 ### 1.1 Components
@@ -48,8 +89,8 @@ There are two independent at-rest mechanisms, owned by different layers:
 "Tenant created" into "encryption actually working", with no manual steps. It runs as the tenant KES
 ServiceAccount (RBAC in `minio-kes-rbac.yaml`: get/list/patch secrets + get/list/delete pods, this
 namespace only). One container (the glerp image: python3/openssl/curl) with the static `mc` binary
-copied in by an initContainer from `minio/mc`. Runs `python3 -u` (unbuffered) so `kubectl logs`
-shows live progress.
+copied in by an initContainer from our GHCR mc image (`ghcr.io/green-llama/mc`, busybox-based so the
+`sh -c cp` works — see §0). Runs `python3 -u` (unbuffered) so `kubectl logs` shows live progress.
 
 Sequence:
 
@@ -145,3 +186,18 @@ Verify first (from a MinIO pod, container `minio`; creds in `<ns>-minio-creds`):
 - **DirectPV `no drive found for requested topology; requested size …`** → the requested
   `tenant.minio.volumeSize` exceeds the DirectPV drives' free space (check
   `kubectl directpv list drives`). Not a chart bug — set a sane `volumeSize`.
+- **`ImagePullBackOff` on a `minio/*` image (`repository does not exist` / `insufficient_scope`)**
+  → an image still points at the withdrawn Docker Hub / quay `minio/*` repos. All MinIO images must
+  come from `ghcr.io/green-llama/*` pinned by digest (§0). Upgrade to a chart version that carries
+  the GHCR pins; if overriding, use the GHCR refs.
+- **`fetch-mc` init container `exec: "/bin/sh": no such file or directory`** → the mc image lacks a
+  shell (a `scratch`-based build). The activate hook needs a shell to copy the binary; use the
+  busybox-based `ghcr.io/green-llama/mc` (§0).
+- **Existing attachments 404 in GLerp after an upgrade, but the objects exist in MinIO** → not data
+  loss and not a DFP/key problem. It is the KMS decrypt path failing: after an upgrade rolls the KES
+  pods, `kes-config-secret`'s `policy.minio.identities` can be reset to `_pending_` and must be
+  re-patched to the client-cert hash (the activate hook does this). Symptom: `mc stat` succeeds but
+  `mc get`/read fails with `kms:NotAuthorized / insufficient permissions to perform KMS operation`,
+  and `mc admin kms key status` shows `Encryption ✗`. Re-run the activate hook (re-run the helm
+  upgrade) so it re-patches the identity and reauths KES+MinIO. DFP keys, object names, and the
+  `{site}/{base}-{name}.ext` naming are unchanged — no per-site datafill or URL rewrites needed.
