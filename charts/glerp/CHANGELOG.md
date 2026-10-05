@@ -3,6 +3,37 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## MinIO images: self-owned in GHCR, digest-pinned (quay also went dark)
+
+MinIO Inc. completed its withdrawal of community images — after Docker Hub (~2026-09-12),
+**quay.io/minio/{minio,mc} went 401** (~2026-09-22; verified 2026-10-05). quay minio/kes still
+pulls but is a dead-repo neighbor. The prior quay repoint is therefore no longer safe, and the
+MinIO server image (never pinned by the chart — injected by the Operator) is on borrowed node-cache
+time.
+
+**glerp now owns every MinIO image under `ghcr.io/green-llama/*`, pinned by digest** — the chart
+depends on no registry or prebuilt artifact outside our control:
+- **kes** — BUILT FROM SOURCE (`github.com/minio/kes` @ `2025-03-12T09-35-18Z`, `go build ./cmd/kes`)
+  via `build/kes/Dockerfile` → `ghcr.io/green-llama/kes@sha256:856b20e0…`.
+- **mc** (activate-hook `fetch-mc`) — BUILT FROM SOURCE (`github.com/pgsty/mc` — maintained AGPL
+  fork; upstream `minio/mc` is archived) → `ghcr.io/green-llama/mc@sha256:45731e38…`. Binary path
+  `/usr/bin/mc` unchanged.
+- **minio server** — the chart now sets `Tenant.spec.image` (new `tenant.minio.image` value;
+  previously unset → Operator default). Pinned to the **pgsty/silo** community fork mirrored to
+  `ghcr.io/green-llama/minio@sha256:b6bfe723…`. silo keeps the `minio` binary + `MINIO_*` env +
+  `/minio/health/*`, so the KES+Vault SSE-KMS design is unchanged.
+
+All three images are multi-arch (amd64+arm64), public (anonymous pull — no imagePullSecret),
+Trivy-scanned, and produced by the new `mirror-minio-images` workflow (build kes+mc from source,
+mirror silo server). Override via `tenant.minio.image` / `tenant.minio.kes.image` /
+`tenant.minio.kes.activateImage`; empty `tenant.minio.image` falls back to the Operator default.
+
+**Deferred strategic item:** silo is a community fork of the now-archived MinIO CE. The
+maintained-vs-migrate decision (silo / MinIO AIStor / migrate off MinIO) remains open; this pin is
+the durable Phase-1 stopgap. **SSE-KMS must be proven on a dev tenant (backuptest) before prod** —
+the silo server + from-source KES/mc have not yet been validated end-to-end against the Vault key
+path.
+
 ## Fix: MinIO images (kes + mc) moved to quay.io (Docker Hub repos removed)
 
 MinIO **removed both the `minio/kes` and `minio/mc` repositories from Docker Hub** — pulling

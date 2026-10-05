@@ -10,6 +10,12 @@ metadata:
   labels:
     {{- include "erpnext.labels" . | nindent 4 }}
 spec:
+  {{- if $m.image }}
+  # MinIO SERVER image, digest-pinned to our own GHCR (tenant.minio.image). MinIO withdrew the
+  # community server image from Docker Hub + quay; this is the pgsty/silo fork mirrored to
+  # ghcr.io/green-llama/minio. If empty, the Operator's built-in default (dead upstream) is used.
+  image: {{ $m.image | quote }}
+  {{- end }}
   configuration:
     name: {{ $ns }}-minio-creds
   buckets:
@@ -39,9 +45,10 @@ spec:
   kes:
     keyName: {{ printf "%s-minio-key" $ns | quote }}
     serviceAccountName: {{ printf "%s-minio-tenant-kes" $ns | quote }}
-    # Default is quay.io (NOT docker.io): MinIO removed minio/kes from Docker Hub; the same
-    # image+tag is public on quay.io. Overridable via tenant.minio.kes.image.
-    image: {{ $kes.image | default "quay.io/minio/kes:2025-03-12T09-35-18Z" | quote }}
+    # Default is our own GHCR build (digest-pinned): MinIO withdrew kes from Docker Hub + quay,
+    # so glerp builds it from source into ghcr.io/green-llama/kes. Overridable via
+    # tenant.minio.kes.image. See mirror-minio-images.yml.
+    image: {{ $kes.image | default "ghcr.io/green-llama/kes:2025-03-12T09-35-18Z@sha256:856b20e0550cc89c2434534a983a8a219f16091f205390053093ed8a04108ab3" | quote }}
     # LABEL (not annotation) is what gets KES a mesh sidecar in an UNLABELED namespace — Istio's
     # injector matches the pod label via objectSelector (handoff doc §2). Do not change to annotation.
     labels:

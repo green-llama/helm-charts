@@ -64,6 +64,17 @@ tenant:
       store: vault-pushwriter
   minio:
     enabled: true                 # per-tenant MinIO Tenant + its IngressRoute
+    # MinIO SERVER image, digest-pinned to our own GHCR. MinIO Inc. withdrew the community
+    # server image (docker.io/minio/minio deleted, quay.io/minio/minio 401), so glerp mirrors the
+    # maintained community fork (pgsty/silo) into ghcr.io/green-llama/minio (multi-arch, public).
+    # The silo fork keeps the `minio` binary, MINIO_* env and /minio/health/* routes, so the
+    # KES+Vault SSE-KMS design is unchanged. Set into the Tenant spec.image below.
+    # NOTE (deferred strategic item): silo is a community fork of the now-archived MinIO CE. The
+    # maintained-vs-migrate decision (silo / AIStor / migrate off MinIO) is still open; this pin
+    # is the durable Phase-1 stopgap (self-owned, digest-pinned). PROVE SSE-KMS on a dev tenant
+    # (backuptest) before relying on it in prod. Empty -> the MinIO Operator's built-in default
+    # (which is the dead upstream image — do not rely on it).
+    image: ghcr.io/green-llama/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
     # USER (usable) file space is ~half of raw after erasure-coding parity.
     # Default target: ~12Gi usable => ~24Gi raw = pools*servers*volumesPerServer*volumeSize.
     #   2 * 2 * 2 * 3Gi = 24Gi raw  ≈  12Gi usable.
@@ -99,10 +110,15 @@ tenant:
     # namespace path segment. See TENANT.md. No Vault commands are needed per new site.
     kes:
       enabled: true
-      # quay.io, NOT docker.io: MinIO removed the minio/kes repo from Docker Hub (pulls now fail
-      # with "repository does not exist / insufficient_scope"). The identical image + tag is public
-      # on quay.io. Keep the pinned timestamp tag.
-      image: quay.io/minio/kes:2025-03-12T09-35-18Z
+      # GHCR, digest-pinned: glerp owns every MinIO image under ghcr.io/green-llama (MinIO Inc.
+      # withdrew the community images from Docker Hub AND quay — docker.io/minio/* deleted
+      # ~2026-09-12, quay.io/minio/{minio,mc} 401 since ~2026-09-22). KES here is BUILT FROM SOURCE
+      # (github.com/minio/kes @ 2025-03-12T09-35-18Z) by the mirror-minio-images workflow, multi-arch,
+      # pinned by digest. Public, anonymous-pullable. Bump: rerun the workflow, re-pin the digest.
+      image: ghcr.io/green-llama/kes:2025-03-12T09-35-18Z@sha256:856b20e0550cc89c2434534a983a8a219f16091f205390053093ed8a04108ab3
+      # mc image for the activate hook's fetch-mc init container. Built from source
+      # (github.com/pgsty/mc — maintained AGPL fork; upstream minio/mc is archived) -> GHCR, digest.
+      activateImage: ghcr.io/green-llama/mc:RELEASE.2026-09-16T00-00-00Z@sha256:45731e38da6029da93a49e6d9c93ae796a30974ef9c5bf690b4c53401982a0be
       # Cluster-wide Vault k8s-auth role KES authenticates as (created once per cluster).
       vaultRole: glerp-minio-kes
       # The MinIO client cert the activate hook hashes for KES's policy.minio.identities. The
@@ -192,7 +208,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.59
+  tag: 1.0.60
 imagePullSecrets:
   - name: ghcr-cred
 ingress:

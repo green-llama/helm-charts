@@ -48,12 +48,14 @@ spec:
         - name: mcbin
           emptyDir: {}
       initContainers:
-        # Copy the STATIC `mc` binary out of minio/mc into a shared volume so the main container
+        # Copy the STATIC `mc` binary out of mc into a shared volume so the main container
         # (glerp image — which has python3/openssl/curl but not mc) can run KMS operations.
-        # quay.io, NOT docker.io: MinIO removed the minio/mc repo from Docker Hub (same as minio/kes);
-        # the identical image+tag is public on quay.io. Overridable via tenant.minio.kes.activateImage.
+        # Our own GHCR build (digest-pinned): MinIO withdrew minio/mc from Docker Hub + quay, so
+        # glerp builds mc from source (github.com/pgsty/mc, maintained AGPL fork) into
+        # ghcr.io/green-llama/mc. Binary path /usr/bin/mc is unchanged. Override via
+        # tenant.minio.kes.activateImage. See mirror-minio-images.yml.
         - name: fetch-mc
-          image: {{ $kes.activateImage | default "quay.io/minio/mc:RELEASE.2025-03-12T17-29-24Z" | quote }}
+          image: {{ $kes.activateImage | default "ghcr.io/green-llama/mc:RELEASE.2026-09-16T00-00-00Z@sha256:45731e38da6029da93a49e6d9c93ae796a30974ef9c5bf690b4c53401982a0be" | quote }}
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c"]
           args: ["cp /usr/bin/mc /mcbin/mc && chmod 0755 /mcbin/mc && echo 'mc copied'"]
