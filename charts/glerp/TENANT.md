@@ -237,9 +237,10 @@ a real (if narrow) finding for a strict multi-tenant isolation control.
 self-scopes to `{{identity…service_account_namespace}}`), which is a **Vault Enterprise-only**
 feature — this cluster runs **Vault Community Edition**, so it is not available. The CE-compatible
 alternative is a genuine **per-tenant** `<ns>-minio-kes` policy+role, auto-created by a Helm hook
-at install (design captured in `MINIO-KES-VAULT-PROVISIONER-HANDOFF.md`). That tightening is
-**deferred**: the current shared-role model is in production and working; per-tenant roles are a
-future hardening step, not a blocker. Get encryption working first, tighten isolation second.
+at install (a per-tenant Vault provisioner). That tightening is **deferred**: the current
+shared-role model is in production and working; per-tenant roles are a future hardening step, not a
+blocker. Get encryption working first, tighten isolation second. See
+`docs/ENCRYPTION-ARCHITECTURE.md` for the current architecture.
 
 **Backfilling existing (pre-encryption) data** — per-site, NOT a cluster prereq: SSE-KMS is not
 retroactive; it only encrypts objects written *after* it is enabled. Existing objects stay
