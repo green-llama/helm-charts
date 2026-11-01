@@ -208,7 +208,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.63
+  tag: 1.0.64
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
@@ -263,10 +263,42 @@ jobs:
     # install). DESTRUCTIVE — never enable it on a site that may hold data.
     recreateIncompleteSite: false
     migrateAfterAppSync: true
-    # installApps: leave EMPTY to install ALL apps baked into the image (read from the
-    # bench's sites/apps.txt at runtime) — the site always matches the image, nothing to
-    # maintain here. Set an explicit list only to install a curated subset on a site.
-    installApps: []
+    # installApps = the DECLARATIVE set of modules enabled by default on every site. The
+    # create-site job installs exactly these (in this order) on a new site, and on upgrade
+    # (upgradeAppsOnExistingSite) syncs existing sites UP to this set (adds missing ones;
+    # never removes). This is the single source of truth for "which modules are on" — add a
+    # module here + upgrade to enable it everywhere; no per-module bench one-offs.
+    #
+    # Modules are listed by their bench MODULE name (not repo name): POS-Awesome-V15 ->
+    # posawesome, glerp_frappe_theme -> frappe_theme. frappe is the framework (always present).
+    #
+    # SHIPPED-BUT-NOT-ENABLED: an app can be baked into the image yet omitted here so its code
+    # ships without being installed. glerp_fitness is intentionally NOT listed — it is present
+    # in the image but installs nowhere until it is added to this list + an upgrade is run.
+    # Leaving this EMPTY ([]) falls back to "install ALL apps in the image", which would
+    # auto-install fitness — so keep it explicit.
+    installApps:
+      - erpnext
+      - payments
+      - hrms
+      - newsletter
+      - blog
+      - eps
+      - offsite_backups
+      - webshop
+      - posawesome
+      - dfp_external_storage
+      - erpnext_email_parser
+      - frappe_theme
+      - glerp_branding
+      - glerp_bigbulk_import
+      - glerp_ai_core
+      - glerp_ai_intake
+      - glerp_payment_gateways
+      - glerp_audience
+      - glerp_twilio_integration
+      - glerp_webtools
+      # - glerp_fitness   # shipped in image; uncomment + upgrade to enable Personal Training
     nodeSelector: {}
     resources: {}
     # Site name for this deployment. Set per install, e.g.

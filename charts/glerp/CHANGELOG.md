@@ -3,6 +3,25 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## Image: MariaDB client no longer demands TLS (fixes `bench new-site` / `bench backup`)
+
+`bench new-site` (and `bench backup`) shell out to the `mariadb` / `mariadb-dump` CLI, whose
+base image now ships **MariaDB client 11.8**. MariaDB client **>= 11.4 requires TLS by default**
+and aborts against a server that offers no TLS with:
+
+```
+ERROR 2026 (HY000): TLS/SSL error: SSL is required, but the server does not support it
+```
+
+Our in-cluster MariaDB is plain by design — internal cluster traffic is not MariaDB-native-TLS'd
+(if that ever changes it is done at the mesh layer via Istio mTLS, not MariaDB TLS). The fix bakes
+`~/.my.cnf` (`[client]\nssl=0`) into the image so the CLI tools do not demand TLS. This affects
+only the CLI DB tools that read `~/.my.cnf`; the app's own PyMySQL connections do not read this
+file and were never affected (which is why DB creation succeeded but the CLI import failed).
+
+Image-level (not a chart mount), so every pod/job — create-site, backup, migrate — inherits it.
+No server-side or native-TLS change; the server stays plain.
+
 ## MinIO images: self-owned in GHCR, digest-pinned (quay also went dark)
 
 MinIO Inc. completed its withdrawal of community images — after Docker Hub (~2026-09-12),
