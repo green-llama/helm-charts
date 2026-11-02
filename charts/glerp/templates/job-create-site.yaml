@@ -38,7 +38,14 @@ spec:
             - |
               set -e
               mkdir -p sites
-              [[ -f sites/common_site_config.json ]] || echo "{}" > sites/common_site_config.json
+              # Reseed common_site_config.json if it is ABSENT, EMPTY, or NOT VALID JSON.
+              # A prior `[[ -f ]]`-only guard let an empty/partial file (0 bytes, stray newline,
+              # or a half-written file on a reused PVC) slip through — bench then fails with
+              # "common_site_config.json is invalid / Expecting value: line 1 column 1 (char 0)".
+              if ! python -c 'import json,sys; json.load(open("sites/common_site_config.json"))' 2>/dev/null; then
+                echo "common_site_config.json missing/empty/invalid — reseeding with {}"
+                echo "{}" > sites/common_site_config.json
+              fi
               # The sites/ PVC shadows the image's built-in sites/apps.txt; seed it so bench
               # can enumerate the apps baked into the image. Prefer the unmounted stash
               # (image-apps.txt); fall back to deriving the list from apps/ (frappe first).
@@ -120,6 +127,14 @@ spec:
         args:
           - |-
             set -x;
+            # Last-ditch guard (the validate-config initContainer also does this): the sites/ PVC
+            # is shared RWX, so between init and here another pod can truncate common_site_config.json.
+            # bench reads it on EVERY command and dies with "Expecting value: line 1 column 1 (char 0)"
+            # if it's empty/invalid. Reseed with {} if it isn't valid JSON, right before bench runs.
+            if ! python -c 'import json; json.load(open("sites/common_site_config.json"))' 2>/dev/null; then
+              echo "common_site_config.json missing/empty/invalid at create-site start — reseeding with {}";
+              mkdir -p sites; echo "{}" > sites/common_site_config.json;
+            fi
             {{- if .Values.jobs.createSite.upgradeAppsOnExistingSite }}
             set -euo pipefail;
 

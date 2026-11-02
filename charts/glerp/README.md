@@ -63,7 +63,7 @@ kubectl -n <your-namespace> logs job/glerp-new-site -f
 | Database | In-cluster **MariaDB** StatefulSet (official `mariadb` image) | Encrypted Longhorn volume (`longhorn-crypto-mariadb-rwo`, 10Gi). Not a subchart. |
 | Cache & queue | **Valkey** | Open-source Redis fork, Frappe-16 RESP3 compatible. The default — free and correct. |
 | Shared config/sites | Longhorn RWX (`longhorn-crypto-rwm`, 2Gi) | bench config only; **user files go to MinIO**, so no NFS/large RWX volume is needed. |
-| User file storage | Per-tenant **MinIO** (tenant mode) | DirectPV-backed; auto-wired to Frappe by the create-site job via `dfp_external_storage`. |
+| User file storage | Per-tenant **MinIO** (tenant mode) | DirectPV-backed; auto-wired to Frappe by the create-site job via `dfp_external_storage`. Default shape **1 pool × 4 servers × 1 volume × 6Gi = 24Gi raw ≈ 12Gi usable** (EC:2+2, survives losing any one of the 4 nodes). Set `tenant.minio.servers` to the storage-node count on a differently-sized cluster. |
 
 > **Cache/queue choice:** Valkey is the default and recommended backend. DragonflyDB is
 > an **opt-in alternative** (`dragonfly-cache`/`dragonfly-queue`), but it does **not**

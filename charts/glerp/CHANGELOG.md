@@ -3,6 +3,29 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## MinIO default topology → 1 pool × 4 servers × 1 volume × 6Gi (simpler, 4-node-idiomatic)
+
+The default per-tenant MinIO shape changes from `2 pools × 2 servers × 2 volumes × 3Gi` to
+`1 pool × 4 servers × 1 volume × 6Gi`. Both are 24Gi raw ≈ 12Gi usable (EC:2+2) and both
+encrypt — this is a simplicity/operability change, not a capacity or durability one. The new
+shape is one erasure set of four DirectPV drives, one drive per node on a 4-node cluster, so
+losing any single node keeps read+write quorum; it maps 1:1 onto a one-drive-per-node fleet
+instead of stacking two virtual volumes per physical drive across two erasure sets.
+
+Set `tenant.minio.servers` to the storage-node count on a differently-sized cluster. **Only
+affects new installs** — MinIO pools are immutable, so existing tenants stay on whatever shape
+they were created with (reshaping needs delete + recreate; leave working tenants as-is).
+
+## tenant.externalDnsTarget now defaults to pec.greenllama.tech (DNS works out of the box)
+
+Since the native tenant templates split routing into separate app (`traefik-system/<ns>`) and
+minio (`<ns>/minio-<ns>`) IngressRoutes, the site's Cloudflare record is created only when those
+routes carry the `external-dns.alpha.kubernetes.io/{hostname,target}` annotations — which the
+templates emit only when `tenant.externalDnsTarget` is set. It shipped defaulting to `""`, so any
+install that didn't explicitly set it got a site that came up but was **unreachable** (external-dns
+generated no endpoint, no error anywhere). Default is now `pec.greenllama.tech` (the cluster's
+standard ingress target); override only for a cluster whose external-dns points elsewhere.
+
 ## Image: MariaDB client no longer demands TLS (fixes `bench new-site` / `bench backup`)
 
 `bench new-site` (and `bench backup`) shell out to the `mariadb` / `mariadb-dump` CLI, whose

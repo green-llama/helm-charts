@@ -21,7 +21,14 @@ domain: greenllama.tech
 tenant:
   enabled: true
   domain: ""                      # e.g. dev.greenllama.tech (defaults to .Values.domain)
-  externalDnsTarget: ""           # e.g. pec.greenllama.tech (for external-dns annotations)
+  # external-dns target for the tenant's IngressRoute annotations. The split app/minio
+  # IngressRoutes (traefik-system/<ns> and <ns>/minio-<ns>) only emit the
+  # external-dns.alpha.kubernetes.io/{hostname,target} annotations when this is set — so with
+  # it EMPTY, external-dns generates no endpoint and the site's Cloudflare record is never
+  # created (the site comes up but is unreachable, with no error). Default to the cluster's
+  # standard ingress target so DNS works out of the box; override only for a cluster whose
+  # external-dns points somewhere else.
+  externalDnsTarget: "pec.greenllama.tech"
   tlsSecretName: letsencrypt-greenllama-tech-tls
   serviceAccount:
     enabled: true                 # <ns>-sa + secret-reader Role/RoleBinding
@@ -77,11 +84,26 @@ tenant:
     image: ghcr.io/green-llama/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
     # USER (usable) file space is ~half of raw after erasure-coding parity.
     # Default target: ~12Gi usable => ~24Gi raw = pools*servers*volumesPerServer*volumeSize.
-    #   2 * 2 * 2 * 3Gi = 24Gi raw  ≈  12Gi usable.
-    pools: 2
-    servers: 2
-    volumesPerServer: 2
-    volumeSize: 3Gi
+    #   1 * 4 * 1 * 6Gi = 24Gi raw  ≈  12Gi usable (EC:2+2).
+    #
+    # Shape rationale: ONE pool forming ONE erasure set of 4 drives, with ONE volume per server
+    # and `servers` == the number of storage nodes — so each node contributes exactly one drive
+    # to the set. This is the idiomatic MinIO layout for a 4-node cluster: lose any one node
+    # (one drive of four) and EC:2+2 keeps read AND write quorum. It maps 1:1 onto a fleet with
+    # one DirectPV drive per node, instead of the older 2-pool shape that stacked two virtual
+    # volumes onto each physical drive across two erasure sets (same usable space, more complexity).
+    #
+    # IMPORTANT: `servers` should match the storage-node count. The default (4) assumes a 4-node
+    # cluster. On a differently-sized cluster set `servers` to the node count so the erasure set
+    # spreads one-drive-per-node (MinIO wants servers to divide the set evenly).
+    #
+    # Pools are IMMUTABLE once created (servers/volumesPerServer cannot be changed on an existing
+    # Tenant) — this shape applies only to NEW installs. Grow capacity by appending to extraPools
+    # below, never by editing these on a live tenant.
+    pools: 1
+    servers: 4
+    volumesPerServer: 1
+    volumeSize: 6Gi
     storageClass: directpv-min-io
     # Capacity growth beyond the initial `pools`/`servers`/`volumesPerServer`/`volumeSize` shape
     # above. MinIO Operator pools are ADDITIVE and IMMUTABLE once created — you cannot resize or
@@ -208,7 +230,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.64
+  tag: 1.0.65
 imagePullSecrets:
   - name: ghcr-cred
 ingress:

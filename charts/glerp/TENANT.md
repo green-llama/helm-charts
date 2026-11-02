@@ -68,6 +68,23 @@ test creds in `values.glerp-ci-test.yaml`, which exists only because glerp-ci ha
 The TLS secret is referenced by name only, so the wildcard `letsencrypt-greenllama-tech-tls`
 must be present in `traefik-system` (it is cluster-wide/replicated in prod).
 
+## MinIO capacity & topology (default)
+
+The per-tenant MinIO store defaults to **1 pool × 4 servers × 1 volume × 6Gi** →
+**24Gi raw ≈ 12Gi usable** (erasure coding EC:2+2). One erasure set of four DirectPV drives,
+one drive per node on a 4-node cluster, so losing any single node keeps read **and** write
+quorum. Encryption-at-rest (SSE-KMS) is independent of this shape.
+
+- **Match `tenant.minio.servers` to the storage-node count.** The default `4` assumes four
+  storage nodes each with one DirectPV drive; on a differently-sized cluster set `servers`
+  to the node count so the erasure set spreads one-drive-per-node.
+- **Pools are immutable.** `servers` / `volumesPerServer` cannot be changed on an existing
+  Tenant — the shape applies only to **new** installs. Grow capacity by appending to
+  `tenant.minio.extraPools` (a new additive pool), never by editing the defaults on a live
+  tenant. Reshaping an existing tenant requires delete + recreate (back up the bucket first).
+- Prior installs may be on the older **2 pools × 2 servers × 2 volumes × 3Gi** shape (same
+  12Gi usable); that is fine and should be left as-is — do not attempt to reshape it.
+
 ## File attachments → MinIO (DFP External Storage, automated)
 
 `dfp_external_storage` is bundled in the image, and the create-site job (after migrate)
