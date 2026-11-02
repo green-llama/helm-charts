@@ -106,13 +106,15 @@ questions:
   - variable: tenant.minio.volumeSize
     label: MinIO user space (per volume)
     description: >-
-      Per-volume size for the tenant's MinIO object store (user file attachments). Raw capacity is
-      2× the usable "user space" after erasure-coding parity, and MinIO spreads it across
-      pools×servers×volumesPerServer volumes (default 2×2×2 = 8). With the default layout each 1Gi
-      here yields ~4Gi usable — so 3Gi ≈ 12Gi usable user space (≈ 24Gi raw). Only applies when
-      tenant infrastructure is enabled. Cannot be shrunk after install.
+      Per-volume size for the tenant's MinIO object store (user file attachments). Usable "user
+      space" is ~half the raw capacity after erasure-coding parity (EC:2+2), and MinIO spreads
+      storage across pools×servers×volumesPerServer volumes (default 1×4×1 = 4 — one erasure set
+      of four drives, one per node on a 4-node cluster, surviving the loss of any one node). With
+      the default layout each 1Gi here yields ~0.5Gi usable across the 4 volumes — so 6Gi ≈ 12Gi
+      usable user space (≈ 24Gi raw). Set servers to your storage-node count on a differently-sized
+      cluster. Only applies when tenant infrastructure is enabled. Cannot be shrunk after install.
     type: string
-    default: "3Gi"
+    default: "6Gi"
     show_if: "tenant.enabled=true"
     group: "Backends"
 
