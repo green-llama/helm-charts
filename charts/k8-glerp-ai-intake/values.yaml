@@ -3,7 +3,7 @@
 
 image:
   repository: ghcr.io/green-llama/k8-glerp-ai-intake
-  tag: "0.3.8"
+  tag: "0.3.10"
   pullPolicy: Always
 
 imagePullSecrets:
@@ -74,7 +74,7 @@ redis:
 # templates/ocr-gpu.yaml and app/pipelines/ocr_client.py.
 ocr:
   enabled: true
-  image: ghcr.io/green-llama/k8-glerp-ai-intake-ocr:latest
+  image: ghcr.io/green-llama/k8-glerp-ai-intake-ocr:0.3.10
   device: cuda                                         # "cpu" only as a local-dev fallback
   # No PVC -- weights are baked into the image (services/ocr-api/Dockerfile); a PVC mounted
   # at /data was tried and removed, confirmed live 2026-10-15: it shadows the image's own
