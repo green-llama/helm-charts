@@ -1,0 +1,110 @@
+{{- /*
+  OCR — PaddleOCR PP-StructureV3 + docTR, served via a dedicated GPU pod (services/ocr-api,
+  PyTorch + PaddlePaddle on CUDA), same migration pattern as k8-glerp-ai-agent's rerank-api/
+  embed-api split. Replaces the old in-process CPU calls in app/pipelines/ocr.py's
+  _paddle_ocr/_paddle_ocr_from_pdf/_doctr_ocr (use_gpu=False hardcoded there).
+
+  GPU-only by design (no CPU branch) -- ocr.nodeSelector should always target the GPU node;
+  running this image on CPU works (model.py falls back to "cpu" if CUDA isn't available) but
+  defeats the point of this migration.
+*/}}
+{{- if .Values.ocr.enabled }}
+{{- $c := .Values.ocr }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intake-ocr
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: intake-ocr
+    app.kubernetes.io/part-of: glerp-ai-intake
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  # Recreate, not RollingUpdate (the Deployment default) -- NOT a PVC concern (this pod has
+  # no volume at all, see the weights-baked-into-image note below), but a GPU-slice capacity
+  # one: confirmed live, 2026-10-15, that removing this line let a RollingUpdate try to
+  # schedule the new pod BEFORE killing the old one, and dev-pec-wn04's GPU time-slicing has
+  # no spare slot for both to exist at once ("Insufficient nvidia.com/gpu" FailedScheduling).
+  # Recreate guarantees the old pod's slice is freed before the new one is requested.
+  #
+  # Weights live entirely in the image's own filesystem layer, not a PVC -- a PVC mounted at
+  # /data was tried and removed (confirmed live, 2026-10-15): mounting ANYTHING at the same
+  # path the image bakes weights into shadows that baked content with the volume's own
+  # (empty) filesystem, forcing a full re-download at every pod start -- exactly the
+  # multi-minute cold start this bake-in work was meant to eliminate. Do not reintroduce a
+  # volume at /data (or /data/doctr, /data/paddleocr) without first confirming it won't
+  # shadow baked content the same way.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: intake-ocr
+  template:
+    metadata:
+      labels:
+        app: intake-ocr
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: ocr-api
+          image: {{ $c.image }}
+          # Always, not IfNotPresent -- this component is actively rebuilt under a mutable
+          # :dev tag during GPU migration; k8-glerp-ai-agent's embed/rerank migration hit a
+          # real bug where IfNotPresent left a node running a stale cached digest after a
+          # same-tag rebuild+push (kubelet logs "already present on machine", never re-pulls).
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: DEVICE
+              value: {{ $c.device | default "cuda" | quote }}
+          # First boot: load both PaddleOCR and docTR onto the GPU + bind :80. Weights are
+          # baked into the image (Dockerfile), not downloaded at startup, so this should be
+          # fast -- but a startupProbe still gates liveness so a slow cold start isn't
+          # killed mid-load, matching rerank/embed's own GPU deployment pattern.
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+            failureThreshold: 4
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            failureThreshold: 4
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: intake-ocr
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: intake-ocr
+    app.kubernetes.io/part-of: glerp-ai-intake
+spec:
+  type: ClusterIP
+  selector:
+    app: intake-ocr
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}

@@ -21,13 +21,17 @@ config:
   APP_ENV: "development"
   LOG_LEVEL: "INFO"
   LLM_PROVIDER: "gemini"
-  GEMINI_MODEL: "gemini-2.5-flash"
+  # 2026-11-03: gemini-2.5-flash deprecated (Google, EOL 2026-12-01) -- moved to its
+  # replacement, with thinking_level=high. Must match app/config.py's own defaults.
+  GEMINI_MODEL: "gemini-3.5-flash-lite"
+  GEMINI_THINKING_LEVEL: "high"
   ANTHROPIC_MODEL: "claude-sonnet-4-6"
   OPENAI_MODEL: "gpt-4o"
   GROQ_MODEL: "llama-3.3-70b-versatile"
   VLLM_BASE_URL: "http://vllm-service.glerp-ai-intake.svc.cluster.local/v1"
   VLLM_MODEL: "deepseek-ai/DeepSeek-V3"
   REDIS_URL: ""  # auto-computed from .Release.Namespace; override explicitly if needed
+  OCR_URL: ""    # auto-computed from .Release.Namespace; override explicitly if needed
   OCR_CONFIDENCE_THRESHOLD: "0.95"
   TEMP_STORAGE_PATH: "/tmp/intake-docs"
   CONTEXT_PROVIDER_AP: "gemini"
@@ -63,6 +67,26 @@ redis:
   enabled: true
   image: redis:7-alpine
   storageSize: 1Gi
+
+# -- OCR (PaddleOCR PP-StructureV3 + docTR) -- served by services/ocr-api (PyTorch +
+# PaddlePaddle on CUDA), NOT run in-process in intake-api/intake-worker anymore. Same
+# migration pattern as k8-glerp-ai-agent's rerank-api/embed-api split; see
+# templates/ocr-gpu.yaml and app/pipelines/ocr_client.py.
+ocr:
+  enabled: true
+  image: ghcr.io/green-llama/k8-glerp-ai-intake-ocr:latest
+  device: cuda                                         # "cpu" only as a local-dev fallback
+  # No PVC -- weights are baked into the image (services/ocr-api/Dockerfile); a PVC mounted
+  # at /data was tried and removed, confirmed live 2026-10-15: it shadows the image's own
+  # baked-in /data/doctr, /data/paddleocr content with an empty volume, forcing a full
+  # re-download at every pod start. See templates/ocr-gpu.yaml's comment.
+  nodeSelector: { nvidia.com/gpu.present: "true" }     # GPU-only image; always target the GPU node
+  resources:
+    # Two models (PaddleOCR det+rec+cls, docTR det+reco) resident at once -- GPU memory,
+    # not CPU/RAM, is the real constraint, requested via nvidia.com/gpu below. CPU here only
+    # needs to feed image decode/preprocessing, not run inference.
+    requests: { cpu: 500m, memory: 3Gi }
+    limits:   { cpu: "2",  memory: 5Gi, nvidia.com/gpu: 1 }
 
 # -- Ingress (Traefik IngressRoute)
 ingress:
