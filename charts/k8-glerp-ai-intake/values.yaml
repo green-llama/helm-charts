@@ -3,7 +3,7 @@
 
 image:
   repository: ghcr.io/green-llama/k8-glerp-ai-intake
-  tag: "0.3.10"
+  tag: "0.3.11"
   pullPolicy: Always
 
 imagePullSecrets:
@@ -31,8 +31,7 @@ config:
   VLLM_BASE_URL: "http://vllm-service.glerp-ai-intake.svc.cluster.local/v1"
   VLLM_MODEL: "deepseek-ai/DeepSeek-V3"
   REDIS_URL: ""  # auto-computed from .Release.Namespace; override explicitly if needed
-  OCR_URL: ""    # auto-computed from .Release.Namespace; override explicitly if needed
-  OCR_CONFIDENCE_THRESHOLD: "0.95"
+  OCR_CONFIDENCE_THRESHOLD: "0.95"   # review threshold for locally extracted text (no OCR service)
   TEMP_STORAGE_PATH: "/tmp/intake-docs"
   CONTEXT_PROVIDER_AP: "gemini"
   CONTEXT_PROVIDER_LEGAL: "anthropic"
@@ -68,25 +67,9 @@ redis:
   image: redis:7-alpine
   storageSize: 1Gi
 
-# -- OCR (PaddleOCR PP-StructureV3 + docTR) -- served by services/ocr-api (PyTorch +
-# PaddlePaddle on CUDA), NOT run in-process in intake-api/intake-worker anymore. Same
-# migration pattern as k8-glerp-ai-agent's rerank-api/embed-api split; see
-# templates/ocr-gpu.yaml and app/pipelines/ocr_client.py.
-ocr:
-  enabled: true
-  image: ghcr.io/green-llama/k8-glerp-ai-intake-ocr:0.3.10
-  device: cuda                                         # "cpu" only as a local-dev fallback
-  # No PVC -- weights are baked into the image (services/ocr-api/Dockerfile); a PVC mounted
-  # at /data was tried and removed, confirmed live 2026-10-15: it shadows the image's own
-  # baked-in /data/doctr, /data/paddleocr content with an empty volume, forcing a full
-  # re-download at every pod start. See templates/ocr-gpu.yaml's comment.
-  nodeSelector: { nvidia.com/gpu.present: "true" }     # GPU-only image; always target the GPU node
-  resources:
-    # Two models (PaddleOCR det+rec+cls, docTR det+reco) resident at once -- GPU memory,
-    # not CPU/RAM, is the real constraint, requested via nvidia.com/gpu below. CPU here only
-    # needs to feed image decode/preprocessing, not run inference.
-    requests: { cpu: 500m, memory: 3Gi }
-    limits:   { cpu: "2",  memory: 5Gi, nvidia.com/gpu: 1 }
+# -- Document reading: there is no OCR pod. Gemini reads PDFs and images directly; Word,
+# email and PDF text layers are read in-process. The PaddleOCR/docTR pod was retired in
+# 0.4.11 -- see docs/DOCUMENT_READING_ARCHITECTURE_ANALYSIS.md.
 
 # -- Ingress (Traefik IngressRoute)
 ingress:
