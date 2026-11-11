@@ -1,0 +1,25 @@
+# Example production values for k8-glerp-ai-agent (chart 0.2.0). Copy it, fill in the
+# placeholders, and pass it with -f (or enter the same values in the Rancher form).
+# No secrets belong here: JWT and orchestrator keys come from Vault through ESO; LLM
+# keys are sent by GLerp to /admin/config. Procedure: docs/DEPLOY_PRODUCTION.md.
+#
+# Everything not listed uses the chart default, which matches what the sandbox
+# (glerp-ai-agent-sandbox) ran during the lora-5 trial: engine 0.1.92, embed 0.1.32,
+# rerank 0.1.82, vllm-light lora-5, Gemini 3.5 Flash Lite for answers.
+
+config:
+  APP_ENV: "production"
+
+ingress:
+  domain: "<prod domain, e.g. greenllama.tech>"   # FQDN = <namespace>.<domain>
+
+# Turn on only after the orchestrator-key property exists in Vault under
+# <namespace>/agent-secrets (see the runbook): without it the whole agent-secrets
+# ExternalSecret fails, including the JWT key.
+orchestrator:
+  enabled: true
+
+# The trained light model, baked into the image. No adapter volume in production.
+vllmLight:
+  enabled: true
+  image: ghcr.io/green-llama/k8-glerp-ai-agent-vllm-light:lora-5

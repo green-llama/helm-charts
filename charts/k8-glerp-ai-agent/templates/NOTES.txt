@@ -1,0 +1,49 @@
+GLerp AI Agent {{ .Chart.AppVersion }} installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Components:
+  - agent-api        {{ .Values.api.replicas }}+ replicas (HPA {{ if .Values.api.autoscaling.enabled }}on{{ else }}off{{ end }})
+  - ingestion-worker {{ .Values.worker.replicas }} replica
+{{- if .Values.qdrant.enabled }}
+  - qdrant           bundled ({{ .Values.qdrant.storageSize }} PVC)
+{{- end }}
+{{- if .Values.postgres.enabled }}
+  - postgres         bundled ({{ .Values.postgres.storageSize }} PVC) — LangGraph checkpoints + runtime_config + ingest_state
+{{- end }}
+{{- if .Values.redis.enabled }}
+  - redis            bundled (AOF, {{ .Values.redis.storageSize }} PVC)
+{{- end }}
+{{- if .Values.embed.enabled }}
+  - embed (TEI)      {{ .Values.embed.modelId }}
+{{- end }}
+{{- if .Values.rerank.enabled }}
+  - rerank (TEI)     {{ .Values.rerank.modelId }}
+{{- end }}
+
+{{ if .Values.ingress.enabled -}}
+External endpoint:  https://{{ include "agent.host" . }}{{ .Values.ingress.pathPrefix }}
+  Health:  https://{{ include "agent.host" . }}{{ .Values.ingress.pathPrefix }}/healthz
+  MCP:     https://{{ include "agent.host" . }}{{ .Values.ingress.pathPrefix }}/mcp   (streamable-HTTP)
+  Chat:    POST https://{{ include "agent.host" . }}{{ .Values.ingress.pathPrefix }}/api/v1/chat
+(dev cluster: external HTTPS is on :10443, NATed to :443)
+{{- end }}
+
+{{ if .Values.eso.enabled -}}
+Secrets are managed by External Secrets Operator from Vault. Prerequisites:
+  - ClusterSecretStores "{{ .Values.eso.vaultStore }}" and "{{ .Values.eso.pushSecrets.store }}" must exist.
+  - The JWT signing key and bundled Postgres password are generated and pushed to Vault
+    on first install (updatePolicy: IfNotExists). The GLerp side must read the SAME JWT
+    key from Vault at secret/{{ .Release.Namespace }}/agent-secrets to mint tokens.
+{{- if .Values.gdrive.enabled }}
+  - Put the Google service-account key JSON in Vault at {{ .Values.eso.gdriveVaultKey }}
+    under property "key.json".
+{{- end }}
+{{- else }}
+ESO is DISABLED — the chart generated fallback Secrets in-cluster (dev/CI only).
+{{- end }}
+
+Next steps:
+  1. kubectl -n {{ .Release.Namespace }} get pods -w        # wait for all Ready
+  2. From GLerp: install the `glerp_ai_agent` app, fill GLerp AI Agent Settings
+     (agent_base_url, agent_jwt_secret == the Vault key, provider keys), click "Sync to Agent Service".
+  3. kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "agent.fullname" . }}-api -- \
+       curl -s localhost:8000/readyz

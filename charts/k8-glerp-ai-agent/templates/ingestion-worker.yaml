@@ -1,0 +1,71 @@
+{{- $w := dict "ctx" . "component" "worker" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agent.componentName" $w }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  {{- if not .Values.worker.autoscaling.enabled }}
+  replicas: {{ .Values.worker.replicas }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  strategy:
+    type: Recreate          # single writer of ingest_state cursors; avoid overlap
+  selector:
+    matchLabels:
+      {{- include "agent.componentSelectorLabels" $w | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agent.componentSelectorLabels" $w | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "agent.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- include "agent.computeAntiAffinity" (dict "ctx" $ "self" "worker") | nindent 8 }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.worker.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "agent.fullname" . }}-config
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+                optional: true
+            {{- if .Values.postgres.enabled }}
+            - secretRef:
+                name: {{ include "agent.fullname" . }}-postgres
+                optional: true
+            {{- end }}
+          volumeMounts:
+            - name: scratch
+              mountPath: /tmp
+            {{- if .Values.gdrive.enabled }}
+            - name: gdrive-sa
+              mountPath: /var/run/secrets/gdrive
+              readOnly: true
+            {{- end }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+      volumes:
+        - name: scratch
+          emptyDir:
+            sizeLimit: {{ .Values.worker.scratchSizeLimit }}
+        {{- if .Values.gdrive.enabled }}
+        - name: gdrive-sa
+          secret:
+            secretName: {{ .Values.gdrive.secretName }}
+        {{- end }}

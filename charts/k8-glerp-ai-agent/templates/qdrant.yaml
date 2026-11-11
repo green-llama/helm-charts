@@ -1,0 +1,90 @@
+{{- if .Values.qdrant.enabled }}
+{{- $q := dict "ctx" . "component" "qdrant" -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "agent.componentName" $q }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: qdrant
+spec:
+  serviceName: {{ include "agent.componentName" $q }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "agent.componentSelectorLabels" $q | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agent.componentSelectorLabels" $q | nindent 8 }}
+    spec:
+      affinity:
+        {{- include "agent.statefulAntiAffinity" (dict "ctx" $ "self" "qdrant") | nindent 8 }}
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: qdrant
+          image: {{ .Values.qdrant.image }}
+          ports:
+            - name: http
+              containerPort: 6333
+            - name: grpc
+              containerPort: 6334
+          {{- if .Values.qdrant.apiKeySecret }}
+          env:
+            - name: QDRANT__SERVICE__API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.qdrant.apiKeySecret }}
+                  key: QDRANT_API_KEY
+          {{- end }}
+          volumeMounts:
+            - name: storage
+              mountPath: /qdrant/storage
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: { path: /livez, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            {{- toYaml .Values.qdrant.resources | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.qdrant.storageClassName }}
+        storageClassName: {{ .Values.qdrant.storageClassName }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.qdrant.storageSize }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agent.componentName" $q }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: qdrant
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "agent.componentSelectorLabels" $q | nindent 4 }}
+  ports:
+    - name: http
+      port: 6333
+      targetPort: http
+    - name: grpc
+      port: 6334
+      targetPort: grpc
+{{- end }}

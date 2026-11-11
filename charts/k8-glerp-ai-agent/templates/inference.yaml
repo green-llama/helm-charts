@@ -1,0 +1,154 @@
+{{- /*
+  HuggingFace Text Embeddings Inference (TEI) — NOT used by either embed or rerank anymore.
+  Both moved to dedicated transformers/FlagEmbedding+PyTorch images (templates/embed-gpu.yaml,
+  templates/rerank-gpu.yaml): TEI's GPU backend refuses to run below CUDA compute capability
+  7.5, which excludes this cluster's V100 (cc 7.0). embed's move also fixed a real, separate
+  bug -- this deployment's TEI never supported BGE-M3's sparse/SPLADE output at all (confirmed
+  live, 2026-09-12: HTTP 424, "not an embedding model with SPLADE pooling" -- hybrid search
+  had been dense-only in production since that day). Kept as an empty range (not deleted
+  outright) so re-adding a TEI-served component here later (e.g. if a Turing+ GPU is ever
+  added and TEI becomes viable for it, or for a plain CPU-only deployment that wants TEI's
+  lighter image instead of this project's own services) is a revert, not a rewrite from
+  scratch -- see git history for the full template body before this change.
+*/}}
+{{- range $name := list }}
+{{- $c := index $.Values $name }}
+{{- if $c.enabled }}
+{{- $ctx := dict "ctx" $ "component" $name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agent.componentName" $ctx }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "agent.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: {{ $.Values.revisionHistoryLimit }}
+  strategy:
+    type: Recreate          # single replica + RWO model-cache PVC — avoid Multi-Attach on rollout
+  selector:
+    matchLabels:
+      {{- include "agent.componentSelectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agent.componentSelectorLabels" $ctx | nindent 8 }}
+    spec:
+      {{- with $c.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- include "agent.computeAntiAffinity" (dict "ctx" $ "self" $name) | nindent 8 }}
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: tei
+          image: {{ $c.image }}
+          args:
+            - "--model-id"
+            - {{ $c.modelId | quote }}
+            - "--port"
+            - "80"
+            {{- if not $c.gpu }}
+            # CPU-only: TEI's tokenizer thread pool (and, via RAYON_NUM_THREADS below, the
+            # Candle inference backend's own thread pool) default to `nproc()`, which reads
+            # the NODE's physical core count, not this container's cgroup CPU quota --
+            # confirmed live (2026-09-17) that these can silently diverge (e.g. an 8-core
+            # node with this pod capped to 5 cores still reports nproc()=8), causing thread
+            # oversubscription once the quota is smaller than the node. Deriving this from
+            # the container's own CPU limit (Downward API, below) keeps it correct
+            # automatically as the limit changes or as pods land on differently-sized nodes,
+            # rather than relying on limit and node core count coincidentally matching.
+            # Moot on GPU -- CUDA kernel throughput doesn't depend on CPU thread count, and
+            # forcing a low worker count derived from a CPU limit would only starve
+            # preprocessing/data-loading threads that should stay generous. See
+            # docs/RERANK_CPU_BENCHMARKS.md for the live benchmark this derivation is based
+            # on (nr_throttled dropped from ~39% to 0% once limit and nproc() matched) --
+            # originally measured against rerank/TEI, same TEI-CPU mechanism applies to embed.
+            - "--tokenization-workers"
+            - "$(CPU_LIMIT)"
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: HUGGINGFACE_HUB_CACHE
+              value: /data
+            {{- if not $c.gpu }}
+            - name: CPU_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: tei
+                  resource: limits.cpu
+                  divisor: "1"
+            - name: RAYON_NUM_THREADS
+              valueFrom:
+                resourceFieldRef:
+                  containerName: tei
+                  resource: limits.cpu
+                  divisor: "1"
+            {{- end }}
+          volumeMounts:
+            - name: models
+              mountPath: /data
+          # First boot: download the model + load the ONNX/torch backend + bind :80.
+          # A startupProbe gates liveness until that's done (up to ~10 min) so a slow
+          # cold start on CPU isn't killed mid-load.
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+            failureThreshold: 4
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            failureThreshold: 4
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: {{ include "agent.componentName" $ctx }}-models
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "agent.componentName" $ctx }}-models
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "agent.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if $c.storageClassName }}
+  storageClassName: {{ $c.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $c.storageSize }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agent.componentName" $ctx }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "agent.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "agent.componentSelectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}
+{{- end }}

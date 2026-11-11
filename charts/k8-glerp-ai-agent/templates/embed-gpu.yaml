@@ -1,0 +1,127 @@
+{{- /*
+  Embedding — BGE-M3 (dense + sparse) served via a dedicated FlagEmbedding+PyTorch CUDA image
+  (services/embed-api), NOT HuggingFace TEI. TEI's GPU (Candle) backend refuses to run below
+  CUDA compute capability 7.5; this cluster's GPU node is a Tesla V100 (compute capability
+  7.0), which TEI's own docs list as explicitly unsupported -- same blocker as rerank, see
+  templates/rerank-gpu.yaml and docs/GPU-MIGRATION-PLAN.md. This move ALSO fixes a real,
+  separate bug: this deployment's TEI never supported BGE-M3's sparse/SPLADE output at all
+  (confirmed live, 2026-09-12: hard HTTP 424, "not an embedding model with SPLADE pooling" --
+  hybrid search had been dense-only in production since that day). FlagEmbedding's
+  BGEM3FlagModel is BAAI's own serving library and genuinely supports dense+sparse.
+
+  GPU-only by design (no CPU branch) -- embed.nodeSelector should always target the GPU node;
+  running this image on CPU works (model.py falls back to "cpu" if CUDA isn't available) but
+  defeats the point of this migration.
+
+  Service name/selector match the component name TEI's embed deployment used
+  (agent.componentName/agent.embedHost) exactly, so agent-api's EMBED_URL config,
+  services/agent-api/app/retrieval/embed.py's EmbedClient, and ingestion-worker's own embed
+  client need zero changes -- only this pod's image and GPU scheduling differ from before.
+*/}}
+{{- if .Values.embed.enabled }}
+{{- $c := .Values.embed }}
+{{- $ctx := dict "ctx" . "component" "embed" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agent.componentName" $ctx }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: embed
+spec:
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  strategy:
+    type: Recreate          # single replica on a capacity-constrained GPU node — Recreate frees
+                             # the GPU slot before the new pod is scheduled (no PVC involved;
+                             # weights are baked into the image, see services/embed-api/Dockerfile)
+  selector:
+    matchLabels:
+      {{- include "agent.componentSelectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agent.componentSelectorLabels" $ctx | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.runtimeClassName }}
+      runtimeClassName: {{ . }}
+      {{- end }}
+      affinity:
+        {{- include "agent.computeAntiAffinity" (dict "ctx" . "self" "embed") | nindent 8 }}
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: embed-api
+          image: {{ $c.image }}
+          # Always, not IfNotPresent -- this component is actively rebuilt under a mutable
+          # :dev tag during GPU migration; IfNotPresent left a node running yesterday's
+          # stale digest after a same-tag rebuild+push (confirmed 2026-10-15: kubelet logged
+          # "already present on machine" and never re-pulled despite new content at :dev).
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: MODEL_ID
+              value: {{ $c.modelId | quote }}
+            - name: DEVICE
+              value: {{ $c.device | default "cuda" | quote }}
+            - name: HF_HOME
+              value: /data
+            {{- with $c.maxClientBatchSize }}
+            # Must stay >= agent-api's EMBED_BATCH_SIZE_HARD_MAX-equivalent if one is ever
+            # added (none exists yet -- embed's CPU/TEI deployment never had a caller-side
+            # batch cap to mirror, see services/embed-api/embed_api/config.py's comment).
+            - name: MAX_CLIENT_BATCH_SIZE
+              value: {{ . | quote }}
+            {{- end }}
+          # NO PVC mount at /data. Confirmed live, 2026-10-17: weights are baked into the image
+          # (services/embed-api/Dockerfile), but a PVC mounted at the same path shadows that
+          # baked content with an empty, differently-permissioned volume -- rerank-gpu.yaml hit
+          # this exact bug (PermissionError: [Errno 13] Permission denied: '/data/token' from
+          # huggingface_hub's get_token()) and embed shares the identical Dockerfile pattern, so
+          # fixed here preemptively rather than waiting to reproduce it. Same lesson as
+          # vllm-light/ocr-api's Dockerfiles this session: a PVC at the same path as baked-in
+          # weights is actively harmful, not just redundant.
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+            failureThreshold: 4
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            failureThreshold: 4
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agent.componentName" $ctx }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: embed
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "agent.componentSelectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}

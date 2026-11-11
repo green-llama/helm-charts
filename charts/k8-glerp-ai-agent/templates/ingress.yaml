@@ -1,0 +1,75 @@
+{{- if .Values.ingress.enabled }}
+{{- $host := include "agent.host" . }}
+{{- $api := dict "ctx" . "component" "api" }}
+{{- $svc := include "agent.componentName" $api }}
+{{- $prefix := .Values.ingress.pathPrefix }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ .Values.ingress.middlewareName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+spec:
+  stripPrefix:
+    prefixes:
+      - {{ $prefix }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "agent.fullname" . }}-route
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    external-dns.alpha.kubernetes.io/hostname: {{ $host }}
+    external-dns.alpha.kubernetes.io/target: {{ .Values.ingress.externalDnsTarget }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+spec:
+  entryPoints:
+    - websecure
+  tls:
+    secretName: {{ .Values.ingress.tlsSecretName }}
+  routes:
+    - match: (Host(`{{ $host }}`)) && PathPrefix(`{{ $prefix }}/api`)
+      kind: Rule
+      services:
+        - name: {{ $svc }}
+          port: 80
+      middlewares:
+        - name: {{ .Values.ingress.middlewareName }}
+    - match: (Host(`{{ $host }}`)) && PathPrefix(`{{ $prefix }}/mcp`)
+      kind: Rule
+      services:
+        - name: {{ $svc }}
+          port: 80
+      middlewares:
+        - name: {{ .Values.ingress.middlewareName }}
+    - match: (Host(`{{ $host }}`)) && PathPrefix(`{{ $prefix }}/admin`)
+      kind: Rule
+      services:
+        - name: {{ $svc }}
+          port: 80
+      middlewares:
+        - name: {{ .Values.ingress.middlewareName }}
+    - match: (Host(`{{ $host }}`)) && (Path(`{{ $prefix }}/healthz`) || Path(`{{ $prefix }}/readyz`))
+      kind: Rule
+      services:
+        - name: {{ $svc }}
+          port: 80
+      middlewares:
+        - name: {{ .Values.ingress.middlewareName }}
+    # OpenAPI schema + interactive docs -- makes a request/response contract mismatch
+    # (wrong field name, wrong shape) self-diagnosing from outside the cluster, instead of
+    # discoverable only by probing shapes against a 422 (exactly what happened before this
+    # route existed: a client sent `message` instead of `messages[]` with no schema to check
+    # against). Read-only, no auth needed -- same posture as /healthz.
+    - match: (Host(`{{ $host }}`)) && (Path(`{{ $prefix }}/openapi.json`) || PathPrefix(`{{ $prefix }}/docs`))
+      kind: Rule
+      services:
+        - name: {{ $svc }}
+          port: 80
+      middlewares:
+        - name: {{ .Values.ingress.middlewareName }}
+{{- end }}

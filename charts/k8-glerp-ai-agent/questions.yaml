@@ -1,0 +1,106 @@
+# Rancher install-form questions for k8-glerp-ai-agent.
+# Everything is still editable in the raw YAML editor; these expose the must-set values.
+
+questions:
+  # ─── Site / ingress ────────────────────────────────────────────────────────
+  - variable: ingress.domain
+    label: Domain
+    description: "Base domain. FQDN = <namespace>.<domain>, e.g. dev.greenllama.tech -> glerp-ai-agent.dev.greenllama.tech"
+    type: string
+    default: "greenllama.tech"
+    required: true
+    group: "Site"
+  - variable: ingress.enabled
+    label: Expose via Traefik IngressRoute
+    type: boolean
+    default: true
+    group: "Site"
+
+  # ─── LLM ──────────────────────────────────────────────────────────────────
+  - variable: config.DEFAULT_LLM_MODEL
+    label: Default LLM model
+    description: "LiteLLM model name. Keys are set from GLerp AI Agent Settings, not here."
+    type: string
+    default: "gemini/gemini-3.5-flash-lite"
+    group: "LLM"
+  - variable: config.FALLBACK_LLM_MODEL
+    label: Fallback LLM model
+    type: string
+    default: "anthropic/claude-sonnet-4-6"
+    group: "LLM"
+
+  # ─── GLerp integration ───────────────────────────────────────────────────
+  - variable: frappe.baseUrl
+    label: GLerp/ERPNext base URL (single-tenant fallback)
+    description: "e.g. https://acme.greenllama.tech . Per-tenant values are pushed via /agent/admin/config; leave blank for pure multi-tenant."
+    type: string
+    default: ""
+    group: "GLerp integration"
+  - variable: gdrive.enabled
+    label: Enable Google Shared Drive connector
+    description: "Requires the service-account key in Vault at eso.gdriveVaultKey."
+    type: boolean
+    default: false
+    group: "GLerp integration"
+
+  # ─── Secrets ─────────────────────────────────────────────────────────────
+  - variable: eso.enabled
+    label: Manage secrets via External Secrets Operator + Vault
+    description: "Recommended. Off = the chart generates in-cluster fallback Secrets (dev/CI only)."
+    type: boolean
+    default: true
+    group: "Secrets"
+
+  - variable: orchestrator.enabled
+    label: Connect glerp-ai-orchestrator
+    description: "Mounts the shared orchestrator key (Vault property orchestrator-key under agent-secrets). Create that property in Vault FIRST: turning this on without it breaks the whole agent-secrets sync."
+    type: boolean
+    default: false
+    group: "Secrets"
+
+  # ─── Light model ─────────────────────────────────────────────────────────
+  - variable: vllmLight.enabled
+    label: Run the local light model (vllm-light)
+    description: "Qwen2.5-3B + the GLerp LoRA, for routing and record-query writing. Needs one GPU slot beside embed and rerank."
+    type: boolean
+    default: true
+    group: "Light model"
+
+  - variable: vllmLight.image
+    label: Light model image
+    description: "The trained model is baked into the image tag (lora-5 = the model adopted 2026-11-11)."
+    type: string
+    default: "ghcr.io/green-llama/k8-glerp-ai-agent-vllm-light:lora-5"
+    group: "Light model"
+
+  # ─── Scaling ─────────────────────────────────────────────────────────────
+  - variable: api.autoscaling.enabled
+    label: Autoscale agent-api
+    type: boolean
+    default: true
+    group: "Scaling"
+  - variable: api.autoscaling.maxReplicas
+    label: agent-api max replicas
+    type: int
+    default: 8
+    group: "Scaling"
+
+  # ─── Storage sizes ───────────────────────────────────────────────────────
+  - variable: qdrant.storageSize
+    label: Qdrant volume size
+    type: string
+    default: "20Gi"
+    group: "Storage"
+  - variable: postgres.storageSize
+    label: Postgres volume size
+    type: string
+    default: "10Gi"
+    group: "Storage"
+
+  # ─── Observability ───────────────────────────────────────────────────────
+  - variable: config.OTEL_EXPORTER_OTLP_ENDPOINT
+    label: OTLP trace endpoint (optional)
+    description: "e.g. http://langfuse-otel.observability.svc.cluster.local:4318 . Blank = tracing off."
+    type: string
+    default: ""
+    group: "Observability"

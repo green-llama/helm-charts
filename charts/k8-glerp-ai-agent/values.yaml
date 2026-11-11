@@ -1,0 +1,301 @@
+# Default values for k8-glerp-ai-agent.
+# Override per environment in the Rancher form or with -f values-<env>.yaml.
+
+# Two images: a lean agent-api and a heavy ingestion-worker (Docling + torch).
+image:
+  pullPolicy: IfNotPresent
+  tag: ""             # both default to .Chart.AppVersion when blank
+  api:
+    repository: ghcr.io/green-llama/k8-glerp-ai-agent
+  worker:
+    repository: ghcr.io/green-llama/k8-glerp-ai-agent-worker
+
+imagePullSecrets:
+  - name: ghcr-cred
+
+nameOverride: ""
+fullnameOverride: ""
+
+revisionHistoryLimit: 3
+
+serviceAccount:
+  create: true
+  name: ""
+  automount: true
+
+# ---------------------------------------------------------------------------
+# agent-api  (FastAPI + MCP + LangGraph)
+# ---------------------------------------------------------------------------
+api:
+  replicas: 2
+  port: 8000
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits:   { cpu: "1",  memory: 1Gi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# ---------------------------------------------------------------------------
+# ingestion-worker  (connectors + parse/chunk/embed pipeline)
+# ---------------------------------------------------------------------------
+worker:
+  replicas: 1
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits:   { cpu: "2",  memory: 3Gi }   # Docling parsing is memory-heavy
+  scratchSizeLimit: 2Gi
+  autoscaling:
+    enabled: false     # driven by queue depth in a later phase
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 75
+
+# ---------------------------------------------------------------------------
+# Non-secret runtime configuration (rendered into a ConfigMap; blank *_HOST /
+# *_URL values are auto-computed from the release namespace).
+# ---------------------------------------------------------------------------
+config:
+  APP_ENV: "development"
+  LOG_LEVEL: "INFO"
+  POSTGRES_DSN: ""          # auto: postgresql://<pg auth>@<release>-postgres.<ns>...:5432/agent
+  REDIS_URL: ""             # auto
+  QDRANT_URL: ""            # auto
+  EMBED_URL: ""             # auto
+  RERANK_URL: ""            # auto
+  EMBED_MODEL_ID: "BAAI/bge-m3"
+  EMBED_DIM: "1024"
+  RERANK_MODEL_ID: "BAAI/bge-reranker-v2-m3"
+  DEFAULT_LLM_MODEL: "gemini/gemini-3.5-flash-lite"
+  FALLBACK_LLM_MODEL: "anthropic/claude-sonnet-4-6"
+  LITELLM_BASE_URL: ""      # "" => in-process LiteLLM SDK
+  # Per-attempt LLM call timeout (combined with LiteLLM's own num_retries=2, ~3x this value
+  # worst case). Lowered from an unconfigurable 60s default (2026-09-19) after two structured-
+  # query questions each hung ~470s with no visible signal -- see app/config.py's
+  # llm_timeout_seconds docstring for the full incident.
+  LLM_TIMEOUT_SECONDS: "20"
+  RETRIEVAL_TOP_K: "40"
+  RERANK_TOP_N: "8"
+  RELEVANCE_THRESHOLD: "0.35"
+  MAX_QUERY_REWRITES: "1"
+  # How long a tenant's daily-rollup LLM usage rows (app/usage.py, GET /admin/usage) are kept
+  # before being pruned. Token/call counts only, not a dollar figure.
+  USAGE_RETENTION_DAYS: "90"
+  JWT_ALGORITHM: "HS256"
+  JWT_AUDIENCE: "glerp-ai-agent"
+  JWT_ISSUER: ""
+  DELTA_INTERVAL_MINUTES: "15"
+  RECONCILE_CRON: "0 2 * * *"
+  MAX_CONCURRENT_DOCS: "4"
+  GDRIVE_SA_KEY_PATH: "/var/run/secrets/gdrive/key.json"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""   # e.g. http://langfuse-otel.observability.svc.cluster.local:4318
+  # Self-hosted light-model routing (docs/MODEL_ROUTING_CONTRACT.md, 2026-10-18) --
+  # deployment-only, never tenant-configurable (see app/config.py's module docstring for
+  # the SSRF reasoning). HOSTED_VLLM_BASE_URL left blank -- auto-computed in configmap.yaml
+  # from agent.vllmLightHost, same pattern as EMBED_URL/RERANK_URL above, so it tracks the
+  # release name/namespace automatically instead of being hardcoded here.
+  HOSTED_VLLM_BASE_URL: ""  # auto: http://<release>-vllm-light.<ns>.svc.cluster.local:80/v1
+  # Widened 2026-10-26: added the default hosted model so GLerp can set it as a shadow_model
+  # (e.g. Qwen-primary + Gemini-shadow, still collecting comparisons in /admin/decisions) --
+  # not just as a primary/fallback. Must match app/config.py's DEFAULT_LLM_MODEL exactly.
+  ROUTABLE_MODELS_JSON: '[{"label": "Qwen2.5-3B (local GPU)", "model": "hosted_vllm/Qwen/Qwen2.5-3B-Instruct"}, {"label": "Gemini (hosted)", "model": "gemini/gemini-2.5-flash"}, {"label": "Gemini 3.5 Flash Lite (hosted)", "model": "gemini/gemini-3.5-flash-lite"}]'
+  # Widened 2026-10-25 (glerp-ai-orchestrator step 3, docs/ROUTE_CONTRACT.md) -- this
+  # explicit chart override is the ACTUAL active value in every deployed environment
+  # regardless of app/config.py's own default (same lesson as LIGHT_MODEL_TIMEOUT_SECONDS
+  # just below: confirmed live that bumping only the code default had zero effect against
+  # the real sandbox until this chart value was updated too -- /api/v1/llm/complete
+  # genuinely 400'd with "call_site 'answer_documents' is not in ROUTABLE_CALL_SITES"
+  # while this still read "supervisor" alone).
+  ROUTABLE_CALL_SITES: "supervisor,structured_query_extract,answer_documents,answer_structured"
+  # Raised 2 -> 6 (2026-10-22, GLerp AI Agent peer, pass-1 finding) -- this explicit
+  # override was the ACTUAL active value in every deployed environment, regardless of
+  # app/config.py's own default; confirmed live that bumping only the code default to 6.0
+  # had zero effect until this was updated too. See app/config.py's
+  # light_model_timeout_seconds field comment for the full "why 6, why not higher" writeup.
+  LIGHT_MODEL_TIMEOUT_SECONDS: "6"
+  DECISIONS_RETENTION_DAYS: "30"
+  # Rerank limits benchmarked on the V100 (values-dev.yaml has the measurements); the
+  # sandbox ran these for weeks, so they're the defaults everywhere now.
+  RERANK_TIMEOUT_SECONDS: "30"
+  RERANK_TOP_N_MAX: "16"
+  RERANK_BATCH_SIZE_MAX: "40"
+
+# Secret name holding JWT_HS256_SECRET (+ optional JWT_RS256_PUBLIC_KEY). With eso.enabled
+# (default) this is created by an ExternalSecret from a Vault value the chart seeds once.
+existingSecret: agent-secrets
+
+# Google Shared Drive service-account key — mounted into the worker at GDRIVE_SA_KEY_PATH.
+# Provide the key in Vault at eso.gdriveVaultKey; disable if the connector is unused.
+gdrive:
+  enabled: false
+  secretName: gdrive-sa       # Secret with key "key.json"
+
+# GLerp/ERPNext site the ingestion-worker calls for File bytes + ACL principals.
+# Per-tenant values are stored in runtime_config via /agent/admin/config; this is only the
+# single-tenant deployment fallback. The API key/secret belong in the ESO Secret
+# (FRAPPE_API_KEY / FRAPPE_API_SECRET), not here.
+frappe:
+  baseUrl: ""                # e.g. https://acme.greenllama.tech
+
+# glerp-ai-orchestrator docs/ROUTE_CONTRACT.md (migration step 2) -- the shared
+# X-Orchestrator-Key secret, mounted into this service as ORCH_ENGINE_KEY. Defaults off:
+# turning this on BEFORE the `orchestrator-key` property exists at this Vault path
+# breaks the WHOLE agent-secrets ExternalSecret sync (see externalsecrets.yaml's own
+# comment) -- create the Vault property first, then flip this to true.
+orchestrator:
+  enabled: false
+
+# ---------------------------------------------------------------------------
+# External Secrets Operator + Vault
+# ---------------------------------------------------------------------------
+eso:
+  enabled: true
+  vaultStore: vault-backend
+  vaultMountPath: secret
+  ghcrVaultKey: secret/data/github/ghcr-cred          # shared, same as the glerp chart
+  gdriveVaultKey: secret/data/glerp-ai-agent/gdrive-sa
+  pushSecrets:
+    enabled: true                                     # auto-generate the JWT signing key once
+    store: vault-pushwriter
+
+# ---------------------------------------------------------------------------
+# Bundled datastores. Set enabled:false to point at an external instance via config.
+# ---------------------------------------------------------------------------
+postgres:
+  enabled: true
+  image: postgres:17-alpine
+  database: agent
+  user: agent
+  # password: seeded via ESO (agent-postgres-secret / key POSTGRES_PASSWORD); or set here for eso.enabled=false
+  storageSize: 10Gi
+  storageClassName: ""
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits:   { cpu: "1",  memory: 1Gi }
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+  storageSize: 1Gi
+  storageClassName: ""
+
+qdrant:
+  enabled: true
+  image: qdrant/qdrant:v1.15.4
+  storageSize: 20Gi
+  storageClassName: ""
+  apiKeySecret: ""      # optional Secret name with key QDRANT_API_KEY
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits:   { cpu: "2",  memory: 4Gi }
+
+# Embeddings (BGE-M3, dense + sparse) -- served by services/embed-api (FlagEmbedding +
+# PyTorch CUDA), NOT HuggingFace TEI. Same compute-capability->=7.5 floor that blocks TEI's
+# GPU backend for rerank also blocks it here (V100 is cc 7.0) -- but even setting that aside,
+# this deployment's TEI never supported BGE-M3's sparse/SPLADE output at all (confirmed live,
+# 2026-09-12: hard HTTP 424, "not an embedding model with SPLADE pooling" -- hybrid search had
+# been dense-only in production since that day). See docs/GPU-MIGRATION-PLAN.md and
+# templates/embed-gpu.yaml. image/modelId/device here are embed-api's own settings, not TEI's.
+embed:
+  enabled: true
+  image: ghcr.io/green-llama/k8-glerp-ai-agent-embed:0.1.32
+  modelId: BAAI/bge-m3
+  device: cuda                                         # "cpu" only as a local-dev fallback
+  maxClientBatchSize: 64                                # not yet benchmarked -- see config.py's comment
+  storageSize: 6Gi                                      # model is ~2.2GB; see rerank's own PVC-sizing note
+  storageClassName: ""
+  nodeSelector: { nvidia.com/gpu.present: "true" }     # GPU-only image; always target the GPU node
+  resources:
+    # The model is modest (~2.2GB fp32 weights) -- GPU memory, not CPU/RAM, is the real
+    # constraint, requested via nvidia.com/gpu in templates/embed-gpu.yaml. CPU here only
+    # needs to feed the tokenizer/preprocessing pipeline, not run inference.
+    requests: { cpu: 500m, memory: 3Gi }
+    limits:   { cpu: "2",  memory: 5Gi, nvidia.com/gpu: 1 }
+
+# Reranking (BGE-reranker-v2-m3) -- served by services/rerank-api (transformers + PyTorch
+# CUDA), NOT HuggingFace TEI. TEI's GPU backend requires compute capability >= 7.5; this
+# cluster's GPU node is a Tesla V100 (compute capability 7.0), which TEI's docs list as
+# explicitly unsupported. PyTorch+CUDA has no such floor. See docs/GPU-MIGRATION-PLAN.md and
+# templates/rerank-gpu.yaml. image/modelId/device here are rerank-api's own settings, not
+# TEI's -- this is a different image built from services/rerank-api/Dockerfile.
+rerank:
+  enabled: true
+  image: ghcr.io/green-llama/k8-glerp-ai-agent-rerank:0.1.82
+  modelId: BAAI/bge-reranker-v2-m3
+  device: cuda                                         # "cpu" only as a local-dev fallback
+  # Must stay >= config.RERANK_BATCH_SIZE_HARD_MAX (configmap.yaml) -- see
+  # templates/rerank-gpu.yaml's comment. 64 confirmed live (2026-10-14, V100): batch=64
+  # completes in ~1.08s, comfortably above this project's own RETRIEVAL_TOP_K (40).
+  maxClientBatchSize: 64
+  storageSize: 5Gi
+  storageClassName: ""
+  nodeSelector: { nvidia.com/gpu.present: "true" }     # GPU-only image; always target the GPU node
+  # runtimeClassName: nvidia                            # only if the cluster requires one
+  resources:
+    # The model is tiny (~1.1-1.2GB fp32 weights) -- GPU memory, not CPU/RAM, is the real
+    # constraint, requested via nvidia.com/gpu below. CPU here only needs to feed the
+    # tokenizer/preprocessing pipeline, not run inference.
+    requests: { cpu: 500m, memory: 2Gi }
+    limits:   { cpu: "2",  memory: 4Gi, nvidia.com/gpu: 1 }
+
+# Self-hosted "light" LLM (Qwen2.5-3B-Instruct + the GLerp LoRA, merged) for routing and
+# record-query writing -- see docs/SELF_HOSTED_LIGHT_MODEL_DESIGN.md, docs/TRAINING_REVIEW.md
+# and templates/vllm-light-gpu.yaml. GLerp picks it per call site (intent_models), so it is
+# only used where a site's settings route to it. Needs one GPU slot beside embed and rerank.
+# The default image has the lora-5 model baked in (services/vllm-light/Dockerfile.merged),
+# served as "Qwen/Qwen2.5-3B-Instruct"; no adapter volume is needed.
+vllmLight:
+  enabled: true
+  # LoRA add-ons (docs/TRAINING_REVIEW.md 5.2). Off unless claimName is set: a volume holding
+  # adapter directories, and modules as "<served name>=/lora/<dir>". Add each served name to
+  # ROUTABLE_MODELS_JSON as "hosted_vllm/<served name>" so a call site can be routed to it.
+  adapter:
+    claimName: ""
+    modules: []
+    maxLoraRank: 16
+    # Fallback: a merged base+adapter directory on that volume (e.g. /lora/lora-1/merged),
+    # served in place of the base model under the same name. Leave "" for the base model.
+    model: ""
+  image: ghcr.io/green-llama/k8-glerp-ai-agent-vllm-light:lora-5
+  nodeSelector: { nvidia.com/gpu.present: "true" }     # GPU-only image; always target the GPU node
+  resources:
+    # Confirmed live, 2026-10-16: RAM is NOT a non-issue the way this comment used to claim.
+    # The model weights (~5.8GB) load into GPU VRAM, but vLLM also allocates a CPU-side KV
+    # cache SWAP buffer in host RAM (vLLM's default --swap-space, reported here as "7281 CPU
+    # blocks") as overflow space, on top of weight-loading staging buffers and normal
+    # Python/torch overhead. At the old 6Gi limit the container was OOMKilled (exit 137) by
+    # the kernel right after GPU KV-cache profiling succeeded -- i.e. the GPU-side config was
+    # fine; this was purely a host-memory limit that was too tight. Raised to 10Gi requests /
+    # 12Gi limit to clear it with real margin; revisit with real traffic data like the
+    # gpu-memory-utilization value in the Dockerfile.
+    requests: { cpu: 500m, memory: 10Gi }
+    limits:   { cpu: "2",  memory: 12Gi, nvidia.com/gpu: 1 }
+
+# ---------------------------------------------------------------------------
+# Traefik IngressRoute
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: true
+  domain: ""                              # FQDN = <namespace>.<domain>
+  externalDnsTarget: "pec.greenllama.tech"
+  tlsSecretName: letsencrypt-greenllama-tech-tls
+  pathPrefix: /agent
+  middlewareName: agent-strip-prefix
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,196 @@
+{{- /*
+  Self-hosted "light" LLM — Qwen2.5-3B-Instruct served by vLLM's own OpenAI-compatible API
+  server (services/vllm-light), for supervisor()'s routing classification tier (see
+  docs/SELF_HOSTED_LIGHT_MODEL_DESIGN.md). Same migration pattern as rerank-api/embed-api/
+  ocr-api: dedicated GPU pod on this cluster's V100.
+
+  UNLIKE the other three GPU services, this one is NOT custom FastAPI code -- `vllm serve`
+  already IS the HTTP server, and its /v1/chat/completions endpoint with
+  response_format={"type":"json_schema",...} matches app/llm/gateway.py's
+  LiteLLMProvider.structured() call shape exactly via LiteLLM's hosted_vllm/ provider prefix.
+  The actual supervisor()/RuntimeConfig wiring to route traffic here is tracked as separate,
+  distinct follow-up work -- this template only stands the pod up; nothing calls it yet.
+
+  vllm==0.9.2 is the LAST vLLM release supporting this V100 (compute capability 7.0/Volta) --
+  confirmed directly against vLLM's own install docs (v0.9.2: "7.0 or higher, e.g. V100";
+  v0.20.0: "7.5 or higher", V100 removed). See services/vllm-light/Dockerfile's own header
+  comment for the full verification trail, including why the OFFICIAL vllm/vllm-openai
+  Docker image is NOT usable here despite the pip package's docs claiming V100 support (its
+  bundled torch==2.7.0+cu128 build has no sm_70 kernels compiled in at all -- confirmed by
+  inspecting the compiled library directly, not assumed from docs).
+
+  GPU-only by design (no CPU branch) -- vllmLight.nodeSelector should always target the GPU
+  node. No PVC: model weights are baked into the image (same lesson learned the hard way on
+  ocr-gpu.yaml -- a PVC mounted at the same path the image bakes weights into SHADOWS that
+  baked content with an empty volume, forcing a full re-download at every pod start).
+*/}}
+{{- if .Values.vllmLight.enabled }}
+{{- $c := .Values.vllmLight }}
+{{- $ctx := dict "ctx" . "component" "vllm-light" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agent.componentName" $ctx }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vllm-light
+spec:
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  # Recreate, NOT RollingUpdate (the Deployment default) -- this node's GPU is time-sliced to
+  # a FIXED number of concurrent pod slots (not a VRAM partition -- time-slicing shares the
+  # same 16GB pool across all scheduled pods with no isolation; see GPU-MIGRATION-PLAN.md's
+  # capacity notes). Confirmed live, 2026-10-15, on ocr-gpu.yaml: RollingUpdate tries to
+  # schedule the new pod BEFORE killing the old one, and a capacity-exhausted node then fails
+  # scheduling with "Insufficient nvidia.com/gpu". Recreate guarantees the old pod's slot is
+  # freed before the new one is requested.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "agent.componentSelectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agent.componentSelectorLabels" $ctx | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- include "agent.computeAntiAffinity" (dict "ctx" . "self" "vllm-light") | nindent 8 }}
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: vllm-light
+          image: {{ $c.image }}
+          # Always, not IfNotPresent -- same reasoning as embed/rerank/ocr's GPU deployments:
+          # this component is actively rebuilt under a mutable :dev tag during this buildout,
+          # and IfNotPresent left a node running a stale cached digest after a same-tag
+          # rebuild+push more than once this migration.
+          imagePullPolicy: Always
+          {{- with $c.adapter }}
+          {{- if .claimName }}
+          # LoRA add-ons beside the base model (docs/TRAINING_REVIEW.md 5.2), each served
+          # under its own model name; the engine picks one per call site through
+          # intent_models. Same server args as the image's CMD, plus the LoRA flags (the
+          # image has no ENTRYPOINT, so the command is repeated too).
+          command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
+          args:
+            - --model
+            # A merged base+adapter directory (the fallback when vLLM's LoRA kernels don't
+            # run on this GPU) replaces the base model under the same served name.
+            - {{ .model | default "Qwen/Qwen2.5-3B-Instruct" | quote }}
+            - --served-model-name
+            - Qwen/Qwen2.5-3B-Instruct
+            - --host
+            - 0.0.0.0
+            - --port
+            - "80"
+            - --max-model-len
+            - "8192"
+            - --gpu-memory-utilization
+            - {{ .gpuMemoryUtilization | default "0.49" | quote }}
+            {{- if .modules }}
+            - --enable-lora
+            - --max-lora-rank
+            - {{ .maxLoraRank | default 16 | quote }}
+            - --lora-modules
+            {{- range .modules }}
+            - {{ . | quote }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 80
+          # First boot: load the ~6GB Qwen2.5-3B-Instruct model (baked into the image, not
+          # downloaded at startup) onto the GPU + bind :80. A startupProbe gates liveness
+          # until that's done, matching embed/rerank/ocr's own GPU deployment pattern.
+          # /health is a real vLLM-registered route (confirmed by reading
+          # vllm.entrypoints.openai.api_server's router.routes against the built image,
+          # 2026-10-16 -- not guessed from vLLM's own docs, which don't document this path).
+          #
+          # The probe is a real structured-output request, not /health: the first such
+          # request after a start took 6.31s (then ~1s), measured 2026-11-06, which is over
+          # LIGHT_MODEL_TIMEOUT_SECONDS=6, so the first user of a new pod hit a timeout.
+          # Readiness only starts after this passes, so that cost is paid before traffic
+          # arrives. A later schema doesn't repeat it (fresh schemas measured ~0.9s). An HTTP
+          # error means the server is up but rejected the warm-up: pass rather than hold a
+          # working pod out of service over the warm-up itself. Connection errors still fail.
+          startupProbe:
+            exec:
+              command:
+                - python3
+                - -c
+                - |
+                  import json, urllib.error, urllib.request
+                  body = json.dumps({
+                      "model": "Qwen/Qwen2.5-3B-Instruct",
+                      "messages": [{"role": "user", "content": "ok"}],
+                      "max_tokens": 8,
+                      "response_format": {"type": "json_schema", "json_schema": {
+                          "name": "warmup",
+                          "schema": {"type": "object", "properties": {"ok": {"type": "boolean"}}},
+                      }},
+                  }).encode()
+                  req = urllib.request.Request(
+                      "http://127.0.0.1:80/v1/chat/completions", body,
+                      {"Content-Type": "application/json"},
+                  )
+                  try:
+                      urllib.request.urlopen(req, timeout=55).read()
+                  except urllib.error.HTTPError as exc:
+                      print("warm-up rejected:", exc.code)
+            periodSeconds: 10
+            timeoutSeconds: 60
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+            failureThreshold: 4
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            failureThreshold: 4
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          {{- if and $c.adapter $c.adapter.claimName }}
+          volumeMounts:
+            - name: lora
+              mountPath: /lora
+              readOnly: true
+      volumes:
+        - name: lora
+          persistentVolumeClaim:
+            # Not readOnly here (only on the mount above): a read-only volume source
+            # can't be SELinux-relabelled for this pod, and keeps the label of the
+            # training/export pod that wrote it -> "Permission denied" on stat.
+            claimName: {{ $c.adapter.claimName }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agent.componentName" $ctx }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vllm-light
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "agent.componentSelectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}

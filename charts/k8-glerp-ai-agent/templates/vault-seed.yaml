@@ -1,0 +1,168 @@
+{{- if and .Values.eso.enabled .Values.eso.pushSecrets.enabled }}
+{{- $ns := .Release.Namespace -}}
+{{- $store := .Values.eso.pushSecrets.store -}}
+{{- $fullname := include "agent.fullname" . -}}
+# Generate the JWT signing key and (bundled) Postgres password ONCE and push them to Vault.
+# updatePolicy: IfNotExists => a re-install / upgrade never overwrites the live value.
+# NOTE: PushSecret remoteKey is the LOGICAL path (no "secret/" mount prefix — ESO adds it);
+# the matching ExternalSecret read uses the FULL "secret/data/..." path.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: {{ $fullname }}-gen-jwt
+  namespace: {{ $ns }}
+spec:
+  length: 64
+  digits: 16
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: {{ $fullname }}-jwt-push
+  namespace: {{ $ns }}
+spec:
+  refreshInterval: 1h
+  updatePolicy: IfNotExists
+  deletionPolicy: None
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: {{ $store }}
+  selector:
+    generatorRef:
+      apiVersion: generators.external-secrets.io/v1alpha1
+      kind: Password
+      name: {{ $fullname }}-gen-jwt
+  data:
+    - match:
+        secretKey: password
+        remoteRef:
+          remoteKey: {{ $ns }}/agent-secrets
+          property: jwt-hs256-secret
+{{- if .Values.postgres.enabled }}
+---
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: {{ $fullname }}-gen-pgpw
+  namespace: {{ $ns }}
+spec:
+  length: 40
+  digits: 10
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: {{ $fullname }}-pgpw-push
+  namespace: {{ $ns }}
+spec:
+  refreshInterval: 1h
+  updatePolicy: IfNotExists
+  deletionPolicy: None
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: {{ $store }}
+  selector:
+    generatorRef:
+      apiVersion: generators.external-secrets.io/v1alpha1
+      kind: Password
+      name: {{ $fullname }}-gen-pgpw
+  data:
+    - match:
+        secretKey: password
+        remoteRef:
+          remoteKey: {{ $ns }}/agent-postgres
+          property: password
+{{- end }}
+{{- if .Values.orchestrator.enabled }}
+---
+# glerp-ai-orchestrator docs/ROUTE_CONTRACT.md (migration step 2) -- the shared
+# X-Orchestrator-Key. SAME Vault path as the JWT key above ({{ $ns }}/agent-secrets),
+# just a different property -- the orchestrator chart reads this property too (its own
+# PushSecret/ExternalSecret, same remoteKey+property, updatePolicy: IfNotExists so
+# whichever chart installs first wins and the other just reads the same value back).
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: {{ $fullname }}-gen-orch-key
+  namespace: {{ $ns }}
+spec:
+  length: 48
+  digits: 10
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: {{ $fullname }}-orch-key-push
+  namespace: {{ $ns }}
+spec:
+  refreshInterval: 1h
+  updatePolicy: IfNotExists
+  deletionPolicy: None
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: {{ $store }}
+  selector:
+    generatorRef:
+      apiVersion: generators.external-secrets.io/v1alpha1
+      kind: Password
+      name: {{ $fullname }}-gen-orch-key
+  data:
+    - match:
+        secretKey: password
+        remoteRef:
+          remoteKey: {{ $ns }}/agent-secrets
+          property: orchestrator-key
+---
+# Training-loop phase 1 (glerp-ai-orchestrator docs/TRAINING_LOOP_DESIGN.md) -- Layer II
+# gets its OWN Postgres database + role on this SAME bundled instance (not a schema inside
+# the engine's "agent" database), so it can be split onto a separate instance later without
+# a data migration across ownership boundaries. The role/database themselves are created by
+# a one-time psql command against the bundled Postgres (see postgres.yaml's existing
+# superuser), using this SAME generated password -- Vault is just the password store, not
+# the thing that actually creates the role.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: {{ $fullname }}-gen-orch-pgpw
+  namespace: {{ $ns }}
+spec:
+  length: 40
+  digits: 10
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: {{ $fullname }}-orch-pgpw-push
+  namespace: {{ $ns }}
+spec:
+  refreshInterval: 1h
+  updatePolicy: IfNotExists
+  deletionPolicy: None
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: {{ $store }}
+  selector:
+    generatorRef:
+      apiVersion: generators.external-secrets.io/v1alpha1
+      kind: Password
+      name: {{ $fullname }}-gen-orch-pgpw
+  data:
+    - match:
+        secretKey: password
+        remoteRef:
+          remoteKey: {{ $ns }}/orchestrator-postgres
+          property: password
+{{- end }}
+{{- end }}

@@ -1,0 +1,125 @@
+{{- /*
+  Reranking — BGE-reranker-v2-m3 served via a dedicated transformers+PyTorch CUDA image
+  (services/rerank-api), NOT HuggingFace TEI. TEI's GPU (Candle) backend refuses to run below
+  CUDA compute capability 7.5; this cluster's GPU node is a Tesla V100 (compute capability
+  7.0), which TEI's own docs list as explicitly unsupported. PyTorch+CUDA has no such floor.
+  See docs/GPU-MIGRATION-PLAN.md for the full story.
+
+  GPU-only by design (no CPU branch like embed's TEI deployment in inference.yaml) --
+  rerank.nodeSelector should always target the GPU node; running this image on CPU works
+  (model.py falls back to "cpu" if CUDA isn't available) but defeats the point of this
+  detour from TEI, which was motivated by rerank's CPU latency in the first place (see
+  RERANK_CPU_BENCHMARKS.md).
+
+  Service name/selector match the component name TEI's rerank deployment used
+  (agent.componentName/agent.rerankHost) exactly, so agent-api's RERANK_URL config and
+  services/agent-api/app/retrieval/rerank.py's RerankClient need zero changes -- only this
+  pod's image and GPU scheduling differ from before.
+*/}}
+{{- if .Values.rerank.enabled }}
+{{- $c := .Values.rerank }}
+{{- $ctx := dict "ctx" . "component" "rerank" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agent.componentName" $ctx }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rerank
+spec:
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  strategy:
+    type: Recreate          # single replica on a capacity-constrained GPU node — Recreate frees
+                             # the GPU slot before the new pod is scheduled (no PVC involved;
+                             # weights are baked into the image, see services/rerank-api/Dockerfile)
+  selector:
+    matchLabels:
+      {{- include "agent.componentSelectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agent.componentSelectorLabels" $ctx | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.runtimeClassName }}
+      runtimeClassName: {{ . }}
+      {{- end }}
+      affinity:
+        {{- include "agent.computeAntiAffinity" (dict "ctx" . "self" "rerank") | nindent 8 }}
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: rerank-api
+          image: {{ $c.image }}
+          # Always, not IfNotPresent -- same reasoning as embed-gpu.yaml's identical line:
+          # this component is actively rebuilt under a mutable :dev tag during GPU migration,
+          # and IfNotPresent left a node running a stale digest after a same-tag rebuild+push.
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: MODEL_ID
+              value: {{ $c.modelId | quote }}
+            - name: DEVICE
+              value: {{ $c.device | default "cuda" | quote }}
+            - name: HF_HOME
+              value: /data
+            {{- with $c.maxClientBatchSize }}
+            # Must stay >= agent-api's RERANK_BATCH_SIZE_HARD_MAX (configmap.yaml) -- that
+            # value is agent-api's belief about this server's own ceiling; if this drifts
+            # below it, agent-api's "safe" value 413s here instead. Not templated FROM that
+            # value (the two live in different Values trees -- config.* vs rerank.*) so set
+            # deliberately together rather than silently implied equal.
+            - name: MAX_CLIENT_BATCH_SIZE
+              value: {{ . | quote }}
+            {{- end }}
+          # NO PVC mount at /data. Confirmed live, 2026-10-17: weights are baked into the image
+          # (services/rerank-api/Dockerfile), but a PVC mounted at the same path shadows that
+          # baked content with an empty, differently-permissioned volume -- crashed with
+          # PermissionError: [Errno 13] Permission denied: '/data/token' from huggingface_hub's
+          # get_token() because the PVC's ownership didn't match the image's chown'd /data.
+          # Same lesson as vllm-light/ocr-api's Dockerfiles this session: a PVC at the same path
+          # as baked-in weights is actively harmful, not just redundant.
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+            failureThreshold: 4
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            failureThreshold: 4
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agent.componentName" $ctx }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rerank
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "agent.componentSelectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}
