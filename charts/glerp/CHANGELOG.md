@@ -3,6 +3,34 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## GLerp AI 2.0.0 (glerp_ai_core v2.0.1, glerp_ai_agent v2.0.0, glerp_ai_intake v2.0.0)
+
+Pins the three GLerp AI apps to their 2.0.0 line: glerp_ai_core **v2.0.1** (2.0.0 + a truly-free
+ISC-licensed SVG "GLerp AI" icon; core now ships a `public/` folder for the first time),
+glerp_ai_agent **v2.0.0**, glerp_ai_intake **v2.0.0**. installApps is unchanged — core and intake
+are enabled by default; the agent stays shipped-but-not-installed (add it to `installApps` to enable).
+No module/directory renames and no new required_apps (agent and intake still require only
+glerp_ai_core). Titles/labels only: intake's app_title is now "GLerp AI Intake"; core now owns the
+"GLerp AI" apps-screen tile (intake dropped its add_to_apps_screen). After migrate, core idempotently
+cleans up the desktop icons and sets the GLerp AI logo.
+
+**⚠️ DEPLOYMENT COUPLING — upgrade the intake SERVICE together with this GLerp image.** The
+standalone GLerp AI Intake service (separate repo k8-glerp-ai-intake, published by the engine peer)
+must go to **image 0.3.12 / chart 0.4.12** alongside this release (0.3.12 stores config per site).
+Notes:
+- The prod intake deployment has **no default Gemini key**. If intake chart **0.4.12** goes live
+  BEFORE sites migrate to app-2.0.0, intake jobs fail until each site's intake settings are saved.
+- Upgrading **both together is fine**: the GLerp 2.0.0 migrate pushes each site's config to the
+  intake service on `after_migrate` (it never raises; failures surface in "Last Sync Status").
+- **Never use intake chart 0.4.9** (it pins a stale image and a nonexistent OCR tag).
+- The agent's own backend (engine chart k8-glerp-ai-agent 0.2.0, orchestrator 0.10.30) only matters
+  on sites that install the agent; no prod site has it yet.
+
+Migrate adds idempotent patches (`glerp_ai_intake.patches.keep_own_provider_keys` — no-op unless a
+dev-only flag was set; `glerp_ai_agent.patches.copy_platform_providers` — copies keys/models from the
+retired GLerp AI Platform Settings into Agent Settings where shared keys were used, no-op where the
+agent isn't installed). Run `bench migrate` on sites after upgrading.
+
 ## MinIO default topology → 1 pool × 4 servers × 1 volume × 6Gi (simpler, 4-node-idiomatic)
 
 The default per-tenant MinIO shape changes from `2 pools × 2 servers × 2 volumes × 3Gi` to
