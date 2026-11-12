@@ -15,3 +15,6 @@ data:
   {{ $key }}: {{ $val | quote }}
   {{- end }}
   {{- end }}
+  # The version the service reports (/healthz, GET /admin/config): the deployed image tag.
+  # All GLerp AI components share one MAJOR version (2.x).
+  APP_VERSION: {{ .Values.image.tag | default .Chart.AppVersion | quote }}
