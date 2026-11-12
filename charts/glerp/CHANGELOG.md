@@ -3,6 +3,32 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## GLerp AI 2.1.0 (core v2.1.0, agent v2.1.0, intake v2.1.0 — shared major version)
+
+Pins all three GLerp AI apps to **v2.1.0** (core 3d9a9d2, agent d9b8527, intake 1142304). From
+2.1.0, every GLerp AI component shares one major version (2.x): Test Connection now shows each
+service's version and warns on a major mismatch. **agent and intake now require glerp_ai_core ≥ 2.1**
+— so the three must move together (this pin does). installApps unchanged (core+intake enabled,
+agent shipped-not-installed); positions/order unchanged. No new patches, DocType changes or
+required_apps beyond the core ≥ 2.1 floor. Supersedes the never-built intake v2.0.1 pin.
+
+New since 2.0.x: intake webhooks accept failed-job payloads; "Shipping Document" results map to
+Shipment; plus the 2.0.1 fixes (a result that can't be applied is marked Failed with a comment +
+Activity Log row instead of retrying hourly forever; a Purchase Invoice whose due date precedes the
+invoice date is saved Needs Review instead of failing; the "confidence below threshold" comment
+appears only when confidence was actually low).
+
+**⚠️ DEPLOYMENT COUPLING — run the 2.x services alongside these apps (shared-major rule).**
+- Intake SERVICE: chart **k8-glerp-ai-intake 2.0.0 (app 2.0.1)** — the renumbered 0.4.12 line. Keep
+  the upgrade-together-with-GLerp rule: prod intake has no default Gemini key, so if the intake
+  service goes live before sites migrate to GLerp 2.1.0, intake jobs fail until each site's intake
+  settings are saved; upgrade both together (GLerp migrate pushes each site's config on
+  after_migrate; failures surface in "Last Sync Status"). Never use the old intake chart 0.4.9.
+- Engine (agent backend): chart **k8-glerp-ai-agent 2.0.0 (app 2.0.1)** — only matters on sites that
+  install the agent; no prod site has it yet.
+
+Run `bench migrate` on sites after upgrading.
+
 ## GLerp AI 2.0.0 (glerp_ai_core v2.0.1, glerp_ai_agent v2.0.0, glerp_ai_intake v2.0.0)
 
 Pins the three GLerp AI apps to their 2.0.0 line: glerp_ai_core **v2.0.1** (2.0.0 + a truly-free
