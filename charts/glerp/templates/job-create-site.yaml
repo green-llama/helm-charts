@@ -210,6 +210,19 @@ spec:
               "{{ . }}"
               {{- end }}
             )
+            # Frappe's installer HARD-REQUIRES an app to be listed in sites/apps.txt before it will
+            # install it ("App <x> not in apps.txt"). On an UPGRADE that enables a NEW curated app
+            # (e.g. adding glerp_ai_agent to installApps on a site that didn't have it), the site's
+            # sites/apps.txt is stale and lacks it -> install-app fails. So ensure every curated app
+            # (plus frappe) is present in sites/apps.txt first. MERGE, don't overwrite: appending
+            # only the missing entries preserves any app already installed on the site but not in
+            # this curated list (overwriting would drop it from apps.txt and break it at runtime).
+            touch sites/apps.txt
+            grep -qxF frappe sites/apps.txt || sed -i '1i frappe' sites/apps.txt
+            for _a in "${apps[@]}"; do
+                [ -z "${_a}" ] && continue
+                grep -qxF "${_a}" sites/apps.txt || echo "${_a}" >> sites/apps.txt
+            done
             {{- else }}
             # Default: install ALL apps baked into the IMAGE. Source of truth is the image's
             # own app list (image-apps.txt stash, or the apps/ dir) — NOT the site's
