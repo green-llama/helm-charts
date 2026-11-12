@@ -28,6 +28,9 @@ data:
   {{ $key }}: {{ $val | quote }}
   {{- end }}
   {{- end }}
+  # The version the services report (/healthz and the GLerp connection check): the
+  # deployed image tag. All GLerp AI components share one MAJOR version (2.x).
+  APP_VERSION: {{ .Values.image.tag | default .Chart.AppVersion | quote }}
   # FRAPPE_BASE_URL kept rendered unchanged -- BACKEND_BASE_URL added alongside it with
   # the identical value (2026-10-23, engine/GLerp boundary audit item #4:
   # docs/INTEGRATION_BOUNDARY.md). This is a plain ConfigMap value, not Vault/ESO-backed,

@@ -1,10 +1,10 @@
-# Example production values for k8-glerp-ai-agent (chart 0.2.0). Copy it, fill in the
+# Example production values for k8-glerp-ai-agent (chart 2.0.0). Copy it, fill in the
 # placeholders, and pass it with -f (or enter the same values in the Rancher form).
 # No secrets belong here: JWT and orchestrator keys come from Vault through ESO; LLM
 # keys are sent by GLerp to /admin/config. Procedure: docs/DEPLOY_PRODUCTION.md.
 #
 # Everything not listed uses the chart default, which matches what the sandbox
-# (glerp-ai-agent-sandbox) ran during the lora-5 trial: engine 0.1.92, embed 0.1.32,
+# (glerp-ai-agent-sandbox) ran during the lora-5 trial: engine 2.0.1, embed 0.1.32,
 # rerank 0.1.82, vllm-light lora-5, Gemini 3.5 Flash Lite for answers.
 
 config:
