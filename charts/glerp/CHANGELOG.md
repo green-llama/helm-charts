@@ -3,6 +3,30 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## glerp_fitness v0.13.0 + glerp_ai_agent v2.2.0 (shipped together)
+
+Pins glerp_fitness **v0.13.0** (1a805cb; rolls up 0.11.0 + 0.12.0 + 0.13.0) and glerp_ai_agent
+**v2.2.0** (9a2ba60). glerp_ai_core and glerp_ai_intake stay at **v2.1.0**. installApps unchanged —
+the agent stays shipped-but-not-installed; glerp_fitness is enabled per-site via installApps.
+
+glerp_fitness 0.13.0: experimental workout tracking, voice notes, AI plans and the planning
+profile — **all OFF by default** (a site looks unchanged until a manager switches them on). Adds new
+DocTypes and 4 desk reports; patches `v0_13.workout_settings_defaults` and `v0_13.reports_data` seed
+the new Single defaults / report data on existing sites. Workout tracking and reports work on their
+own; the voice and AI features need glerp_ai_agent (shipped here) plus a GLerp AI backend service.
+
+glerp_ai_agent 2.2.0 — version floors for its features (the agent requires glerp_ai_core ≥ 2.1,
+already satisfied):
+- Voice notes require **GLerp AI orchestrator ≥ 2.1.1**.
+- AI workout suggestions require **orchestrator ≥ 2.2.1**.
+- Production has no GLerp AI backend service yet, so on beltonparks the voice/AI features report
+  "aren't available yet" — expected. Workout tracking and reports do not depend on them.
+- Migrate adds the **GLerp AI Voice Job**, **Task Job** and **Usage Settings** DocTypes and the
+  **"GLerp AI Administrator"** role (granted to support@greenllama.tech if that user exists).
+  Default monthly AI budget is **$10**.
+
+Run `bench migrate` on sites after upgrading.
+
 ## GLerp AI 2.1.0 (core v2.1.0, agent v2.1.0, intake v2.1.0 — shared major version)
 
 Pins all three GLerp AI apps to **v2.1.0** (core 3d9a9d2, agent d9b8527, intake 1142304). From
