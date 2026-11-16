@@ -3,7 +3,7 @@
 
 image:
   repository: ghcr.io/green-llama/k8-glerp-ai-intake
-  tag: "2.2.0"
+  tag: "2.3.0"
   pullPolicy: Always
 
 imagePullSecrets:
@@ -23,6 +23,10 @@ config:
   LLM_PRICES_JSON: '{"gemini-3.5-flash-lite": [0.30, 2.50], "gemini-2.5-flash": [0.30, 2.50]}'
   LLM_PRICES_AS_OF: "2026-11-15"
   USAGE_RETENTION_DAYS: "100"
+  # Usage is reported in contexts (same unit as the engine; see the engine's docs/USAGE_CONTEXTS.md).
+  USAGE_CONTEXT_USD_PER_MILLION: "0.30"
+  # "true" also returns dollars: cutover only, then "false" so no cost reaches client sites.
+  USAGE_REPORT_COST: "true"
   APP_ENV: "development"
   LOG_LEVEL: "INFO"
   LLM_PROVIDER: "gemini"
