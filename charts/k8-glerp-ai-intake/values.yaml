@@ -25,8 +25,8 @@ config:
   USAGE_RETENTION_DAYS: "100"
   # Usage is reported in contexts (same unit as the engine; see the engine's docs/USAGE_CONTEXTS.md).
   USAGE_CONTEXT_USD_PER_MILLION: "0.30"
-  # "true" also returns dollars: cutover only, then "false" so no cost reaches client sites.
-  USAGE_REPORT_COST: "true"
+  # "true" also returns dollars. Keep "false": no cost reaches client sites.
+  USAGE_REPORT_COST: "false"
   APP_ENV: "development"
   LOG_LEVEL: "INFO"
   LLM_PROVIDER: "gemini"
