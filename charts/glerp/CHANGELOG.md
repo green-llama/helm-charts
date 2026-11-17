@@ -3,6 +3,40 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## glerp_fitness v0.14.0
+
+Pins glerp_fitness **v0.14.0** (c95be6b). glerp_ai_agent stays **v2.2.0**; glerp_ai_core and
+glerp_ai_intake stay **v2.1.0**. fitness 0.14.0 works with agent 2.2.0. installApps unchanged
+(fitness enabled per-site; agent shipped-but-not-installed).
+
+0.14.0 adds the one-list session editor, Wathan 1RM estimation (replacing Epley), volume charts,
+the "voice notes / suggested plans" wording, the exercise-picker fix, equipment for trainers, and
+the schedule Week view.
+
+**Run `bench migrate` per site after upgrading.** Migrate:
+- adds two hidden Workout fields (`voice_reviewed`, `voice_undo`);
+- runs patch `glerp_fitness.patches.v0_14.wathan_estimates` — switches estimated-1RM benchmark types
+  from Epley to Wathan, recalculates those readings and recomputes personal records (a few seconds
+  on a dev site).
+
+## host_name set to https://<site> on every site (fix)
+
+Both the create-site and migrate-site jobs now ensure each site's `host_name` is set to
+`https://<site>`. Behind TLS-terminating Traefik, Frappe's `frappe.utils.get_url()` otherwise falls
+back to `http://<site>`, so backend callbacks, email links and print links come out as plain http.
+This broke glerp_ai_agent voice notes: the agent syncs `get_url()` to the orchestrator as the site's
+callback address, and the orchestrator hit a `ConnectTimeout` on port 80 fetching audio / posting
+results (https on 443 answers in ~0.08 s).
+
+- **New installs:** create-site sets `host_name` after app sync.
+- **Existing sites:** back-filled at upgrade by the migrate job.
+- **MERGE, not overwrite:** the value is set only when currently unset (checked by reading
+  `site_config.json` directly, unambiguous across bench versions), so a site with a custom domain or
+  port keeps its own `host_name`. Safe to re-run; idempotent.
+
+To unblock a site immediately without waiting for this release:
+`bench --site <site> set-config host_name "https://<site>"`.
+
 ## glerp_fitness v0.13.0 + glerp_ai_agent v2.2.0 (shipped together)
 
 Pins glerp_fitness **v0.13.0** (1a805cb; rolls up 0.11.0 + 0.12.0 + 0.13.0) and glerp_ai_agent

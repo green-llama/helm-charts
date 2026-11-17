@@ -248,6 +248,18 @@ spec:
                 fi
             done
 
+            # Ensure host_name is set so Frappe builds https:// URLs (callback/email/print links).
+            # Behind TLS-terminating Traefik, get_url() otherwise falls back to http://<site>, which
+            # breaks backend callbacks (e.g. voice-note audio fetch) and emits http links. MERGE, not
+            # overwrite: only set it if currently unset, so a site with a custom domain/port keeps its
+            # value. Read site_config.json directly (unambiguous for unset keys across bench versions).
+            if python -c 'import json,os,sys; c=json.load(open(os.path.join("sites",sys.argv[1],"site_config.json"))); sys.exit(0 if c.get("host_name") else 1)' "${SITE_NAME}" 2>/dev/null; then
+                echo "host_name already set for ${SITE_NAME} -> leaving as-is";
+            else
+                echo "host_name unset for ${SITE_NAME} -> setting https://${SITE_NAME}";
+                bench --site "${SITE_NAME}" set-config host_name "https://${SITE_NAME}";
+            fi
+
             {{- if .Values.jobs.createSite.migrateAfterAppSync }}
             echo "Running migrate after app sync";
             bench --site "${SITE_NAME}" migrate;
