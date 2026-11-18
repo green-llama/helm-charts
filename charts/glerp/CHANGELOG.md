@@ -3,6 +3,33 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## GLerp AI 2.2/2.3 + glerp_fitness v0.15.1 (shipped together)
+
+Pins **glerp_ai_core v2.2.0** (5953774), **glerp_ai_agent v2.3.0** (798e651),
+**glerp_ai_intake v2.2.0** (4189ca9) and **glerp_fitness v0.15.1** (f95a68d; 0.15.0 + one UI change,
+same day). installApps unchanged (agent shipped-but-not-installed; fitness enabled per-site).
+
+**⚠️ Release together — hard coupling:**
+- Agent 2.3.0 and intake 2.2.0 require **glerp_ai_core ≥ 2.2**.
+- Agent 2.3.0 requires **glerp_fitness ≥ 0.15.0 on the same site**: every trainer voice note and plan
+  profile now requires the user agreement (the disclaimer flag), which only fitness ≥ 0.15.0 sends.
+  With an older fitness, trainers' voice notes and plans are **refused**.
+
+**Usage is in contexts, never dollars:**
+- Core adds the **AI Usage** page (Settings → AI Usage) and a monthly context cap, default **33,000K**
+  (GLerp AI Usage Settings, now owned by Core). Migrate converts the old $ budget to contexts, then
+  deletes the $ budget and its change history; converts voice/task job costs to contexts and drops
+  the agent's `cost_usd` column. The **GLerp AI Administrator** role goes to support@greenllama.tech.
+- Intake stops at the cap: new documents go to **Needs Review** with a comment.
+
+**Service floors:** usage reports need engine ≥ 2.3 and intake **service** ≥ 2.3 (an older service
+shows "unavailable" on the page, never zero); clients' own voice notes and plans need
+**orchestrator ≥ 2.4.1**. Client features are **Off** until a manager turns them on.
+
+**Each site: `bench migrate`.** fitness runs patches `v0_15.own_workouts`, `v0_15.feature_trainers`
+and `v0_15.agreements` and adds two DocTypes; the AI-usage conversions above run on the same migrate.
+Nothing manual after migrate.
+
 ## glerp_fitness v0.14.0
 
 Pins glerp_fitness **v0.14.0** (c95be6b). glerp_ai_agent stays **v2.2.0**; glerp_ai_core and
