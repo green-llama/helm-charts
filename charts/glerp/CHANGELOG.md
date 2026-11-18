@@ -3,6 +3,26 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## Pin hrms to v16.54.1 (fix: migrate crash in 1.0.74)
+
+**Fixes a `bench migrate` failure introduced in image 1.0.74 / chart 1.0.100.** hrms was pinned to
+the rolling `version-16` branch, which advanced to **16.60.0** (released 2026-11-17 20:41 UTC, ~19 h
+after the 1.0.73 build) and added patch `hrms.patches.v16_0.add_employee_profile_fields`. That patch
+creates a custom field of type **"Vue Component"** — a field type that exists only in newer Frappe 16
+(≥ 16.60.x). The Frappe framework baked into these images is older, so migrate aborted with
+`ValidationError: Field Type cannot be "Vue Component"` in the hrms post-model-sync patches.
+
+Fix: pin **hrms to tag v16.54.1** (a0103235) — the last release before the break; its `patches.txt`
+does not contain `add_employee_profile_fields`. **Frappe is intentionally left where it is** — moving
+it to 16.60.x would be a large unplanned framework jump for production. The four GLerp app tags are
+unchanged (fitness v0.15.1, core v2.2.0, agent v2.3.0, intake v2.2.0); only hrms moves off the
+floating branch to a fixed tag.
+
+Re-run `bench migrate` on the fixed image: the doctype sync had already run, so migrate resumes at the
+hrms patches and then runs the GLerp app patches (fitness `v0_15.*`, the AI-usage conversions). A site
+left in maintenance mode by the failed run must have it cleared:
+`bench --site <site> set-maintenance-mode off`.
+
 ## GLerp AI 2.2/2.3 + glerp_fitness v0.15.1 (shipped together)
 
 Pins **glerp_ai_core v2.2.0** (5953774), **glerp_ai_agent v2.3.0** (798e651),
