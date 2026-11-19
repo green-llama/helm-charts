@@ -3,6 +3,19 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## glerp_fitness v0.15.2 (review fixes)
+
+Bumps **glerp_fitness v0.15.1 → v0.15.2** (0fd4fe2). Everything else is unchanged from 1.0.75:
+glerp_ai_core v2.2.0, glerp_ai_agent v2.3.0, glerp_ai_intake v2.2.0, hrms pinned v16.54.1, Frappe
+as-is (no floating upstream branches).
+
+0.15.2 is review fixes only — **no patches, no DocType changes**, so `bench migrate` just syncs the
+pages: a security fix for client saves, faster staff Insights, a self-coaching Home for clients who
+never trained, and sign-in link timing. The sign-in link email now goes through the `short`
+background queue, so the site's workers must be running (as they normally are).
+
+Versions confirmed with the HB-PT and GLerp AI Agent sessions and against GitHub before building.
+
 ## Pin hrms to v16.54.1 (fix: migrate crash in 1.0.74)
 
 **Fixes a `bench migrate` failure introduced in image 1.0.74 / chart 1.0.100.** hrms was pinned to
