@@ -3,6 +3,31 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## glerp_fitness v0.15.3 (+ glerp_bigbulk_import S3 fix)
+
+Bumps **glerp_fitness v0.15.2 → v0.15.3** (4d602ab). Other apps unchanged: glerp_ai_core v2.2.0,
+glerp_ai_agent v2.3.0, glerp_ai_intake v2.2.0, hrms pinned v16.54.1, Frappe as-is.
+
+**Also ships the glerp_bigbulk_import S3 fix** (merge 0c8d1df on `main`, which apps.json pins): prod
+sites with S3 attachments (dfp_external_storage) no longer get "Cannot access file path" on Generate
+Column Mappings / Preview / Import (now reads via `File.get_content()`); unmatched CSV columns are
+skipped and listed instead of failing. Python only — no DocType/patch/migration changes in that app.
+After deploy, verify on the prod BigBulk Import Profile with the S3 attachment PTBR_RB1.csv: Generate
+Column Mappings should map columns with no file-path error.
+
+glerp_fitness 0.15.3: "About the client" in plans (client-editable; trainer notes stay out of
+clients' own plans); trainers get the full Exercise catalog; the session Plan card starts folded;
+clients edit their usual week; voice status keeps updating after Stop on phones; add-ons that haven't
+started say so; benchmark readings can be imported; new agreement wording for new sites.
+
+**Run `bench migrate` per site.** It syncs DocType changes (new Client Profile fields, new defaults
+in Personal Training Settings, Benchmark Reading `allow_import`). **No patches.**
+
+**⚠️ Orchestrator floor:** the "About the client" plan feature needs **GLerp AI orchestrator ≥ 2.7.1**
+(live in the RKE2 sandbox). With an older orchestrator the app still works, but plans ignore "About
+the client" and may name the product. Orchestrator is deployed in its own lane — not gated by this
+build.
+
 ## glerp_fitness v0.15.2 (review fixes)
 
 Bumps **glerp_fitness v0.15.1 → v0.15.2** (0fd4fe2). Everything else is unchanged from 1.0.75:
