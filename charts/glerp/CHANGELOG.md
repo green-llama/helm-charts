@@ -3,6 +3,37 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## glerp_fitness v0.15.5 + glerp_ai_agent v2.4.0; every frappe app pinned exactly
+
+Same base as the previous release (Frappe 16.60.2, erpnext/hrms 16.60.0, Insights 3.50.3,
+glerp_branding 2.0.0, frappe_theme removed).
+
+- **glerp_fitness `v0.15.4 → v0.15.5`** (82ca53c): packages cover sessions by date (oldest package
+  → earliest sessions); a session's Package is now set automatically; packages show
+  item · hours · date; Benchmarks get full-width charts, period buttons and CSV; client page lists
+  collapse to 3; the Add-ons list shows current ones only; iPhone home-screen tip; trainer activity
+  fix.
+- **glerp_ai_agent `v2.3.0 → v2.4.0`** (d81dac1): `allowed_roles` lets a trainer who also has a
+  client login (or front desk who also trains) use suggested plans and voice notes (fixes "You can't
+  use this AI task"); the AI button follows the secondary-button colour with no frappe_theme
+  dependency (fixes the default colour on sites that uninstalled frappe_theme); speaker-labels
+  switch, off everywhere. glerp_ai_core v2.2.0 and glerp_ai_intake v2.2.0 unchanged. Orchestrator
+  floor ≥ 2.7.1.
+- **Every frappe app is now pinned exactly — no more floating `version-16`.** payments
+  `version-16 → v16.0.1` (its release tag; same code). newsletter, blog, eps, offsite_backups and
+  webshop publish no release tags, so they're pinned by exact commit (apps.json `"commit"`, checked
+  out by `scripts/checkout_commit_pins.py` right after `bench init`): newsletter 642986c,
+  blog a88363c, eps 9ad8f3b, offsite_backups 4764d43, webshop 5d14c61 — the same code the previous
+  image built from. CI now fails the build if any github.com/frappe/* app floats.
+
+**Run `bench migrate` per site.** It adds the Package `title` field and runs patch
+`glerp_fitness.patches.v0_15.packages_by_date`, which re-assigns each client's package hours by
+session date. **Client balances don't change, but some sessions move to a different package** (on a
+test site: 17 sessions across 8 clients).
+
+**⚠️ Sites still on image 1.0.77 or earlier** (chart ≤ 1.0.103) must uninstall frappe_theme before
+upgrading, exactly as for the previous release (see below).
+
 ## Frappe 16.60 framework jump + Insights + glerp_branding 2.0 (frappe_theme removed)
 
 **⚠️ FRAMEWORK JUMP — test on non-critical sites first.** Bumps the Frappe framework and core apps
