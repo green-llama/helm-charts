@@ -3,6 +3,39 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## Frappe 16.60 framework jump + Insights + glerp_branding 2.0 (frappe_theme removed)
+
+**⚠️ FRAMEWORK JUMP — test on non-critical sites first.** Bumps the Frappe framework and core apps
+from the 16.26 line to **16.60**, adds Insights, and replaces AGPL `frappe_theme` with the proprietary
+`glerp_branding` 2.0 "GLerp Theme".
+
+- **Frappe `v16.26.1 → v16.60.2`** (build.yml FRAPPE_BRANCH). Needs Python 3.14 / Node 24 from the
+  base image; adds litellm, onnxruntime, pyarrow, duckdb, frappe-flow, typst. Enables **Frappe Flow**
+  (needed by glerp_fitness v0.15.4's personal-training Flow Skill).
+- **erpnext `v16.26.2 → v16.60.0`**, **hrms `v16.54.1 → v16.60.0`** (hrms now ships two frontends:
+  frontend/ + roster/). Migrate removes orphaned upstream DocTypes and reorganises workspaces/reports.
+- **NEW: Insights `v3.50.3`** (d733108, AGPL-3.0) — installed by default on every site, **after hrms**
+  (both erpnext and hrms ship Insights workbooks that must install first). Install order:
+  frappe → erpnext → hrms → insights → payments → rest.
+- **glerp_branding `v1.2.1 → v2.0.0`** (1622795) — proprietary "GLerp Theme" DocType; no longer
+  requires frappe_theme.
+- **frappe_theme REMOVED from the image entirely** (was `glerp_frappe_theme v1.0.1`, AGPL). Also
+  removed from installApps.
+- **glerp_fitness `v0.15.3 → v0.15.4`** (3f60f31): trainer "Insights" page → "Client review" at
+  `/pt-review` (old `/pt-insights` redirects); new `skills/personal-training/SKILL.md` loads as a
+  locked Frappe Flow Skill on Frappe ≥16.60 (inert without Flow set up). Migrate syncs pages, removes
+  the old `/pt-insights` Web Page. No DocTypes/patches. Orchestrator floor ≥2.7.1 (unchanged).
+- All other GLerp apps held at their 1.0.77 pins (glerp_ai_core v2.2.0, glerp_ai_agent v2.3.0,
+  glerp_ai_intake v2.2.0, glerp_bigbulk_import main, etc.).
+
+**⚠️ UPGRADE HAZARD — existing sites with frappe_theme installed:** removing frappe_theme's code from
+the image breaks any site that still has the app installed. Per site, BEFORE/at upgrade: back up →
+deploy's migrate runs glerp_branding's `v2_0.import_my_theme` (copies My Theme + attached files into
+GLerp Theme) → `bench uninstall-app frappe_theme --yes` (branding's before_app_uninstall hook re-imports
+first so logo/background files aren't lost) → `clear-cache` + restart web. GLerp Theme then switches on.
+New sites are clean (frappe_theme never installed). Cosmetic note: glerp_ai_agent v2.3.0's AI button
+falls back to its default color on sites without frappe_theme (fixed in the next agent release).
+
 ## glerp_fitness v0.15.3 (+ glerp_bigbulk_import S3 fix)
 
 Bumps **glerp_fitness v0.15.2 → v0.15.3** (4d602ab). Other apps unchanged: glerp_ai_core v2.2.0,
