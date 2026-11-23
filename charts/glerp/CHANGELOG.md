@@ -3,6 +3,26 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## fix: also clear Frappe's cached app list when upgrading a site that still lists frappe_theme
+
+The previous fix cleaned `sites/apps.txt`, but upgraded sites still failed with
+`No module named 'frappe_theme'`. Frappe also caches its app list (`all_apps`), the installed apps
+and the loaded hooks in the Redis cache, and the copies from the old image still named
+frappe_theme. `bench clear-cache` can't remove them, because it loads every app's hooks first and
+crashes the same way.
+
+- The new-site and migrate jobs now delete those cached keys from the Redis cache before running
+  any bench command. The keys are `all_apps`, `installed_apps`, `app_hooks`, `app_modules`,
+  `installed_app_modules`, `module_app`, `module_installed_app` and `scheduler_events`.
+  - Frappe rebuilds them on demand.
+  - Sessions and per-user caches are untouched.
+  - The step never fails the job.
+
+**After the upgrade jobs finish**, restart the Frappe deployments (gunicorn, scheduler, socketio,
+workers), so no process keeps an old copy. Then retire frappe_theme on each site:
+`bench --site <site> remove-from-installed-apps frappe_theme`, `bench --site <site> clear-cache`,
+and restart web.
+
 ## fix: upgrading a site that still lists frappe_theme (removed from the image in 1.0.78)
 
 Upgrading an existing site from chart ≤ 1.0.103 failed in the new-site job with

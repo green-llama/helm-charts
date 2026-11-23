@@ -250,3 +250,14 @@ skips the app: the site's data and its installed_apps list are untouched, so mig
 {{- define "glerp.reconcileAppsTxt" -}}
 python -c 'import os; p="sites/apps.txt"; a=[l.strip() for l in open(p) if l.strip()] if os.path.exists(p) else []; keep=[x for x in a if x=="frappe" or os.path.isdir("apps/"+x)]; gone=[x for x in a if x not in keep]; gone and open(p,"w").write("\n".join(keep)+"\n"); print("apps.txt: removed apps not in this image: "+", ".join(gone) if gone else "apps.txt: every entry is in this image")'
 {{- end -}}
+
+{{/*
+Drop Frappe's cached app lists and hooks from the Redis cache. Frappe caches which apps are on the
+bench ("all_apps"), the installed apps and the loaded hooks. After an app's code is removed from the
+image, those cached copies still name it, so bench keeps importing it, and `bench clear-cache` can't
+help: it loads every app's hooks first and crashes the same way. These keys are rebuilt on demand;
+sessions and user caches are untouched. Never fails the job. One line, for folded (>) scalars.
+*/}}
+{{- define "glerp.clearAppCache" -}}
+./env/bin/python -c 'import json,redis; u=json.load(open("sites/common_site_config.json")).get("redis_cache"); r=redis.from_url(u) if u else None; names=("all_apps","installed_apps","app_hooks","app_modules","installed_app_modules","module_app","module_installed_app","scheduler_events"); ks=[k for n in names for k in r.scan_iter(match="*|"+n, count=1000)] if r else []; ks and r.delete(*ks); print("redis cache: cleared "+str(len(ks))+" cached app-list/hooks key(s)")' || echo "redis cache: could not clear the cached app lists (continuing)"
+{{- end -}}

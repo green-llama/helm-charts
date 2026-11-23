@@ -138,6 +138,7 @@ spec:
             # Before ANY bench command: drop apps.txt entries whose code isn't in this image
             # (see glerp.reconcileAppsTxt), or bench crashes importing them.
             {{ include "glerp.reconcileAppsTxt" . }};
+            {{ include "glerp.clearAppCache" . }};
             {{- if .Values.jobs.createSite.upgradeAppsOnExistingSite }}
             set -euo pipefail;
 
