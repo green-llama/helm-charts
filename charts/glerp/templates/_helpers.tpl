@@ -238,3 +238,15 @@ minio-tenant.yaml can't drift out of sync (mesh-exclusion labels, security conte
     runAsNonRoot: true
     allowPrivilegeEscalation: false
 {{- end -}}
+
+{{/*
+Drop sites/apps.txt entries whose code isn't in this image (e.g. frappe_theme, removed in image
+1.0.78). Frappe decides which installed apps are "on the bench" from sites/apps.txt
+(frappe.get_all_apps), NOT from what's importable. A stale entry makes every bench command and web
+request import that app's hooks and crash with "No module named ...". Once the entry is gone, Frappe
+skips the app: the site's data and its installed_apps list are untouched, so migrate can still run
+(e.g. glerp_branding's My Theme import). One line, so it also works inside a folded (>) scalar.
+*/}}
+{{- define "glerp.reconcileAppsTxt" -}}
+python -c 'import os; p="sites/apps.txt"; a=[l.strip() for l in open(p) if l.strip()] if os.path.exists(p) else []; keep=[x for x in a if x=="frappe" or os.path.isdir("apps/"+x)]; gone=[x for x in a if x not in keep]; gone and open(p,"w").write("\n".join(keep)+"\n"); print("apps.txt: removed apps not in this image: "+", ".join(gone) if gone else "apps.txt: every entry is in this image")'
+{{- end -}}

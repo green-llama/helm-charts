@@ -3,6 +3,26 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## fix: upgrading a site that still lists frappe_theme (removed from the image in 1.0.78)
+
+Upgrading an existing site from chart ≤ 1.0.103 failed in the new-site job with
+`ModuleNotFoundError: No module named 'frappe_theme'`. Frappe treats an app as present if it's in
+`sites/apps.txt`, whether or not its code is in the image. The site's apps.txt still listed
+frappe_theme, and the job also re-added any app from a stored `installApps` list. So every bench
+command imported frappe_theme's hooks and crashed.
+
+- The new-site and migrate jobs now remove `sites/apps.txt` entries whose code isn't in the image,
+  before running any bench command. The site's data and its installed-apps list are unchanged.
+  Frappe then skips the missing app, so `migrate` can run, including glerp_branding's import of the
+  old My Theme settings into GLerp Theme.
+- `installApps` entries that aren't in the image are skipped with a warning, rather than being
+  added to apps.txt and installed.
+- Fixed the "already installed" check. `bench list-apps` prints `<app> <version> <branch>`, so the
+  old exact-line match never matched and every upgrade re-ran `install-app` on every app.
+
+**If your release stores its own `installApps` list** (e.g. one that enables glerp_ai_agent), update
+it: remove `frappe_theme` and add `insights` after `hrms`.
+
 ## glerp_fitness v0.15.5 + glerp_ai_agent v2.4.0; every frappe app pinned exactly
 
 Same base as the previous release (Frappe 16.60.2, erpnext/hrms 16.60.0, Insights 3.50.3,

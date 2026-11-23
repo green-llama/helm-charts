@@ -135,6 +135,9 @@ spec:
               echo "common_site_config.json missing/empty/invalid at create-site start — reseeding with {}";
               mkdir -p sites; echo "{}" > sites/common_site_config.json;
             fi
+            # Before ANY bench command: drop apps.txt entries whose code isn't in this image
+            # (see glerp.reconcileAppsTxt), or bench crashes importing them.
+            {{ include "glerp.reconcileAppsTxt" . }};
             {{- if .Values.jobs.createSite.upgradeAppsOnExistingSite }}
             set -euo pipefail;
 
@@ -210,6 +213,19 @@ spec:
               "{{ . }}"
               {{- end }}
             )
+            # Skip any listed app whose code isn't in this image (e.g. frappe_theme, removed in
+            # 1.0.78, still in an older stored values list). Appending it to apps.txt or trying to
+            # install it would break every bench command on the site.
+            _present=()
+            for _a in "${apps[@]}"; do
+                [ -z "${_a}" ] && continue
+                if [ -d "apps/${_a}" ]; then
+                    _present+=("${_a}")
+                else
+                    echo "WARNING: installApps lists '${_a}', which is not in this image - skipping it. Remove it from jobs.createSite.installApps.";
+                fi
+            done
+            apps=("${_present[@]}")
             # Frappe's installer HARD-REQUIRES an app to be listed in sites/apps.txt before it will
             # install it ("App <x> not in apps.txt"). On an UPGRADE that enables a NEW curated app
             # (e.g. adding glerp_ai_agent to installApps on a site that didn't have it), the site's
@@ -237,14 +253,18 @@ spec:
             # keep the site's apps.txt in sync with the image list (runtime pods read it)
             { echo frappe; printf '%s\n' "${apps[@]}"; } > sites/apps.txt
             {{- end }}
+            # `bench list-apps` prints "<app> <version> <branch>" per line, so keep only the first
+            # column; an exact-line match on the raw output never matched, so every upgrade re-ran
+            # install-app on every app.
+            awk 'NF{print $1}' /tmp/installed_apps.txt > /tmp/installed_names.txt
             for app in "${apps[@]}"; do
                 [ -z "${app}" ] && continue
-                if grep -Fxq "${app}" /tmp/installed_apps.txt; then
+                if grep -Fxq "${app}" /tmp/installed_names.txt; then
                     echo "App already installed: ${app}";
                 else
                     echo "Installing app: ${app}";
                     bench --site "${SITE_NAME}" install-app "${app}";
-                    echo "${app}" >> /tmp/installed_apps.txt;
+                    echo "${app}" >> /tmp/installed_names.txt;
                 fi
             done
 
