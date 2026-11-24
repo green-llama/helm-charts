@@ -29,9 +29,10 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["bash", "-c"]
         args:
-          - >
+          - |
             {{ include "glerp.reconcileAppsTxt" . }};
             {{ include "glerp.clearAppCache" . }};
+            {{- include "glerp.retireApps" . | nindent 12 }}
             bench --site $(SITE_NAME) set-maintenance-mode on;
             if python -c 'import json,os,sys; c=json.load(open(os.path.join("sites",sys.argv[1],"site_config.json"))); sys.exit(0 if c.get("host_name") else 1)' "$(SITE_NAME)" 2>/dev/null; then
               echo "host_name already set for $(SITE_NAME) -> leaving as-is";

@@ -207,6 +207,11 @@ spec:
                 bench --site "${SITE_NAME}" list-apps > /tmp/installed_apps.txt
             fi
 
+            # Before installing apps or migrating: take removed apps (jobs.retiredApps) off the
+            # site's installed-apps list, or install/migrate hooks that import every installed app
+            # fail with "No module named <app>".
+            {{- include "glerp.retireApps" . | nindent 12 }}
+
             {{- if .Values.jobs.createSite.installApps }}
             # Explicit curated list from values.
             apps=(

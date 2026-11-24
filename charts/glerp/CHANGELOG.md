@@ -3,6 +3,41 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## Transition: frappe_theme's code is back in the image so sites can uninstall it cleanly
+
+Removing frappe_theme's code (1.0.78) before existing sites had uninstalled it broke their
+upgrades in four ways, one after another:
+- `sites/apps.txt` still listed it;
+- Frappe's cached app list in Redis still named it;
+- Insights' install/migrate hooks import every app on the site's installed-apps list;
+- 30 frappe_theme DocTypes stay in the database until the end of migrate. hrms's
+  `rename_identification_document_type` patch updates Link fields on them, which imports
+  frappe_theme ("Module Frappe Theme not found").
+
+So this image ships **glerp_frappe_theme v1.0.2** again (098bda5), **only as a transition**:
+- It is NOT in `installApps`, so new sites never install it; they start on glerp_branding's
+  GLerp Theme.
+- Existing sites keep working with it installed, then uninstall it the way that was tested.
+
+**Per existing site (anything installed before image 1.0.78):**
+1. Back up: `bench --site <site> backup --with-files`.
+2. If the release stores its own `installApps`, remove `frappe_theme` and add `insights` after
+   `hrms`.
+3. Upgrade to this chart. migrate runs, including glerp_branding 2.0's import of My Theme into
+   GLerp Theme.
+4. `bench --site <site> uninstall-app frappe_theme --yes`. glerp_branding's before-uninstall hook
+   copies My Theme again and moves its logo/background files first, so nothing is lost.
+5. `bench --site <site> clear-cache`, restart the Frappe deployments, and check Desk → GLerp Theme.
+
+frappe_theme comes out of the image in a later release, once every site has uninstalled it.
+
+Also in this chart: `jobs.retiredApps` (default `[frappe_theme]`) is the safety net for that later
+removal. Before installing apps or migrating, the jobs take each listed app off a site's
+installed-apps list, but only once its code is no longer in the image. It does nothing while
+frappe_theme is shipped. It edits the stored list directly, because
+`bench remove-from-installed-apps` re-saves a record, and on a site not yet migrated to Frappe
+16.60 that fails with "DocType Flow Trigger not found".
+
 ## fix: also clear Frappe's cached app list when upgrading a site that still lists frappe_theme
 
 The previous fix cleaned `sites/apps.txt`, but upgraded sites still failed with
