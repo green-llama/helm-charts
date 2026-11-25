@@ -207,11 +207,6 @@ spec:
                 bench --site "${SITE_NAME}" list-apps > /tmp/installed_apps.txt
             fi
 
-            # Before installing apps or migrating: take removed apps (jobs.retiredApps) off the
-            # site's installed-apps list, or install/migrate hooks that import every installed app
-            # fail with "No module named <app>".
-            {{- include "glerp.retireApps" . | nindent 12 }}
-
             {{- if .Values.jobs.createSite.installApps }}
             # Explicit curated list from values.
             apps=(
@@ -219,8 +214,8 @@ spec:
               "{{ . }}"
               {{- end }}
             )
-            # Skip any listed app whose code isn't in this image (e.g. frappe_theme, removed in
-            # 1.0.78, still in an older stored values list). Appending it to apps.txt or trying to
+            # Skip any listed app whose code isn't in this image (e.g. one removed from the image but
+            # still in an older stored values list). Appending it to apps.txt or trying to
             # install it would break every bench command on the site.
             _present=()
             for _a in "${apps[@]}"; do
@@ -263,6 +258,18 @@ spec:
             # column; an exact-line match on the raw output never matched, so every upgrade re-ran
             # install-app on every app.
             awk 'NF{print $1}' /tmp/installed_apps.txt > /tmp/installed_names.txt
+            {{- if .Values.jobs.createSite.migrateAfterAppSync }}
+            # EXISTING site: migrate BEFORE installing any new app. A new app's install syncs its
+            # DocTypes against the CURRENT framework schema; on a site whose database is still on an
+            # older Frappe (e.g. 16.26 -> 16.60), that fails on tables only migrate creates
+            # ("Table ...tabFlow Tool doesn't exist" installing insights) and the job stops before
+            # migrating, leaving new code on an old database.
+            if [ "${do_create}" = "0" ]; then
+                echo "Existing site: migrating before installing any new apps";
+                bench --site "${SITE_NAME}" migrate;
+            fi
+            {{- end }}
+            _new_apps=0
             for app in "${apps[@]}"; do
                 [ -z "${app}" ] && continue
                 if grep -Fxq "${app}" /tmp/installed_names.txt; then
@@ -271,6 +278,7 @@ spec:
                     echo "Installing app: ${app}";
                     bench --site "${SITE_NAME}" install-app "${app}";
                     echo "${app}" >> /tmp/installed_names.txt;
+                    _new_apps=1
                 fi
             done
 
@@ -287,8 +295,14 @@ spec:
             fi
 
             {{- if .Values.jobs.createSite.migrateAfterAppSync }}
-            echo "Running migrate after app sync";
-            bench --site "${SITE_NAME}" migrate;
+            # New site, or new apps were just installed: migrate (again) so their after_migrate hooks
+            # run. An existing site with no new apps was already migrated above.
+            if [ "${do_create}" = "1" ] || [ "${_new_apps}" = "1" ]; then
+                echo "Running migrate after app sync";
+                bench --site "${SITE_NAME}" migrate;
+            else
+                echo "No new apps installed; skipping the second migrate (already migrated above)";
+            fi
             {{- end }}
 
             {{- if and .Values.tenant.enabled .Values.tenant.dfp.enabled }}

@@ -3,6 +3,49 @@
 Notable changes to the `glerp` Helm chart. Chart versions are published automatically by the
 `green-llama/glerp-image` pipeline; this file records the meaningful functional changes.
 
+## frappe_theme removed from the image; transition steps removed
+
+Every site has uninstalled frappe_theme, so the 1.0.82 / 1.0.108 transition is over.
+
+- Image: `glerp_frappe_theme` is gone from `apps.json`. glerp_branding is v2.0.1, which drops its
+  one-time My Theme migration code.
+- Image: glerp_fitness v0.15.6 (Feature access, own-logging choice, add-on end-date fix). Needs
+  `bench migrate`; the migrate job runs it.
+- Chart: `jobs.retiredApps` and the retire step in the new-site and migrate jobs are removed.
+  Stored values that still set `jobs.retiredApps` are ignored.
+- Kept, because they help with any future app change: the `sites/apps.txt` sync, the Redis app-cache
+  clear, and skipping `installApps` entries whose code isn't in the image.
+
+**Before upgrading:** frappe_theme must be uninstalled on the site
+(`bench --site <site> uninstall-app frappe_theme --yes` on 1.0.108). A site, or a restored backup,
+that still lists it will fail to migrate on this release.
+
+## fix: migrate existing sites before installing new apps
+
+Upgrading production sites from Frappe 16.26 to 16.60 (chart 1.0.108) failed in the new-site job
+with `Table '...tabFlow Tool' doesn't exist` while installing insights. The job installed new apps
+before migrating, so the new app's install ran against the old database schema. The job then
+stopped before migrating, leaving 16.60 code on a 16.26 database.
+
+- On an existing site, the new-site job now runs `bench migrate` first, then installs any new apps.
+- It migrates a second time only if it installed something (to run their after_migrate hooks).
+- New sites are unchanged: create, install apps, migrate once.
+
+**Sites left un-migrated by 1.0.108:** in the gunicorn pod run `bench --site <site> migrate`, then
+`bench --site <site> install-app insights`, then `bench --site <site> migrate` again.
+
+## fix: keep sites/apps.txt in step with the image (adds back apps it had dropped)
+
+Upgrading a site that had already been through chart 1.0.106/1.0.107 failed on 1.0.108 with
+`Module Frappe Theme not found`. Those charts removed frappe_theme from `sites/apps.txt` while its
+code was out of the image. When the code came back in 1.0.108, nothing re-added it, so Frappe still
+treated the installed app as absent.
+
+- The new-site and migrate jobs now make `sites/apps.txt` match the apps in the image before any
+  bench command. They add shipped apps that are missing and remove entries whose code isn't in the
+  image. Listing a shipped app that isn't installed on the site is harmless; the site's data and
+  installed apps are untouched.
+
 ## Transition: frappe_theme's code is back in the image so sites can uninstall it cleanly
 
 Removing frappe_theme's code (1.0.78) before existing sites had uninstalled it broke their

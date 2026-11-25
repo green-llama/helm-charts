@@ -230,7 +230,7 @@ image:
   pullPolicy: Always
   repository: ghcr.io/green-llama/glerp-image
   # tag is managed automatically by glerp-image/.github/workflows/build.yml. Do not hand-edit.
-  tag: 1.0.82
+  tag: 1.0.83
 imagePullSecrets:
   - name: ghcr-cred
 ingress:
@@ -249,18 +249,6 @@ jobs:
   # Default 1h keeps logs available briefly for debugging, then cleans up. Set "" / null to
   # disable auto-deletion.
   ttlSecondsAfterFinished: 3600
-  # Apps being retired. Before installing apps or migrating, the new-site and migrate jobs take each
-  # of these off the site's installed-apps list, but ONLY once its code is no longer in the image
-  # (a no-op while the code is still shipped). The app's data is kept. This matters: some apps'
-  # install/migrate hooks loop over every installed app and import it, and fail with
-  # "No module named <app>" while a removed app is still listed.
-  # frappe_theme: its code is back in the image as a TRANSITION (since 1.0.82) so existing sites can
-  # migrate and then `bench uninstall-app frappe_theme --yes` cleanly. Removing an installed app's
-  # code before it's uninstalled breaks migrate in several ways (seen on 1.0.78-1.0.81: leftover
-  # DocTypes are imported by unrelated patches). Drop it from apps.json only after every site has
-  # uninstalled it; this list is the safety net for any site that was missed.
-  retiredApps:
-    - frappe_theme
   backup:
     affinity: {}
     backoffLimit: 0
@@ -304,11 +292,12 @@ jobs:
     # module here + upgrade to enable it everywhere; no per-module bench one-offs.
     #
     # Modules are listed by their bench MODULE name (not repo name): POS-Awesome-V15 ->
-    # posawesome. frappe is the framework (always present). NOTE: frappe_theme (the AGPL
-    # glerp_frappe_theme app) is deliberately NOT listed: glerp_branding v2.0.0 ("GLerp Theme")
-    # replaces it, so new sites never install it. Its code is shipped in the image only as a
-    # transition, so existing sites can run `bench uninstall-app frappe_theme --yes` after
-    # upgrading (glerp_branding's hook copies My Theme into GLerp Theme first).
+    # posawesome. frappe is the framework (always present). Theming is glerp_branding's GLerp Theme
+    # (frappe_theme was retired in 1.0.83 / chart 1.0.109).
+    #
+    # REMOVING AN APP FROM THE IMAGE: uninstall it on every site first
+    # (`bench --site <site> uninstall-app <app> --yes`), THEN drop it from apps.json. Removing the code
+    # of an app that is still installed breaks migrate (its leftover DocTypes get imported).
     #
     # SHIPPED-BUT-NOT-ENABLED: an app can be baked into the image yet omitted here so its code
     # ships without being installed. glerp_fitness is intentionally NOT listed — it is present

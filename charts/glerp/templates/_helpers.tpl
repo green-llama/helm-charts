@@ -240,15 +240,18 @@ minio-tenant.yaml can't drift out of sync (mesh-exclusion labels, security conte
 {{- end -}}
 
 {{/*
-Drop sites/apps.txt entries whose code isn't in this image (e.g. frappe_theme, removed in image
-1.0.78). Frappe decides which installed apps are "on the bench" from sites/apps.txt
-(frappe.get_all_apps), NOT from what's importable. A stale entry makes every bench command and web
-request import that app's hooks and crash with "No module named ...". Once the entry is gone, Frappe
-skips the app: the site's data and its installed_apps list are untouched, so migrate can still run
-(e.g. glerp_branding's My Theme import). One line, so it also works inside a folded (>) scalar.
+Make sites/apps.txt match the apps in this image (image-apps.txt, else the apps/ dirs), before any
+bench command. Frappe decides which installed apps are "on the bench" from sites/apps.txt
+(frappe.get_all_apps), NOT from what's importable:
+- a stale entry for an app whose code is gone makes bench import it and crash
+  ("No module named ...");
+- a MISSING entry for an app that is installed and shipped makes Frappe skip it, so anything that
+  touches its DocTypes fails ("Module <X> not found").
+Listing an app that's shipped but not installed on the site is harmless. The site's data and
+installed-apps list are untouched. One line, so it also works inside a folded (>) scalar.
 */}}
 {{- define "glerp.reconcileAppsTxt" -}}
-python -c 'import os; p="sites/apps.txt"; a=[l.strip() for l in open(p) if l.strip()] if os.path.exists(p) else []; keep=[x for x in a if x=="frappe" or os.path.isdir("apps/"+x)]; gone=[x for x in a if x not in keep]; gone and open(p,"w").write("\n".join(keep)+"\n"); print("apps.txt: removed apps not in this image: "+", ".join(gone) if gone else "apps.txt: every entry is in this image")'
+python -c 'import os; p="sites/apps.txt"; img=[l.strip() for l in open("image-apps.txt") if l.strip()] if os.path.exists("image-apps.txt") else ["frappe"]+sorted(d for d in os.listdir("apps") if d!="frappe" and os.path.isdir("apps/"+d)); cur=[l.strip() for l in open(p) if l.strip()] if os.path.exists(p) else []; new=img+[a for a in cur if a not in img and os.path.isdir("apps/"+a)]; added=[a for a in new if a not in cur]; gone=[a for a in cur if a not in new]; (added or gone) and open(p,"w").write("\n".join(new)+"\n"); print("apps.txt: added "+(", ".join(added) or "-")+"; removed "+(", ".join(gone) or "-") if (added or gone) else "apps.txt: matches this image")'
 {{- end -}}
 
 {{/*
@@ -260,52 +263,4 @@ sessions and user caches are untouched. Never fails the job. One line, for folde
 */}}
 {{- define "glerp.clearAppCache" -}}
 ./env/bin/python -c 'import json,redis; u=json.load(open("sites/common_site_config.json")).get("redis_cache"); r=redis.from_url(u) if u else None; names=("all_apps","installed_apps","app_hooks","app_modules","installed_app_modules","module_app","module_installed_app","scheduler_events"); ks=[k for n in names for k in r.scan_iter(match="*|"+n, count=1000)] if r else []; ks and r.delete(*ks); print("redis cache: cleared "+str(len(ks))+" cached app-list/hooks key(s)")' || echo "redis cache: could not clear the cached app lists (continuing)"
-{{- end -}}
-
-{{/*
-Take each jobs.retiredApps entry off the site's installed-apps list when its code isn't in this
-image (see values.yaml). The site's data is kept; a no-op for apps that aren't installed.
-It edits the stored list directly rather than calling `bench remove-from-installed-apps`: that
-command also re-saves the Installed Applications record, and on a site not yet migrated to frappe
->=16.60 any save fails with "DocType Flow Trigger not found" (migrate refreshes that record itself).
-Multi-line: include with nindent inside a literal (|) block. Never fails the job.
-*/}}
-{{- define "glerp.retireApps" -}}
-/home/frappe/frappe-bench/env/bin/python -W ignore - "${SITE_NAME}" {{ range .Values.jobs.retiredApps }}"{{ . }}" {{ end }}<<'GLERP_RETIRE_PY' || echo "WARNING: could not retire jobs.retiredApps (continuing)"
-import json, os, sys
-
-site, wanted = sys.argv[1], sys.argv[2:]
-bench = "/home/frappe/frappe-bench"
-os.chdir(os.path.join(bench, "sites"))
-import frappe
-
-frappe.init(site, sites_path=".")
-frappe.connect()
-row = frappe.db.sql("select defvalue from `tabDefaultValue` where parent='__global' and defkey='installed_apps'")
-apps = json.loads(row[0][0]) if row and row[0][0] else []
-gone = [a for a in wanted if a in apps and not os.path.isdir(os.path.join(bench, "apps", a))]
-if gone:
-    keep = [a for a in apps if a not in gone]
-    # Edit the stored list directly. `bench remove-from-installed-apps` also re-saves the
-    # Installed Applications record, and on a site not yet migrated to frappe >=16.60 any save
-    # fails ("DocType Flow Trigger not found"). migrate refreshes that record itself.
-    frappe.db.sql(
-        "update `tabDefaultValue` set defvalue=%s where parent='__global' and defkey='installed_apps'",
-        json.dumps(keep),
-    )
-    frappe.db.commit()
-    if "installed_apps" in frappe.conf:  # frappe >=16.60 mirrors the list into site_config.json
-        from frappe.installer import update_site_config
-
-        update_site_config("installed_apps", keep)
-    frappe.client_cache.delete_value("defaults::__global")
-    frappe.cache.delete_value(
-        ["defaults::__global", "installed_apps", "all_apps", "app_hooks", "app_modules",
-         "installed_app_modules", "module_app", "module_installed_app", "scheduler_events"]
-    )
-    print("Retired from installed apps (code not in this image; data kept): " + ", ".join(gone))
-else:
-    print("retiredApps: nothing to retire on " + site)
-frappe.destroy()
-GLERP_RETIRE_PY
 {{- end -}}
